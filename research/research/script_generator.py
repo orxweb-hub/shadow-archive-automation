@@ -1,119 +1,16 @@
-import os
-import json
-from pathlib import Path
-
-from google import genai
-
-
-REPORT_FILE = Path("research/reports/mv_joyita_web_research.json")
-SCRIPT_DIR = Path("research/scripts")
-
-
-def generate_script(report):
-    api_key = os.environ.get("GEMINI_API_KEY")
-
-    if not api_key:
-        raise RuntimeError("GEMINI_API_KEY bulunamadı.")
-
-    client = genai.Client(api_key=api_key)
-
-    prompt = f"""
-You are the documentary scriptwriter for the YouTube channel
-"Shadow Archive".
-
-Use the following factual research report:
-
-RESEARCH REPORT:
-{json.dumps(report, ensure_ascii=False, indent=2)}
-
-Write an ORIGINAL Turkish documentary narration.
-
-Requirements:
-
-- Target length: 15–20 minutes.
-- Natural, human-sounding Turkish.
-- Strong cinematic opening.
-- Build suspense gradually.
-- Tell the story chronologically.
-- Keep confirmed facts separate from theories.
-- Never present speculation as fact.
-- Never invent dialogue.
-- Never invent evidence.
-- Never invent witnesses or events.
-- Do not exaggerate facts.
-- Do not use generic AI-style phrases repeatedly.
-- Make the narration feel like a serious documentary.
-- Explain important details naturally.
-- End with the strongest unanswered question.
-
-Structure:
-
-1. OPENING HOOK
-2. THE BACKGROUND
-3. WHAT HAPPENED
-4. THE DISCOVERY
-5. THE INVESTIGATION
-6. THE MAIN THEORIES
-7. WHAT WE ACTUALLY KNOW
-8. WHAT REMAINS UNEXPLAINED
-9. FINAL
-
-Write ONLY the narration.
-
-Do not include:
-- camera directions
-- scene directions
-- sound effects
-- editing instructions
-- timestamps
-"""
-
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt
-    )
-
-    return response.text.strip()
-
-
-def main():
-
-    if not REPORT_FILE.exists():
-        raise FileNotFoundError(
-            f"Web araştırma raporu bulunamadı: {REPORT_FILE}"
-        )
-
-    report = json.loads(
-        REPORT_FILE.read_text(
-            encoding="utf-8"
-        )
-    )
-
-    print("SHADOW ARCHIVE — SCRIPT GENERATOR")
-    print("=" * 50)
-
-    print("Web araştırma raporu bulundu.")
-
-    script = generate_script(report)
-
-    SCRIPT_DIR.mkdir(
-        parents=True,
-        exist_ok=True
-    )
-
-    script_file = (
-        SCRIPT_DIR /
-        "mv_joyita_script.txt"
-    )
-
-    script_file.write_text(
-        script,
-        encoding="utf-8"
-    )
-
-    print("Senaryo oluşturuldu.")
-    print(f"Dosya: {script_file}")
-
-
-if __name__ == "__main__":
-    main()
+Node 20 is being deprecated. This workflow is running with Node 24 by default. If you need to temporarily use Node 20, you can set the ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true environment variable. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+Run actions/upload-artifact@v4
+(node:3792) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+With the provided path, there will be 1 file uploaded
+Artifact name is valid!
+Root directory input is valid!
+Beginning upload of artifact content to blob storage
+(node:3792) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+Uploaded bytes 4988206
+Finished uploading artifact content to blob storage!
+SHA256 digest of uploaded artifact zip is 628cc31c1a9ded40c331cd5df9248b5da3a0fd28c75c9f5c48538b1228ed2033
+Finalizing artifact upload
+Artifact shadow-archive-voice-test.zip successfully finalized. Artifact ID 9236475687
+Artifact shadow-archive-voice-test has been successfully uploaded! Final size is 4988206 bytes. Artifact ID is 9236475687
+Artifact download URL: https://github.com/orxweb-hub/shadow-archive-automation/actions/runs/31847661384/artifacts/9236475687
