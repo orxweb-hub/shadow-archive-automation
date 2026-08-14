@@ -1,9 +1,11 @@
 import os
 import json
 from pathlib import Path
+
 from google import genai
 
-REPORT_FILE = Path("research/reports/mv_joyita.json")
+
+REPORT_FILE = Path("research/reports/mv_joyita_web_research.json")
 SCRIPT_DIR = Path("research/scripts")
 
 
@@ -19,27 +21,30 @@ def generate_script(report):
 You are the documentary scriptwriter for the YouTube channel
 "Shadow Archive".
 
-Use ONLY the research report below.
+Use the following factual research report:
 
 RESEARCH REPORT:
 {json.dumps(report, ensure_ascii=False, indent=2)}
 
-Write an ORIGINAL Turkish documentary script about this case.
+Write an ORIGINAL Turkish documentary narration.
 
 Requirements:
+
 - Target length: 15–20 minutes.
-- Natural Turkish narration.
-- Do not sound like an AI or a school essay.
-- Start with a strong cinematic hook.
+- Natural, human-sounding Turkish.
+- Strong cinematic opening.
 - Build suspense gradually.
 - Tell the story chronologically.
-- Clearly distinguish confirmed facts from theories.
+- Keep confirmed facts separate from theories.
 - Never present speculation as fact.
-- Do not invent dialogue, evidence, witnesses or events.
+- Never invent dialogue.
+- Never invent evidence.
+- Never invent witnesses or events.
+- Do not exaggerate facts.
+- Do not use generic AI-style phrases repeatedly.
+- Make the narration feel like a serious documentary.
 - Explain important details naturally.
-- Include transitions between sections.
 - End with the strongest unanswered question.
-- Do not use clickbait claims that the evidence cannot support.
 
 Structure:
 
@@ -53,8 +58,14 @@ Structure:
 8. WHAT REMAINS UNEXPLAINED
 9. FINAL
 
-Write only the narration.
-Do not include camera directions, sound effects or editing instructions.
+Write ONLY the narration.
+
+Do not include:
+- camera directions
+- scene directions
+- sound effects
+- editing instructions
+- timestamps
 """
 
     response = client.models.generate_content(
@@ -66,31 +77,42 @@ Do not include camera directions, sound effects or editing instructions.
 
 
 def main():
+
     if not REPORT_FILE.exists():
         raise FileNotFoundError(
-            f"Araştırma raporu bulunamadı: {REPORT_FILE}"
+            f"Web araştırma raporu bulunamadı: {REPORT_FILE}"
         )
 
     report = json.loads(
-        REPORT_FILE.read_text(encoding="utf-8")
+        REPORT_FILE.read_text(
+            encoding="utf-8"
+        )
     )
+
+    print("SHADOW ARCHIVE — SCRIPT GENERATOR")
+    print("=" * 50)
+
+    print("Web araştırma raporu bulundu.")
 
     script = generate_script(report)
 
-    SCRIPT_DIR.mkdir(parents=True, exist_ok=True)
+    SCRIPT_DIR.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
-    script_file = SCRIPT_DIR / "mv_joyita_script.txt"
+    script_file = (
+        SCRIPT_DIR /
+        "mv_joyita_script.txt"
+    )
 
     script_file.write_text(
         script,
         encoding="utf-8"
     )
 
-    print("SHADOW ARCHIVE — SCRIPT GENERATED")
-    print("=" * 45)
-    print(f"Senaryo kaydedildi: {script_file}")
-    print()
-    print(script)
+    print("Senaryo oluşturuldu.")
+    print(f"Dosya: {script_file}")
 
 
 if __name__ == "__main__":
