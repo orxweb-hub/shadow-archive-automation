@@ -1,8 +1,10 @@
 import os
 import json
+from pathlib import Path
 from google import genai
 
 CHANNEL_NAME = "Shadow Archive"
+QUEUE_FILE = Path("research/topic_queue.json")
 
 
 def find_topics(count=10):
@@ -16,7 +18,9 @@ def find_topics(count=10):
     prompt = f"""
 You are the topic discovery engine for the YouTube channel "{CHANNEL_NAME}".
 
-The channel focuses on:
+Generate {count} ORIGINAL mystery documentary topics.
+
+Focus on:
 - unexplained mysteries
 - unsolved cases
 - strange historical events
@@ -24,35 +28,22 @@ The channel focuses on:
 - unexplained discoveries
 - forgotten stories
 
-Generate {count} ORIGINAL video topic ideas.
-
 For every topic provide:
-1. title_idea
-2. subject
-3. why_viewers_would_click
-4. long_video_potential
-5. shorts_potential
-6. research_difficulty
+- title_idea
+- subject
+- why_viewers_would_click
+- long_video_potential
+- shorts_potential
+- research_difficulty
 
-Important:
-- Do not invent real events.
+Rules:
+- Never invent real events.
 - Do not present rumors as facts.
-- Avoid topics that are extremely overused unless there is a genuinely new angle.
-- Prefer stories that can support a 15+ minute documentary-style video.
-- Prefer topics with strong curiosity and storytelling potential.
+- Prefer topics that can support a 15+ minute documentary.
+- Prefer strong curiosity and storytelling potential.
+- Avoid generic or repetitive ideas.
 
-Return ONLY valid JSON in this format:
-
-[
-  {{
-    "title_idea": "...",
-    "subject": "...",
-    "why_viewers_would_click": "...",
-    "long_video_potential": 1,
-    "shorts_potential": 1,
-    "research_difficulty": 1
-  }}
-]
+Return ONLY valid JSON.
 """
 
     response = client.models.generate_content(
@@ -62,26 +53,37 @@ Return ONLY valid JSON in this format:
 
     text = response.text.strip()
 
-    # Markdown kod bloğu gelirse temizle
     if text.startswith("```"):
         text = text.replace("```json", "").replace("```", "").strip()
 
     return json.loads(text)
 
 
+def save_topics(topics):
+    QUEUE_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+    QUEUE_FILE.write_text(
+        json.dumps(
+            {"topics": topics},
+            ensure_ascii=False,
+            indent=2
+        ),
+        encoding="utf-8"
+    )
+
+
 def main():
     topics = find_topics(10)
+    save_topics(topics)
 
-    print("\nSHADOW ARCHIVE — TOPIC DISCOVERY")
+    print("\nSHADOW ARCHIVE — TOPIC QUEUE")
     print("=" * 45)
 
     for number, topic in enumerate(topics, start=1):
-        print(f"\n{number}. {topic['title_idea']}")
-        print(f"Konu: {topic['subject']}")
-        print(f"İzleyici ilgisi: {topic['why_viewers_would_click']}")
-        print(f"Uzun video: {topic['long_video_potential']}/10")
-        print(f"Shorts: {topic['shorts_potential']}/10")
-        print(f"Araştırma zorluğu: {topic['research_difficulty']}/10")
+        print(f"{number}. {topic['title_idea']}")
+        print(f"   Uzun video: {topic['long_video_potential']}/10")
+        print(f"   Shorts: {topic['shorts_potential']}/10")
+        print()
 
 
 if __name__ == "__main__":
