@@ -11,18 +11,28 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Repository'i indir
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Python'u kur
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Gereksinimleri kur
+      - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Kaynak araştırmasını çalıştır
+      - name: Check files
+        run: |
+          echo "Python:"
+          python --version
+          echo "Files:"
+          ls -la
+          echo "Research:"
+          ls -la research
+
+      - name: Run researcher
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: python research/source_researcher.py
+        run: |
+          python research/source_researcher.py
