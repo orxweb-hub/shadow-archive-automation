@@ -1,0 +1,299 @@
+[
+  {
+    "scene": 1,
+    "description": "Vast dark blue ocean waves moving slowly, capturing the depth and immense scale of the sea.",
+    "search_queries": [
+      "dark ocean waves",
+      "deep blue sea aerial",
+      "vast ocean horizon"
+    ],
+    "mood": "mysterious",
+    "duration_hint": 20
+  },
+  {
+    "scene": 2,
+    "description": "Close-up of a vintage 1950s ocean navigation map with nautical lines and depth charts.",
+    "search_queries": [
+      "vintage nautical map",
+      "antique sea chart close up",
+      "historical world map compass"
+    ],
+    "mood": "historical",
+    "duration_hint": 15
+  },
+  {
+    "scene": 3,
+    "description": "Isolated aerial view of the Pacific Ocean with small tropical sea currents and empty blue horizon.",
+    "search_queries": [
+      "pacific ocean drone",
+      "isolated ocean aerial",
+      "endless blue sea"
+    ],
+    "mood": "lonely",
+    "duration_hint": 15
+  },
+  {
+    "scene": 4,
+    "description": "A vintage 1950s style motor vessel or small cargo ship floating alone in calm open water.",
+    "search_queries": [
+      "vintage motor vessel sea",
+      "old wooden ship open ocean",
+      "1950s cargo boat"
+    ],
+    "mood": "eerie",
+    "duration_hint": 25
+  },
+  {
+    "scene": 5,
+    "description": "Nautical navigation compass and brass instruments sitting on a wooden table near a ship window.",
+    "search_queries": [
+      "brass nautical compass",
+      "ship navigation table",
+      "vintage maritime instruments"
+    ],
+    "mood": "investigative",
+    "duration_hint": 15
+  },
+  {
+    "scene": 6,
+    "description": "A rescue boat or search ship approaching a stationary, drifting vessel on ocean water.",
+    "search_queries": [
+      "ship approaching boat ocean",
+      "sea rescue vessel",
+      "discovering abandoned boat"
+    ],
+    "mood": "suspenseful",
+    "duration_hint": 20
+  },
+  {
+    "scene": 7,
+    "description": "Empty wooden ship deck with ropes and equipment, slowly rolling with the swell, no people visible.",
+    "search_queries": [
+      "empty ship deck ocean",
+      "abandoned boat deck",
+      "unmanned vessel deck"
+    ],
+    "mood": "chilling",
+    "duration_hint": 20
+  },
+  {
+    "scene": 8,
+    "description": "Close-up of an abandoned lifebuoy and ropes resting on a calm wooden ship surface.",
+    "search_queries": [
+      "lifebuoy on deck",
+      "abandoned boat ropes",
+      "sea life preserver ship"
+    ],
+    "mood": "melancholic",
+    "duration_hint": 15
+  },
+  {
+    "scene": 9,
+    "description": "Aerial view of a remote South Pacific tropical island beach and coral reef (Tokelau aesthetic).",
+    "search_queries": [
+      "south pacific island aerial",
+      "remote tropical coastline",
+      "pacific coral lagoon"
+    ],
+    "mood": "exotic",
+    "duration_hint": 15
+  },
+  {
+    "scene": 10,
+    "description": "A vintage doctor's medical bag, stethoscope, and mid-century prescription notes on a desk.",
+    "search_queries": [
+      "vintage doctor bag stethoscope",
+      "1950s medical equipment",
+      "old doctor desk"
+    ],
+    "mood": "nostalgic",
+    "duration_hint": 15
+  },
+  {
+    "scene": 11,
+    "description": "Hands turning through yellowed newspaper archive pages with black and white headlines.",
+    "search_queries": [
+      "reading vintage newspaper archives",
+      "old newspaper headlines",
+      "investigator reading newspaper"
+    ],
+    "mood": "analytical",
+    "duration_hint": 15
+  },
+  {
+    "scene": 12,
+    "description": "A memorial flower wreath floating on dark harbor water, symbolizing loss at sea.",
+    "search_queries": [
+      "memorial wreath ocean water",
+      "flower wreath floating sea",
+      "maritime memorial service"
+    ],
+    "mood": "somber",
+    "duration_hint": 15
+  },
+  {
+    "scene": 13,
+    "description": "Ocean waves gently slapping against the wooden hull of a floating vessel, showing buoyancy.",
+    "search_queries": [
+      "waves hitting boat hull",
+      "ship floating water level",
+      "wooden ship side water"
+    ],
+    "mood": "curious",
+    "duration_hint": 20
+  },
+  {
+    "scene": 14,
+    "description": "An archivist opening a dusty historical file folder inside a dim basement record room.",
+    "search_queries": [
+      "opening archive folder",
+      "dusty document vault",
+      "historical record file"
+    ],
+    "mood": "mysterious",
+    "duration_hint": 15
+  },
+  {
+    "scene": 15,
+    "description": "Rainy vintage street in 1950s England (Derby aesthetic) with old cars and brick buildings.",
+    "search_queries": [
+      "1950s English city rain",
+      "vintage brick street derby",
+      "old British street rainy"
+    ],
+    "mood": "gloomy",
+    "duration_hint": 15
+  },
+  {
+    "scene": 16,
+    "description": "Silhouette of a lone ship drifting near the ocean horizon during a moody, orange-purple sunset.",
+    "search_queries": [
+      "ship silhouette ocean sunset",
+      "drifting vessel dusk",
+      "lonely boat sunset horizon"
+    ],
+    "mood": "haunting",
+    "duration_hint": 20
+  },
+  {
+    "scene": 17,
+    "description": "Close-up of a vintage 1950s shortwave radio transmitter with glowing vacuum tubes and dials.",
+    "search_queries": [
+      "vintage shortwave radio transmitter",
+      "1950s maritime radio",
+      "old radio dials close up"
+    ],
+    "mood": "tense",
+    "duration_hint": 15
+  },
+  {
+    "scene": 18,
+    "description": "An unmanned wooden ship wheel swaying slowly with the movement of the waves.",
+    "search_queries": [
+      "ship wooden steering wheel",
+      "unmanned ship bridge",
+      "abandoned helm boat"
+    ],
+    "mood": "eerie",
+    "duration_hint": 15
+  },
+  {
+    "scene": 19,
+    "description": "A person sitting quietly on a rocky shore staring out at the vast ocean in contemplation.",
+    "search_queries": [
+      "person sitting sea shore nostalgic",
+      "looking at endless sea horizon",
+      "grieving near ocean coast"
+    ],
+    "mood": "melancholic",
+    "duration_hint": 15
+  },
+  {
+    "scene": 20,
+    "description": "Vintage printing press machine printing news sheets or magazines rapidly.",
+    "search_queries": [
+      "vintage printing press machine",
+      "printing newspaper retro",
+      "old press publishing"
+    ],
+    "mood": "dramatic",
+    "duration_hint": 15
+  },
+  {
+    "scene": 21,
+    "description": "A courtroom scene close-up showing a judge's wooden gavel and official inquiry paper documents.",
+    "search_queries": [
+      "gavel legal court document",
+      "official inquiry court paper",
+      "judge wooden gavel desk"
+    ],
+    "mood": "serious",
+    "duration_hint": 15
+  },
+  {
+    "scene": 22,
+    "description": "An empty small lifeboat floating far away on huge open ocean swells under cloudy skies.",
+    "search_queries": [
+      "empty lifeboat ocean",
+      "small boat lost at sea",
+      "abandoned raft waves"
+    ],
+    "mood": "desolate",
+    "duration_hint": 20
+  },
+  {
+    "scene": 23,
+    "description": "Dramatic dark stormy ocean waves crashing violently during a stormy night.",
+    "search_queries": [
+      "dark ocean storm waves",
+      "stormy sea night heavy waves",
+      "rough ocean water night"
+    ],
+    "mood": "threatening",
+    "duration_hint": 20
+  },
+  {
+    "scene": 24,
+    "description": "Pacific Island community members standing on a beach looking out toward the ocean water.",
+    "search_queries": [
+      "pacific islanders coastal shore",
+      "people looking sea horizon",
+      "island inhabitants coast"
+    ],
+    "mood": "reflective",
+    "duration_hint": 15
+  },
+  {
+    "scene": 25,
+    "description": "Modern oceanographic radar and sonar screen scanning dark blue marine depth data.",
+    "search_queries": [
+      "sonar radar screen ocean depth",
+      "marine navigation radar",
+      "underwater scanning display"
+    ],
+    "mood": "technological",
+    "duration_hint": 15
+  },
+  {
+    "scene": 26,
+    "description": "Misty thick fog rolling over sea water, partially covering the silhouette of a drifting ship.",
+    "search_queries": [
+      "foggy ocean boat horizon",
+      "ghost ship fog sea",
+      "misty ocean vessel silhouette"
+    ],
+    "mood": "mystical",
+    "duration_hint": 20
+  },
+  {
+    "scene": 27,
+    "description": "Cinematic dark ocean closing shot with sunlight reflecting softly on water, fading to dark.",
+    "search_queries": [
+      "dark ocean reflection sunset",
+      "deep blue sea fading night",
+      "tranquil dark ocean horizon"
+    ],
+    "mood": "haunting",
+    "duration_hint": 25
+  }
+]
