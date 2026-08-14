@@ -1,0 +1,26 @@
+name: Shadow Archive - AI Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-ai:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repository'i indir
+        uses: actions/checkout@v4
+
+      - name: Python'u kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Gereksinimleri kur
+        run: pip install -r requirements.txt
+
+      - name: Gemini bağlantısını test et
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python -c "from google import genai; import os; client=genai.Client(api_key=os.environ['GEMINI_API_KEY']); response=client.models.generate_content(model='gemini-3.6-flash', contents='Shadow Archive için tek cümlelik gizemli bir video fikri üret.'); print(response.text)"
