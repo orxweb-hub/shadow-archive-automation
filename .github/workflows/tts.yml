@@ -34,13 +34,17 @@ jobs:
           ffmpeg -y \
             -i research/audio/mv_joyita_voice.wav \
             -codec:a libmp3lame \
-            -b:a 128k \
+            -b:a 96k \
             research/audio/mv_joyita_voice.mp3
 
-      - name: Save audio files
+      - name: Check audio
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add research/audio/
-          git diff --cached --quiet || git commit -m "Add WAV and MP3 voice"
-          git push
+          ls -lh research/audio/
+          du -h research/audio/mv_joyita_voice.mp3
+
+      - name: Upload MP3
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadow-archive-voice-test
+          path: research/audio/mv_joyita_voice.mp3
+          retention-days: 7
