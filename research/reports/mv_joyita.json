@@ -1,0 +1,146 @@
+{
+  "topic": "The Ghost Ship That Kept Its Secrets: What Happened to the MV Joyita?",
+  "summary": "On October 3, 1955, the 69-foot wooden motor vessel MV Joyita departed Apia, Western Samoa, bound for the Tokelau Islands with 25 people aboard (16 crew, 9 passengers) and a cargo of medical supplies, timber, and empty oil drums. The 270-mile journey was expected to take under two days. The vessel never arrived. On November 10, 1955, 38 days after departure, the Joyita was found adrift over 600 miles off course near the Fiji archipelago, partially submerged and heavily listing, with no trace of the 25 souls onboard. Despite an extensive Commission of Inquiry and decades of investigation, no human remains or life rafts were ever recovered, making the incident one of the South Pacific's most enduring maritime mysteries.",
+  "timeline": [
+    {
+      "date": "1931",
+      "event": "Built at Wilmington Boat Works in Los Angeles as a luxury yacht for film director Roland West; named 'Joyita' ('Little Jewel' in Spanish)."
+    },
+    {
+      "date": "1941–1945",
+      "event": "Acquired by the United States Navy for World War II service, designated YYP-108, and used to patrol Hawaiian waters."
+    },
+    {
+      "date": "1952",
+      "event": "Purchased by Dr. Katharine Luomala, a professor of anthropology at the University of Hawaii, and chartered to her acquaintance, Captain Thomas H. 'Dusty' Miller."
+    },
+    {
+      "date": "October 3, 1955 (05:00 GMT+13)",
+      "event": "MV Joyita departs Apia, Western Samoa, for Fakaofo in the Tokelau Islands. Arrival expected October 5."
+    },
+    {
+      "date": "October 6, 1955",
+      "event": "Fakaofo reports Joyita is overdue. The Royal New Zealand Air Force (RNZAF) initiates a search-and-rescue operation covering nearly 100,000 square miles of ocean."
+    },
+    {
+      "date": "October 12, 1955",
+      "event": "Official aerial search called off after finding no sign of the vessel, life rafts, or wreckage."
+    },
+    {
+      "date": "November 10, 1955",
+      "event": "The merchant ship Tuvalu, captained by Gerald Douglas, spots the waterlogged and listing Joyita drifting north of Vanua Levu, Fiji, roughly 600 miles off its intended course."
+    },
+    {
+      "date": "November 12, 1955",
+      "event": "The Joyita is towed into Suva Harbor, Fiji, for technical inspection and forensic investigation."
+    },
+    {
+      "date": "February 1956",
+      "event": "Official Inquiry into the disappearance of the passengers and crew opens in Apia, Western Samoa."
+    },
+    {
+      "date": "1956–1960s",
+      "event": "The repaired ship runs aground multiple times under new owners, earning a reputation as a jinxed vessel before being abandoned and salvaged for scrap in Fiji."
+    }
+  ],
+  "people": [
+    {
+      "name": "Captain Thomas H. 'Dusty' Miller",
+      "role": "Master of the MV Joyita",
+      "notes": "British-born master mariner with years of Pacific navigation experience. Known to be headstrong and deeply attached to his ship despite financial troubles."
+    },
+    {
+      "name": "Dr. Alfred 'Andy' Denis Parsons",
+      "role": "Passenger / World Health Organization Physician",
+      "notes": "En route to Tokelau to perform a medical mission; his doctor's bag was found open on deck."
+    },
+    {
+      "name": "Roger Pearless",
+      "role": "Passenger / District Officer",
+      "notes": "New Zealand district officer travelling to Tokelau to assist local administration."
+    },
+    {
+      "name": "Herbert T. 'Dusty' Hodgkinson",
+      "role": "First Mate",
+      "notes": "Experienced seaman aboard the vessel."
+    },
+    {
+      "name": "Katharine Luomala",
+      "role": "Owner of the Joyita",
+      "notes": "Anthropology professor at the University of Hawaii who bought the boat and chartered it to Miller."
+    },
+    {
+      "name": "Captain Gerald Douglas",
+      "role": "Master of the merchant vessel Tuvalu",
+      "notes": "Discovered the derelict Joyita floating off Vanua Levu on November 10, 1955."
+    }
+  ],
+  "locations": [
+    {
+      "location": "Apia, Western Samoa",
+      "significance": "Port of departure for the final voyage on October 3, 1955."
+    },
+    {
+      "location": "Fakaofo Atoll, Tokelau",
+      "significance": "Intended destination, roughly 270 miles north of Apia."
+    },
+    {
+      "location": "Vanua Levu, Fiji",
+      "significance": "Island near where the drifting derelict was spotted on November 10, 1955."
+    },
+    {
+      "location": "Suva, Fiji",
+      "significance": "Port where the Joyita was towed for official inspection and salvage."
+    }
+  ],
+  "confirmed_facts": [
+    "The Joyita was unsinkable by standard means due to cork lining installed in her hull during her time as a refrigerated vessel, combined with cargo containing empty oil drums and timber.",
+    "When discovered, the ship was waterlogged, listing starboard at roughly 45 degrees, but floating high enough that the deck was partly above water.",
+    "All 25 individuals aboard (16 crew members and 9 passengers) were missing, and no bodies or survivors were ever found.",
+    "The vessel's three Carley life floats and single auxiliary dinghy were missing.",
+    "The vessel was operating on a single engine when it departed due to a broken clutch on the starboard engine.",
+    "A corroded galvanized pipe in the auxiliary engine cooling system had failed, causing water to flood the bilges.",
+    "The electric bilge pumps were inoperable, and the manual bilge pump was found disconnected or clogged.",
+    "The radio had been set to the international distress frequency (2182 kHz), but a broken aerial wire hidden under insulation prevented any transmission from going out.",
+    "A doctor's bag belonging to Dr. Parsons was found open on the deck containing blood-stained bandages, a scalpel, and medical equipment.",
+    "The navigational gear—including the chronometer, sextant, logbook, and main compass—was missing from the vessel.",
+    "All four tons of cargo, consisting primarily of medical supplies, food goods, and timber, were missing or heavily depleted."
+  ],
+  "disputed_claims": [
+    "Whether Captain Miller abandoned ship under panic or was incapacitated/killed prior to the evacuation.",
+    "Whether the bloody bandages on deck indicated a medical emergency, injury during a mechanical breakdown, or an violent confrontation onboard.",
+    "Claims regarding the exact timestamp of the abandonment; while cabin clocks had stopped at 10:25, it is disputed whether this was AM or PM, or caused by power loss rather than time of abandon."
+  ],
+  "unverified_claims": [
+    "Sensationalist newspaper allegations that Japanese fishing fleets or submarines attacked the Joyita and murdered/kidnapped the crew.",
+    "Cold War allegations involving Soviet submarine interdiction or secret naval weapons tests.",
+    "Local Pacific rumors of pirate attacks or modern high-seas privateering.",
+    "Unconfirmed claims that Captain Miller had large personal debts and arranged a faked disappearance for insurance fraud."
+  ],
+  "possible_explanations": [
+    {
+      "theory": "Flooding and Premature Abandonment (Official Inquiry Conclusion)",
+      "details": "A pipe in the auxiliary cooling system failed, flooding the vessel. Because the bilge pumps failed and the starboard engine was offline, the boat took on heavy water and listed severely. Unaware that the cork lining and cargo made the Joyita virtually unsinkable, passengers and crew panicked and launched the Carley floats into the open Pacific, where they were likely swept away, capsized, or preyed upon by sharks."
+    },
+    {
+      "theory": "Injury/Incapacitation of the Captain and Subsequent Mutiny/Panic",
+      "details": "Captain Miller, known for stating he would never abandon the Joyita, may have been injured or killed during the engine breakdown (explaining the doctor's bag and blood-stained bandages). Without his command to stay aboard the buoyant vessel, the inexperienced crew and frightened passengers abandoned ship into inadequate life rafts."
+    },
+    {
+      "theory": "Piracy or Hostile Encounter",
+      "details": "The vessel was intercepted by rogue ocean raiders or a foreign vessel who killed or abducted the passengers and crew, looted the cargo and navigational equipment, and left the ship drifting to hide the crime."
+    }
+  ],
+  "important_details": [
+    "The vessel's radio transmitter was functional, but the fault in the lead-in wire meant radio signals went nowhere despite the transmitter operating.",
+    "The starboard engine had been covered with a mattress to protect surrounding fittings during repair efforts before or during the trip.",
+    "The official 1956 Commission of Inquiry criticized Captain Miller for reckless seamanship by putting to sea with only one operational engine, no working radio, and inadequate life-saving equipment."
+  ],
+  "source_types_to_check": [
+    "1956 Commission of Inquiry Official Report (Apia, Western Samoa / New Zealand Archives)",
+    "Contemporary maritime logbooks and records from RNZAF Search and Rescue Operations (October 1955)",
+    "Pacific Islands Monthly archives (1955–1956 coverage)",
+    "Book: 'Joyita: Mystery of the Lost Net' by Lord Kilbracken (1962)",
+    "Book: 'Dark Light: The Mystery of the MV Joyita' by David G. Wright (2002)"
+  ]
+}
