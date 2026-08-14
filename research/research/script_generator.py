@@ -26,39 +26,51 @@ Use ONLY the factual research report below.
 RESEARCH REPORT:
 {json.dumps(report, ensure_ascii=False, indent=2)}
 
-Write a long-form ORIGINAL Turkish documentary narration
+Write a LONG-FORM ORIGINAL Turkish documentary narration
 about the MV Joyita mystery.
 
 TARGET LENGTH:
-2,200–2,800 Turkish words.
+2,500–3,000 Turkish words.
 
 The narration should be approximately 15–20 minutes long.
 
-IMPORTANT:
+IMPORTANT FACTUAL RULES:
 - Never invent facts.
 - Never invent dialogue.
 - Never invent witnesses.
 - Never invent evidence.
 - Never invent events.
-- Never present rumors as facts.
-- Separate confirmed facts from theories.
-- Do not repeat information just to make the script longer.
-- Expand important factual details naturally.
+- Never present rumors as confirmed facts.
+- Clearly separate confirmed facts from theories.
+- If information is uncertain, say that it is uncertain.
+- Do not repeat the same information simply to increase length.
+- Expand important factual details with explanation and context.
 - Explain the timeline carefully.
-- Explain the investigation and evidence.
+- Explain what happened before the disappearance.
+- Explain the voyage and circumstances surrounding the disappearance.
+- Explain how the vessel was discovered.
+- Explain the investigation.
+- Examine the evidence carefully.
 - Examine the major theories.
-- Explain why theories are supported or weakened.
+- Explain why each theory is considered possible or unlikely.
+- Explain what the official investigation concluded.
 - Clearly explain what remains unknown.
 
 STYLE:
 - Natural Turkish.
-- Serious documentary narration.
+- Serious investigative documentary style.
+- Human-like narration.
 - Varied sentence lengths.
 - Natural transitions.
 - Strong opening.
 - Gradually increasing suspense.
 - Avoid repetitive AI-style phrases.
-- Do not use excessive clickbait.
+- Avoid excessive clickbait.
+- Do not constantly use phrases such as
+  "düşünün", "asıl soru şu", "işte burada".
+- Do not use filler sentences.
+- Every paragraph should add useful information.
+- Make the narration feel like a professional documentary.
 
 STRUCTURE:
 
@@ -74,13 +86,21 @@ THE INVESTIGATION
 
 THE MISSING PEOPLE
 
+THE EVIDENCE
+
 THE MAIN THEORIES
 
 WHAT THE OFFICIAL INVESTIGATION FOUND
 
+WHAT THE THEORIES CANNOT EXPLAIN
+
 WHAT WE STILL DON'T KNOW
 
 FINAL
+
+IMPORTANT:
+Write enough detail to reach 2,500–3,000 words.
+Do not stop early.
 
 Write ONLY the narration.
 
@@ -144,8 +164,11 @@ def main():
         encoding="utf-8"
     )
 
+    print()
     print("SENARYO BAŞARIYLA KAYDEDİLDİ")
+    print("=" * 55)
     print(f"Dosya: {script_file}")
+    print(f"Kelime sayısı: {word_count}")
 
 
 if __name__ == "__main__":
