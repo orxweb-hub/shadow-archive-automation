@@ -1,8 +1,14 @@
 import os
 import json
+from pathlib import Path
 from google import genai
 
-CHANNEL_NAME = "Shadow Archive"
+REPORT_DIR = Path("research/reports")
+
+TOPIC = """
+The Ghost Ship That Kept Its Secrets:
+What Happened to the MV Joyita?
+"""
 
 
 def research_topic(topic):
@@ -14,15 +20,16 @@ def research_topic(topic):
     client = genai.Client(api_key=api_key)
 
     prompt = f"""
-You are the research engine for the YouTube documentary channel "{CHANNEL_NAME}".
+You are the factual research engine for the YouTube documentary
+channel "Shadow Archive".
 
 Research this topic:
 
 {topic}
 
-Create a factual research report for a documentary.
+Create a detailed factual research report.
 
-Return ONLY valid JSON with this structure:
+Return ONLY valid JSON:
 
 {{
   "topic": "",
@@ -40,13 +47,12 @@ Return ONLY valid JSON with this structure:
 
 Rules:
 - Never invent facts.
-- Clearly separate confirmed facts from disputed or unverified claims.
-- Do not present rumors as facts.
+- Separate confirmed facts from disputed claims.
+- Never present rumors as facts.
+- If something is uncertain, put it under unverified_claims.
 - Prefer official records, reputable journalism, academic sources,
-  books, archives and primary documents.
-- If a detail cannot be confidently established, put it in
-  "unverified_claims".
-- The report will later be used to write an original documentary script.
+  archives, books and primary documents.
+- This report will later be used to create an original documentary.
 """
 
     response = client.models.generate_content(
@@ -63,15 +69,21 @@ Rules:
 
 
 def main():
-    topic = """
-The Ghost Ship That Kept Its Secrets:
-What Happened to the MV Joyita?
-"""
+    report = research_topic(TOPIC)
 
-    report = research_topic(topic)
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
 
-    print("\nSHADOW ARCHIVE — SOURCE RESEARCH")
+    report_file = REPORT_DIR / "mv_joyita.json"
+
+    report_file.write_text(
+        json.dumps(report, ensure_ascii=False, indent=2),
+        encoding="utf-8"
+    )
+
+    print("SHADOW ARCHIVE — RESEARCH REPORT")
     print("=" * 45)
+    print(f"Rapor kaydedildi: {report_file}")
+    print()
     print(json.dumps(report, ensure_ascii=False, indent=2))
 
 
