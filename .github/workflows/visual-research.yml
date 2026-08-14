@@ -1,0 +1,47 @@
+name: Shadow Archive - Visual Research
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  visual-research:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run visual research
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+        run: |
+          python research/research/visual_researcher.py
+
+      - name: Check generated files
+        run: |
+          echo "=== VIDEO DIRECTORY ==="
+          find research/video -maxdepth 2 -type f -print
+          echo ""
+          echo "=== FILE SIZES ==="
+          du -h research/video/clips/* || true
+
+      - name: Commit generated assets
+        run: |
+          git config user.name "Shadow Archive Bot"
+          git config user.email "shadow-archive-bot@users.noreply.github.com"
+          git add research/video
+          git commit -m "Generate documentary visual assets" || echo "No changes to commit"
+          git push
