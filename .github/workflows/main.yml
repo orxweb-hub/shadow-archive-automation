@@ -1,10 +1,10 @@
-name: Shadow Archive - AI Test
+name: Shadow Archive - Topic Finder
 
 on:
   workflow_dispatch:
 
 jobs:
-  test-ai:
+  find-topics:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,8 +19,7 @@ jobs:
       - name: Gereksinimleri kur
         run: pip install -r requirements.txt
 
-      - name: Gemini bağlantısını test et
+      - name: 10 konu üret
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-        run: |
-          python -c "from google import genai; import os; client=genai.Client(api_key=os.environ['GEMINI_API_KEY']); response=client.models.generate_content(model='gemini-3.6-flash', contents='Shadow Archive için tek cümlelik gizemli bir video fikri üret.'); print(response.text)"
+        run: python research/topic_finder.py
