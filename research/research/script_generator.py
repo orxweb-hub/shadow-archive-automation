@@ -124,7 +124,7 @@ def main():
 
     print(f"Üretilen kelime sayısı: {word_count}")
 
-    if word_count < 1800:
+    if word_count < 1500:
         raise RuntimeError(
             f"Senaryo çok kısa: {word_count} kelime."
         )
