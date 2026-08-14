@@ -1,0 +1,55 @@
+name: Shadow Archive - Video Editor
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  video-editor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Generate Turkish voice
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python research/research/tts_generator.py
+
+      - name: Build documentary video
+        run: |
+          python research/research/video_editor.py
+
+      - name: Check final video
+        run: |
+          ls -lh research/video/
+          ffprobe \
+            -v error \
+            -show_entries format=duration \
+            -of default=noprint_wrappers=1:nokey=1 \
+            research/video/shadow_archive_mv_joyita.mp4
+
+      - name: Upload final video
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadow-archive-mv-joyita-final
+          path: research/video/shadow_archive_mv_joyita.mp4
+          retention-days: 7
