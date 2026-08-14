@@ -23,14 +23,24 @@ jobs:
         run: |
           pip install -r requirements.txt
 
-      - name: Generate voice
+      - name: Generate WAV voice
         run: |
           python research/research/tts_generator.py
 
-      - name: Save audio
+      - name: Convert WAV to MP3
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+          ffmpeg -y \
+            -i research/audio/mv_joyita_voice.wav \
+            -codec:a libmp3lame \
+            -b:a 128k \
+            research/audio/mv_joyita_voice.mp3
+
+      - name: Save audio files
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add research/audio/
-          git diff --cached --quiet || git commit -m "Add generated voice"
+          git diff --cached --quiet || git commit -m "Add WAV and MP3 voice"
           git push
