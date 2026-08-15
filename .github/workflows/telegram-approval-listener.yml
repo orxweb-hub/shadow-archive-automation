@@ -5,6 +5,10 @@ on:
   schedule:
     - cron: "*/5 * * * *"
 
+permissions:
+  actions: write
+  contents: read
+
 jobs:
   listen:
     runs-on: ubuntu-latest
@@ -13,12 +17,14 @@ jobs:
       - name: Check Telegram
         env:
           TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           python - <<'PY'
           import os
           import json
           import urllib.request
           import urllib.parse
+          import subprocess
 
           token = os.environ["TOKEN"]
 
@@ -35,10 +41,11 @@ jobs:
               with urllib.request.urlopen(request, timeout=30) as response:
                   return json.loads(response.read().decode())
 
-          print("Telegram kontrol ediliyor...")
+          print("==========================================")
+          print("SHADOW ARCHIVE TELEGRAM LISTENER")
+          print("==========================================")
 
           updates = telegram("getUpdates", {})
-
           results = updates.get("result", [])
 
           if not results:
@@ -63,7 +70,7 @@ jobs:
               print("BUTTON CLICK DETECTED")
               print("ACTION:", action)
 
-              # Buton yüklenmesini kapat
+              # Telegram butonundaki yüklenme işaretini kapat
               try:
                   telegram(
                       "answerCallbackQuery",
@@ -71,32 +78,86 @@ jobs:
                           "callback_query_id": callback_id
                       }
                   )
+
                   print("CALLBACK ANSWERED")
+
               except Exception as e:
                   print("CALLBACK ANSWER SKIPPED:", e)
 
+              # ==========================================
+              # ONAYLA
+              # ==========================================
+
               if action == "approve":
+
                   text = (
                       "SHADOW ARCHIVE - YAYIN ONAYLANDI\n\n"
                       "MV JOYITA\n\n"
-                      "Yayin sistemi baslatilacak."
+                      "YouTube yukleme sistemi baslatiliyor...\n\n"
+                      "Video: PRIVATE"
                   )
 
+                  # YouTube Private Upload workflow'unu başlat
+                  print("STARTING YOUTUBE UPLOAD WORKFLOW...")
+
+                  result = subprocess.run(
+                      [
+                          "gh",
+                          "workflow",
+                          "run",
+                          "Shadow Archive - YouTube Private Upload"
+                      ],
+                      capture_output=True,
+                      text=True
+                  )
+
+                  print("GH STDOUT:", result.stdout)
+                  print("GH STDERR:", result.stderr)
+
+                  if result.returncode == 0:
+                      print("YOUTUBE WORKFLOW STARTED")
+
+                  else:
+                      print("YOUTUBE WORKFLOW ERROR")
+                      print("Return code:", result.returncode)
+
+                      text = (
+                          "SHADOW ARCHIVE - HATA\n\n"
+                          "YouTube yukleme workflow'u baslatilamadi.\n\n"
+                          "GitHub Actions kontrol edilmeli."
+                      )
+
+              # ==========================================
+              # REDDET
+              # ==========================================
+
               elif action == "reject":
+
                   text = (
                       "SHADOW ARCHIVE - YAYIN REDDEDILDI\n\n"
                       "MV JOYITA\n\n"
                       "Video yayinlanmayacak."
                   )
 
+              # ==========================================
+              # SAATI DEĞİŞTİR
+              # ==========================================
+
               elif action == "change_time":
+
                   text = (
                       "SHADOW ARCHIVE - SAAT DEGISIKLIGI\n\n"
+                      "MV JOYITA\n\n"
                       "Yeni yayin saati bekleniyor."
                   )
 
               else:
+
                   text = "Bilinmeyen islem."
+
+              # ==========================================
+              # TELEGRAM MESAJINI GÜNCELLE
+              # ==========================================
 
               if message:
 
@@ -104,6 +165,7 @@ jobs:
                   message_id = message["message_id"]
 
                   try:
+
                       result = telegram(
                           "editMessageText",
                           {
@@ -117,7 +179,12 @@ jobs:
                       print(result)
 
                   except Exception as e:
+
                       print("MESSAGE UPDATE ERROR:", e)
+
+          # ==========================================
+          # İŞLENEN TELEGRAM MESAJLARINI TEMİZLE
+          # ==========================================
 
           if last_update_id is not None:
 
@@ -130,5 +197,8 @@ jobs:
 
               print("UPDATES CONFIRMED")
 
+          print("==========================================")
           print("TELEGRAM CHECK COMPLETED")
+          print("==========================================")
+
           PY
