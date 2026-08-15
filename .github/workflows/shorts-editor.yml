@@ -28,7 +28,11 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      - name: Generate Shorts
+      - name: Generate Shorts Voice
+        run: |
+          python research/research/shorts_tts.py
+
+      - name: Generate Shorts Video
         run: |
           python research/research/shorts_editor.py
 
