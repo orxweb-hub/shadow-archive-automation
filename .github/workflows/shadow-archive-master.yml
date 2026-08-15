@@ -1,3 +1,4 @@
+```yaml
 name: Shadow Archive - Master Production
 
 on:
@@ -12,6 +13,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout Repository
         uses: actions/checkout@v4
 
@@ -21,12 +23,44 @@ jobs:
           python-version: "3.12"
 
       - name: Install Dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
 
-      - name: Start Master Production
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Web Research
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python research/research/web_research.py
+
+      - name: Generate Script
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python research/research/script_generator.py
+
+      - name: Generate Natural Voice
+        run: |
+          python research/research/tts_generator.py
+
+      - name: Check Production Files
         run: |
           echo "=========================================="
-          echo "SHADOW ARCHIVE MASTER PRODUCTION"
+          echo "MASTER FIRST STAGE COMPLETE"
           echo "=========================================="
-          echo "Master system started successfully."
+
+          echo "Research:"
+          ls -lh research/reports/
+
+          echo "Script:"
+          ls -lh research/scripts/
+
+          echo "Voice:"
+          ls -lh research/audio/
+
           echo "=========================================="
+```
