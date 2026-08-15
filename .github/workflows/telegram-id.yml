@@ -1,0 +1,33 @@
+name: Get Telegram Chat ID
+
+on:
+  workflow_dispatch:
+
+jobs:
+  get-chat-id:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get Telegram updates
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          RESPONSE=$(curl -s "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates")
+
+          echo "Telegram yanıtı:"
+          echo "$RESPONSE"
+
+          echo ""
+          echo "CHAT ID:"
+          echo "$RESPONSE" | python -c "
+          import sys, json
+          data=json.load(sys.stdin)
+          results=data.get('result', [])
+          if not results:
+              print('CHAT ID BULUNAMADI')
+          else:
+              for item in results:
+                  chat=item.get('message', {}).get('chat', {})
+                  if chat:
+                      print(chat.get('id'))
+              "
