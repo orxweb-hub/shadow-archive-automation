@@ -32,31 +32,56 @@ jobs:
         run: |
           python research/research/tts_generator.py
 
+      - name: Check Voice
+        run: |
+          ls -lh research/audio/mv_joyita_voice.wav
+          ffprobe -v error \
+            -show_entries format=duration \
+            -of default=noprint_wrappers=1:nokey=1 \
+            research/audio/mv_joyita_voice.wav
+
       - name: Check Dead Forest Music
         run: |
           test -f research/audio/dead_forest.mp3
           ls -lh research/audio/dead_forest.mp3
-
-      - name: Check Visual Clips
-        run: |
-          test -d research/video/clips
-          find research/video/clips -type f -name "*.mp4" | head -20
-
-      - name: Build Cinematic V4
-        run: |
-          python research/research/cinematic_video_editor.py
-
-      - name: Check Final Video
-        run: |
-          ls -lh research/video/shadow_archive_mv_joyita_v4.mp4
           ffprobe -v error \
             -show_entries format=duration \
             -of default=noprint_wrappers=1:nokey=1 \
-            research/video/shadow_archive_mv_joyita_v4.mp4
+            "research/audio/dead_forest.mp3"
 
-      - name: Upload Cinematic V4
+      - name: TEST - Mix Voice And Music
+        run: |
+          mkdir -p research/video/test
+
+          ffmpeg -y \
+            -i research/audio/mv_joyita_voice.wav \
+            -stream_loop -1 \
+            -i research/audio/dead_forest.mp3 \
+            -filter_complex \
+            "[0:a]volume=1.0[voice];[1:a]volume=0.16[music];[voice][music]amix=inputs=2:duration=first:dropout_transition=2" \
+            -t 10 \
+            -c:a aac \
+            -b:a 192k \
+            -ar 44100 \
+            -ac 2 \
+            research/video/test/audio_mix_test.m4a
+
+      - name: TEST - Verify Mixed Audio
+        run: |
+          ls -lh research/video/test/audio_mix_test.m4a
+
+          ffprobe -v error \
+            -show_entries format=duration \
+            -of default=noprint_wrappers=1:nokey=1 \
+            research/video/test/audio_mix_test.m4a
+
+          echo "=========================================="
+          echo "AUDIO MIX TEST PASSED"
+          echo "=========================================="
+
+      - name: Upload Audio Test
         uses: actions/upload-artifact@v4
         with:
-          name: shadow-archive-main-cinematic-v4
-          path: research/video/shadow_archive_mv_joyita_v4.mp4
-          retention-days: 7
+          name: shadow-archive-audio-mix-test
+          path: research/video/test/audio_mix_test.m4a
+          retention-days: 2
