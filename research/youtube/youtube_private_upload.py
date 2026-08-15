@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import datetime, timedelta, timezone
 
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
@@ -28,28 +29,63 @@ youtube = build(
     credentials=credentials,
 )
 
-body = {
-    "snippet": {
-        "title": "MV Joyita: The Ship That Vanished Without a Trace",
-        "description": """The MV Joyita disappeared in 1955 under mysterious circumstances.
+# ==========================================
+# TEST YAYIN ZAMANI
+# ==========================================
+# Şimdilik videoyu 10 dakika sonrasına planlıyoruz.
+# Sistem başarıyla çalıştıktan sonra bunu Telegram'dan
+# gelen gerçek yayın saatine bağlayacağız.
 
-This video explores the known facts surrounding the disappearance, the official investigation, and the unanswered questions that remain.
+publish_time = datetime.now(timezone.utc) + timedelta(minutes=10)
+
+publish_at = publish_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+# ==========================================
+# VIDEO BILGILERI
+# ==========================================
+
+title = "MV Joyita: 25 Kişi Nasıl Ortadan Kayboldu?"
+
+description = """MV Joyita, 1955 yılında Pasifik Okyanusu'nda kaybolduktan
+sonra terk edilmiş ve suyla dolmuş halde bulunan gizemli bir gemiydi.
+
+Bu videoda MV Joyita olayının kronolojisini, gemide bulunan izleri,
+resmî soruşturmayı ve bugün hâlâ cevaplanmamış soruları inceliyoruz.
 
 Shadow Archive
 Mystery • Unsolved Cases • Real Events
-""",
-        "tags": [
-            "MV Joyita",
-            "Joyita mystery",
-            "unsolved mystery",
-            "missing ship",
-            "real mystery",
-            "Shadow Archive",
-        ],
+
+Kaynaklar:
+National Library of New Zealand
+Official MV Joyita Inquiry Records
+
+#MVJoyita #Gizem #ÇözülemeyenOlaylar #GerçekOlaylar
+#GizemliOlaylar #ShadowArchive
+"""
+
+tags = [
+    "MV Joyita",
+    "MV Joyita mystery",
+    "Joyita mystery",
+    "unsolved mystery",
+    "unsolved cases",
+    "missing ship",
+    "mystery",
+    "real mystery",
+    "true mystery",
+    "Shadow Archive",
+]
+
+body = {
+    "snippet": {
+        "title": title,
+        "description": description,
+        "tags": tags,
         "categoryId": "24",
     },
     "status": {
         "privacyStatus": "private",
+        "publishAt": publish_at,
         "selfDeclaredMadeForKids": False,
     },
 }
@@ -61,7 +97,12 @@ media = MediaFileUpload(
 )
 
 print("==========================================")
-print("STARTING YOUTUBE PRIVATE UPLOAD")
+print("SHADOW ARCHIVE YOUTUBE SCHEDULED UPLOAD")
+print("==========================================")
+print("Title:", title)
+print("Scheduled UTC:", publish_at)
+print("Privacy: PRIVATE")
+print("Upload starting...")
 print("==========================================")
 
 request = youtube.videos().insert(
@@ -81,6 +122,9 @@ while response is None:
 
 print("==========================================")
 print("YOUTUBE UPLOAD SUCCESS")
+print("==========================================")
 print("Video ID:", response["id"])
-print("Privacy: PRIVATE")
+print("Title:", response["snippet"]["title"])
+print("Scheduled:", response["status"].get("publishAt"))
+print("Privacy:", response["status"]["privacyStatus"])
 print("==========================================")
