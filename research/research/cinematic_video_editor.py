@@ -3,10 +3,10 @@ import subprocess
 
 CLIPS_DIR = Path("research/video/clips")
 AUDIO_FILE = Path("research/audio/mv_joyita_voice.wav")
-MUSIC_FILE = Path("research/audio/shorts/mystery_ambient.wav")
+MUSIC_FILE = Path("research/audio/dead_forest.mp3")
 
-WORK_DIR = Path("research/video/cinematic_work_v3")
-OUTPUT_FILE = Path("research/video/shadow_archive_mv_joyita_v3.mp4")
+WORK_DIR = Path("research/video/cinematic_work_v4")
+OUTPUT_FILE = Path("research/video/shadow_archive_mv_joyita_v4.mp4")
 
 WIDTH = 1920
 HEIGHT = 1080
@@ -26,11 +26,11 @@ def get_duration(path):
             "-v", "error",
             "-show_entries", "format=duration",
             "-of", "default=noprint_wrappers=1:nokey=1",
-            str(path)
+            str(path),
         ],
         capture_output=True,
         text=True,
-        check=True
+        check=True,
     )
     return float(result.stdout.strip())
 
@@ -40,17 +40,27 @@ def main():
     if not AUDIO_FILE.exists():
         raise FileNotFoundError(f"Voice file not found: {AUDIO_FILE}")
 
+    if not MUSIC_FILE.exists():
+        raise FileNotFoundError(f"Music file not found: {MUSIC_FILE}")
+
+    if not CLIPS_DIR.exists():
+        raise FileNotFoundError(f"Clips directory not found: {CLIPS_DIR}")
+
     clips = sorted(CLIPS_DIR.glob("*.mp4"))
 
     if not clips:
-        raise FileNotFoundError("No visual clips found.")
+        raise FileNotFoundError("No Pexels video clips found.")
 
     WORK_DIR.mkdir(parents=True, exist_ok=True)
+
+    for old_file in WORK_DIR.glob("segment_*.mp4"):
+        old_file.unlink()
 
     duration = get_duration(AUDIO_FILE)
 
     print(f"Voice duration: {duration:.2f}s")
-    print(f"Visual clips: {len(clips)}")
+    print(f"Available clips: {len(clips)}")
+    print(f"Music: {MUSIC_FILE}")
 
     segment_files = []
 
@@ -61,43 +71,15 @@ def main():
         clip = clips[i % len(clips)]
         output = WORK_DIR / f"segment_{i:04d}.mp4"
 
-        mode = i % 4
-
-        if mode == 0:
-            zoom_expr = "min(zoom+0.0015,1.10)"
-            x_expr = "iw/2-(iw/zoom/2)"
-            y_expr = "ih/2-(ih/zoom/2)"
-
-        elif mode == 1:
-            zoom_expr = "min(zoom+0.0013,1.08)"
-            x_expr = "iw/2-(iw/zoom/2)+on*0.25"
-            y_expr = "ih/2-(ih/zoom/2)"
-
-        elif mode == 2:
-            zoom_expr = "min(zoom+0.0013,1.08)"
-            x_expr = "iw/2-(iw/zoom/2)-on*0.25"
-            y_expr = "ih/2-(ih/zoom/2)"
-
-        else:
-            zoom_expr = "min(zoom+0.0014,1.09)"
-            x_expr = "iw/2-(iw/zoom/2)"
-            y_expr = "ih/2-(ih/zoom/2)+on*0.18"
-
         vf = (
             f"scale={WIDTH}:{HEIGHT}:"
             "force_original_aspect_ratio=increase,"
             f"crop={WIDTH}:{HEIGHT},"
-            "zoompan="
-            f"z='{zoom_expr}':"
-            f"x='{x_expr}':"
-            f"y='{y_expr}':"
-            f"d={SEGMENT_DURATION * FPS}:"
-            f"s={WIDTH}x{HEIGHT}:"
-            f"fps={FPS},"
-            "eq=contrast=1.07:"
-            "saturation=1.06:"
-            "brightness=-0.04,"
-            "vignette"
+            "eq=contrast=1.06:"
+            "saturation=1.05:"
+            "brightness=-0.03,"
+            "vignette,"
+            "format=yuv420p"
         )
 
         run([
@@ -108,11 +90,13 @@ def main():
             "-t", str(SEGMENT_DURATION),
             "-vf", vf,
             "-an",
+            "-r", str(FPS),
             "-c:v", "libx264",
             "-preset", "veryfast",
-            "-crf", "24",
+            "-crf", "23",
             "-pix_fmt", "yuv420p",
-            str(output)
+            "-movflags", "+faststart",
+            str(output),
         ])
 
         segment_files.append(output)
@@ -133,68 +117,70 @@ def main():
         "-i", str(concat_file),
         "-t", str(duration),
         "-c", "copy",
-        str(base_video)
+        "-movflags", "+faststart",
+        str(base_video),
     ])
 
-    if MUSIC_FILE.exists():
+    print("Mixing voice + Dead Forest music...")
 
-        audio_filter = (
-            "[2:a]"
-            "volume=1.0"
-            "[voice];"
+    audio_filter = (
+        "[1:a]volume=0.16,"
+        "afade=t=in:st=0:d=4,"
+        "afade=t=out:st=1730:d=10"
+        "[music];"
+        "[2:a]volume=1.0[voice];"
+        "[voice][music]"
+        "amix=inputs=2:"
+        "duration=first:"
+        "dropout_transition=2:"
+        "normalize=0,"
+        "alimiter=limit=0.95"
+        "[audio]"
+    )
 
-            "[1:a]"
-            "volume=0.35"
-            "[music];"
+    run([
+        "ffmpeg",
+        "-y",
 
-            "[voice][music]"
-            "amix=inputs=2:"
-            "duration=first:"
-            "dropout_transition=3,"
-            "loudnorm=I=-16:"
-            "TP=-1.5:"
-            "LRA=11"
-            "[audio]"
-        )
+        "-i", str(base_video),
 
-        run([
-            "ffmpeg",
-            "-y",
-            "-i", str(base_video),
-            "-stream_loop", "-1",
-            "-i", str(MUSIC_FILE),
-            "-i", str(AUDIO_FILE),
-            "-filter_complex", audio_filter,
-            "-map", "0:v:0",
-            "-map", "[audio]",
-            "-t", str(duration),
-            "-c:v", "copy",
-            "-c:a", "aac",
-            "-b:a", "160k",
-            "-shortest",
-            str(OUTPUT_FILE)
-        ])
+        "-stream_loop", "-1",
+        "-i", str(MUSIC_FILE),
 
-    else:
+        "-i", str(AUDIO_FILE),
 
-        run([
-            "ffmpeg",
-            "-y",
-            "-i", str(base_video),
-            "-i", str(AUDIO_FILE),
-            "-map", "0:v:0",
-            "-map", "1:a:0",
-            "-t", str(duration),
-            "-c:v", "copy",
-            "-c:a", "aac",
-            "-b:a", "160k",
-            str(OUTPUT_FILE)
-        ])
+        "-filter_complex", audio_filter,
 
-    print("====================================")
-    print("CINEMATIC VIDEO V3 COMPLETE")
-    print(f"OUTPUT: {OUTPUT_FILE}")
-    print("====================================")
+        "-map", "0:v:0",
+        "-map", "[audio]",
+
+        "-t", str(duration),
+
+        "-c:v", "libx264",
+        "-preset", "veryfast",
+        "-crf", "23",
+        "-pix_fmt", "yuv420p",
+
+        "-c:a", "aac",
+        "-b:a", "192k",
+        "-ar", "44100",
+        "-ac", "2",
+
+        "-movflags", "+faststart",
+
+        str(OUTPUT_FILE),
+    ])
+
+    print("")
+    print("==========================================")
+    print("SHADOW ARCHIVE CINEMATIC V4 COMPLETE")
+    print("==========================================")
+    print(f"Output: {OUTPUT_FILE}")
+    print(f"Duration: {duration:.2f}s")
+    print("Real video motion: ENABLED")
+    print("Dead Forest music: ENABLED")
+    print("iPad compatibility: ENABLED")
+    print("==========================================")
 
 
 if __name__ == "__main__":
