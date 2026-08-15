@@ -26,10 +26,11 @@ jobs:
           import urllib.parse
           import subprocess
 
-          token = os.environ["TOKEN"]
+          TOKEN = os.environ["TOKEN"]
 
           def telegram(method, data):
-              url = f"https://api.telegram.org/bot{token}/{method}"
+              url = f"https://api.telegram.org/bot{TOKEN}/{method}"
+
               encoded = urllib.parse.urlencode(data).encode()
 
               request = urllib.request.Request(
@@ -41,18 +42,23 @@ jobs:
               with urllib.request.urlopen(request, timeout=30) as response:
                   return json.loads(response.read().decode())
 
+
           print("==========================================")
           print("SHADOW ARCHIVE TELEGRAM LISTENER")
           print("==========================================")
 
+
           updates = telegram("getUpdates", {})
+
           results = updates.get("result", [])
 
           if not results:
               print("NO NEW TELEGRAM UPDATES")
               raise SystemExit(0)
 
+
           last_update_id = None
+
 
           for update in results:
 
@@ -63,15 +69,20 @@ jobs:
               if not callback:
                   continue
 
+
               action = callback.get("data")
               callback_id = callback.get("id")
               message = callback.get("message")
 
+
               print("BUTTON CLICK DETECTED")
               print("ACTION:", action)
 
-              # Telegram butonundaki yüklenme işaretini kapat
+
+              # Telegram buton yüklenmesini kapat
+
               try:
+
                   telegram(
                       "answerCallbackQuery",
                       {
@@ -79,26 +90,67 @@ jobs:
                       }
                   )
 
-                  print("CALLBACK ANSWERED")
-
               except Exception as e:
-                  print("CALLBACK ANSWER SKIPPED:", e)
+
+                  print("CALLBACK ERROR:", e)
+
 
               # ==========================================
-              # ONAYLA
+              # KONU ONAYLANDI
               # ==========================================
 
-              if action == "approve":
+              if action == "topic_approve":
+
+                  print("TOPIC APPROVED")
 
                   text = (
-                      "SHADOW ARCHIVE - YAYIN ONAYLANDI\n\n"
-                      "MV JOYITA\n\n"
-                      "YouTube yukleme sistemi baslatiliyor...\n\n"
-                      "Video: PRIVATE"
+                      "🤖 SHADOW ARCHIVE\n\n"
+                      "✅ KONU ONAYLANDI\n\n"
+                      "Video üretim sistemi başlatılıyor...\n\n"
+                      "Araştırma → Senaryo → Ses → Görüntü → Kurgu"
                   )
 
-                  # YouTube Private Upload workflow'unu başlat
-                  print("STARTING YOUTUBE UPLOAD WORKFLOW...")
+
+                  # Burada video üretim workflow'u başlatılacak.
+                  #
+                  # Şimdilik sadece kontrol ediyoruz.
+                  #
+                  # Bir sonraki aşamada gerçek workflow
+                  # buraya bağlanacak.
+
+
+                  print(
+                      "VIDEO PRODUCTION WILL START"
+                  )
+
+
+              # ==========================================
+              # KONU REDDEDİLDİ
+              # ==========================================
+
+              elif action == "topic_reject":
+
+                  text = (
+                      "🤖 SHADOW ARCHIVE\n\n"
+                      "❌ KONU REDDEDİLDİ\n\n"
+                      "Bu konu için video oluşturulmayacak."
+                  )
+
+
+              # ==========================================
+              # YAYIN ONAYI
+              # ==========================================
+
+              elif action == "publish_approve":
+
+                  print("PUBLISH APPROVED")
+
+                  text = (
+                      "🤖 SHADOW ARCHIVE\n\n"
+                      "▶️ YAYIN ONAYLANDI\n\n"
+                      "YouTube yükleme sistemi başlatılıyor..."
+                  )
+
 
                   result = subprocess.run(
                       [
@@ -111,49 +163,63 @@ jobs:
                       text=True
                   )
 
-                  print("GH STDOUT:", result.stdout)
-                  print("GH STDERR:", result.stderr)
+
+                  print("GH STDOUT:")
+                  print(result.stdout)
+
+                  print("GH STDERR:")
+                  print(result.stderr)
+
 
                   if result.returncode == 0:
-                      print("YOUTUBE WORKFLOW STARTED")
+
+                      print(
+                          "YOUTUBE WORKFLOW STARTED"
+                      )
 
                   else:
-                      print("YOUTUBE WORKFLOW ERROR")
-                      print("Return code:", result.returncode)
 
                       text = (
-                          "SHADOW ARCHIVE - HATA\n\n"
-                          "YouTube yukleme workflow'u baslatilamadi.\n\n"
+                          "❌ YOUTUBE WORKFLOW HATASI\n\n"
                           "GitHub Actions kontrol edilmeli."
                       )
 
+
               # ==========================================
-              # REDDET
+              # YAYIN REDDİ
               # ==========================================
 
-              elif action == "reject":
+              elif action == "publish_reject":
 
                   text = (
-                      "SHADOW ARCHIVE - YAYIN REDDEDILDI\n\n"
-                      "MV JOYITA\n\n"
-                      "Video yayinlanmayacak."
+                      "🤖 SHADOW ARCHIVE\n\n"
+                      "❌ YAYIN REDDEDİLDİ\n\n"
+                      "Video yayınlanmayacak."
                   )
 
+
               # ==========================================
-              # SAATI DEĞİŞTİR
+              # SAAT DEĞİŞİKLİĞİ
               # ==========================================
 
               elif action == "change_time":
 
                   text = (
-                      "SHADOW ARCHIVE - SAAT DEGISIKLIGI\n\n"
-                      "MV JOYITA\n\n"
-                      "Yeni yayin saati bekleniyor."
+                      "🕐 SHADOW ARCHIVE\n\n"
+                      "Yeni yayın saati bekleniyor.\n\n"
+                      "Örnek:\n"
+                      "12:00\n"
+                      "20:00\n"
+                      "21:00"
                   )
+
 
               else:
 
-                  text = "Bilinmeyen islem."
+                  text = (
+                      "⚠️ Bilinmeyen Telegram işlemi."
+                  )
+
 
               # ==========================================
               # TELEGRAM MESAJINI GÜNCELLE
@@ -162,11 +228,13 @@ jobs:
               if message:
 
                   chat_id = message["chat"]["id"]
+
                   message_id = message["message_id"]
+
 
                   try:
 
-                      result = telegram(
+                      telegram(
                           "editMessageText",
                           {
                               "chat_id": chat_id,
@@ -175,15 +243,20 @@ jobs:
                           }
                       )
 
-                      print("TELEGRAM MESSAGE UPDATED")
-                      print(result)
+                      print(
+                          "TELEGRAM MESSAGE UPDATED"
+                      )
 
                   except Exception as e:
 
-                      print("MESSAGE UPDATE ERROR:", e)
+                      print(
+                          "MESSAGE UPDATE ERROR:",
+                          e
+                      )
+
 
           # ==========================================
-          # İŞLENEN TELEGRAM MESAJLARINI TEMİZLE
+          # UPDATE'LERİ TEMİZLE
           # ==========================================
 
           if last_update_id is not None:
@@ -195,7 +268,10 @@ jobs:
                   }
               )
 
-              print("UPDATES CONFIRMED")
+              print(
+                  "UPDATES CONFIRMED"
+              )
+
 
           print("==========================================")
           print("TELEGRAM CHECK COMPLETED")
