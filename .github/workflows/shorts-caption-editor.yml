@@ -1,22 +1,45 @@
-name: Shadow Archive - Shorts Caption Editor
+name: Shadow Archive - Shorts Final
 
 on:
   workflow_dispatch:
 
 jobs:
-  caption-editor:
+  shorts-final:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
       - name: Install FFmpeg
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      - name: Run Caption Editor
+      - name: Generate Shorts Voice
+        run: |
+          python research/research/shorts_tts.py
+
+      - name: Generate Shorts Video
+        run: |
+          python research/research/shorts_editor.py
+
+      - name: Generate English Subtitles
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python research/research/shorts_subtitles.py
+
+      - name: Burn English Subtitles
         run: |
           python research/research/shorts_caption_editor.py
 
