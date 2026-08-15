@@ -1,32 +1,25 @@
-import os
-import json
+üimport json
 from pathlib import Path
-
-from google import genai
 
 SELECTION_FILE = Path("research/video/shorts_selection.json")
 OUTPUT_DIR = Path("research/video/subtitles")
 
 
 def main():
-    api_key = os.environ.get("GEMINI_API_KEY")
 
-    if not api_key:
-        raise RuntimeError("GEMINI_API_KEY bulunamadı.")
+    print("=" * 60)
+    print("SHADOW ARCHIVE — ENGLISH SUBTITLES")
+    print("=" * 60)
 
     if not SELECTION_FILE.exists():
         raise FileNotFoundError(
-            "Shorts seçim dosyası bulunamadı."
+            "shorts_selection.json bulunamadı."
         )
 
     data = json.loads(
         SELECTION_FILE.read_text(
             encoding="utf-8"
         )
-    )
-
-    client = genai.Client(
-        api_key=api_key
     )
 
     OUTPUT_DIR.mkdir(
@@ -37,35 +30,21 @@ def main():
     for short in data["shorts"]:
 
         number = short["short"]
-        script = short["script"]
 
-        prompt = f"""
-You are a professional English subtitle writer.
+        # Shorts seçiminde İngilizce metin
+        # daha sonra eklenecek.
+        english = short.get(
+            "english_script",
+            ""
+        ).strip()
 
-Translate the following Turkish YouTube Shorts narration
-into natural, concise English.
+        if not english:
+            print(
+                f"Short {number}: "
+                "İngilizce metin henüz bulunmuyor."
+            )
 
-IMPORTANT:
-- Preserve the exact meaning.
-- Do not add information.
-- Do not remove important information.
-- Do not translate word-for-word if it sounds unnatural.
-- Make it sound like a professional documentary.
-- Keep sentences short enough for subtitles.
-
-TURKISH SCRIPT:
-
-{script}
-
-Return ONLY the English translation.
-"""
-
-        response = client.models.generate_content(
-            model="gemini-3.6-flash",
-            contents=prompt
-        )
-
-        english = response.text.strip()
+            continue
 
         output_file = (
             OUTPUT_DIR /
@@ -78,11 +57,12 @@ Return ONLY the English translation.
         )
 
         print(
-            f"Short {number} English subtitle hazır."
+            f"Short {number} altyazısı hazır."
         )
 
+    print()
     print("=" * 60)
-    print("ENGLISH SUBTITLE GENERATION COMPLETED")
+    print("ENGLISH SUBTITLE FILES HAZIR")
     print("=" * 60)
 
 
