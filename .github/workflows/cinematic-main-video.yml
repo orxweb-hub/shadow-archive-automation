@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   cinematic-main:
@@ -36,16 +36,10 @@ jobs:
         run: |
           python research/research/mystery_music.py
 
-      - name: Check Existing Subtitles
-        run: |
-          test -f research/video/subtitles/mv_joyita_english.srt
-          echo "Existing subtitles found."
-
-      - name: Check Existing Visual Assets
+      - name: Check Visual Clips
         run: |
           test -d research/video/clips
           find research/video/clips -type f -name "*.mp4" | head -20
-          echo "Existing visual assets found."
 
       - name: Build Cinematic V3
         run: |
@@ -54,7 +48,10 @@ jobs:
       - name: Check Final Video
         run: |
           ls -lh research/video/shadow_archive_mv_joyita_v3.mp4
-          du -h research/video/shadow_archive_mv_joyita_v3.mp4
+          ffprobe -v error \
+            -show_entries format=duration \
+            -of default=noprint_wrappers=1:nokey=1 \
+            research/video/shadow_archive_mv_joyita_v3.mp4
 
       - name: Upload Cinematic V3
         uses: actions/upload-artifact@v4
