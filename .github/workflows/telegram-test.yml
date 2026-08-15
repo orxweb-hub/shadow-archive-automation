@@ -1,14 +1,14 @@
-name: Telegram Test
+name: Telegram Approval Test
 
 on:
   workflow_dispatch:
 
 jobs:
-  send-test:
+  approval:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send Telegram message
+      - name: Send approval message
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -16,4 +16,22 @@ jobs:
           curl -s -X POST \
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${TELEGRAM_CHAT_ID}" \
-            --data-urlencode "text=🤖 Shadow Archive bağlantısı başarılı! Telegram onay sistemi hazır."
+            --data-urlencode "text=🎬 SHADOW ARCHIVE — YAYIN ONAYI
+
+MV Joyita videosu hazır.
+
+🎥 Ana video: Hazır
+📱 Short #1: Hazır
+📱 Short #2: Hazır
+🖼️ Thumbnail: Hazır
+📝 Başlık: Hazır
+📄 Açıklama: Hazır
+🏷️ Etiketler: Hazır
+
+⏰ Yayın planı:
+09:00 — Short #1
+12:00 — Ana video
+21:00 — Short #2
+
+Videoları planlanan saatlerde yayınlayalım mı?" \
+            --data-urlencode 'reply_markup={"inline_keyboard":[[{"text":"🟢 ONAYLA","callback_data":"approve"},{"text":"🔴 REDDET","callback_data":"reject"}],[{"text":"🕐 SAATİ DEĞİŞTİR","callback_data":"change_time"}]]}'
