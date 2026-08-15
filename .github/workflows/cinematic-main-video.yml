@@ -1,0 +1,60 @@
+name: Shadow Archive - Cinematic Main Video V2
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cinematic-main:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Generate Main Voice
+        run: |
+          python research/research/tts_generator.py
+
+      - name: Generate Mystery Music
+        run: |
+          python research/research/mystery_music.py
+
+      - name: Download Visual Assets
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+        run: |
+          python research/research/visual_researcher.py
+
+      - name: Build Cinematic V2
+        run: |
+          python research/research/cinematic_video_editor.py
+
+      - name: Check Output
+        run: |
+          ls -lh research/video/shadow_archive_mv_joyita_v2.mp4
+          du -h research/video/shadow_archive_mv_joyita_v2.mp4
+
+      - name: Upload Cinematic V2
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadow-archive-main-cinematic-v2
+          path: research/video/shadow_archive_mv_joyita_v2.mp4
+          retention-days: 7
