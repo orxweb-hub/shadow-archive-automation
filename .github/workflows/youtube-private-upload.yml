@@ -1,0 +1,73 @@
+name: Shadow Archive - YouTube Private Upload
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Find Latest Cinematic V4 Run
+        id: find_run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          RUN_ID=$(gh run list \
+            --workflow="cinematic-main-video-v4.yml" \
+            --status=success \
+            --limit=1 \
+            --json databaseId \
+            --jq '.[0].databaseId')
+
+          if [ -z "$RUN_ID" ]; then
+            echo "Cinematic V4 successful run not found."
+            exit 1
+          fi
+
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+          echo "Latest Cinematic V4 run: $RUN_ID"
+
+      - name: Download Final Video Artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p video
+
+          gh run download \
+            "${{ steps.find_run.outputs.run_id }}" \
+            --name shadow-archive-final-video \
+            --dir video
+
+          ls -lh video/
+
+      - name: Rename Video
+        run: |
+          mv video/shadow_archive_mv_joyita_v4.mp4 video/final.mp4
+          ls -lh video/final.mp4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install YouTube Dependencies
+        run: |
+          pip install google-api-python-client
+          pip install google-auth
+          pip install google-auth-oauthlib
+          pip install google-auth-httplib2
+
+      - name: Upload Video To YouTube
+        env:
+          YOUTUBE_OAUTH_CLIENT_JSON: ${{ secrets.YOUTUBE_OAUTH_CLIENT_JSON }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          python research/youtube/youtube_private_upload.py
