@@ -1,4 +1,4 @@
-üimport json
+import json
 from pathlib import Path
 
 SELECTION_FILE = Path("research/video/shorts_selection.json")
