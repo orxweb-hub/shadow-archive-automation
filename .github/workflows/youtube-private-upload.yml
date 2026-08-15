@@ -21,7 +21,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           RUN_ID=$(gh run list \
-            --workflow="cinematic-main-video-v4.yml" \
+            --workflow="Shadow Archive - Cinematic Main Video V4" \
             --status=success \
             --limit=1 \
             --json databaseId \
@@ -40,16 +40,15 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p video
-
           gh run download \
             "${{ steps.find_run.outputs.run_id }}" \
             --name shadow-archive-final-video \
             --dir video
-
           ls -lh video/
 
       - name: Rename Video
         run: |
+          test -f video/shadow_archive_mv_joyita_v4.mp4
           mv video/shadow_archive_mv_joyita_v4.mp4 video/final.mp4
           ls -lh video/final.mp4
 
@@ -60,10 +59,7 @@ jobs:
 
       - name: Install YouTube Dependencies
         run: |
-          pip install google-api-python-client
-          pip install google-auth
-          pip install google-auth-oauthlib
-          pip install google-auth-httplib2
+          pip install google-api-python-client google-auth google-auth-oauthlib google-auth-httplib2
 
       - name: Upload Video To YouTube
         env:
