@@ -1,4 +1,4 @@
-name: Shadow Archive - English Subtitles
+name: Shadow Archive - English Subtitles V2
 
 on:
   workflow_dispatch:
@@ -24,9 +24,12 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Whisper
+      - name: Install Translation Dependencies
         run: |
           pip install openai-whisper
+          pip install torch
+          pip install transformers
+          pip install sentencepiece
 
       - name: Check Voice
         run: |
@@ -34,26 +37,18 @@ jobs:
 
       - name: Generate English Subtitles
         run: |
-          mkdir -p research/video/subtitles
-
-          whisper research/audio/mv_joyita_voice.wav \
-            --model base \
-            --language Turkish \
-            --task translate \
-            --output_format srt \
-            --output_dir research/video/subtitles
-
-          mv research/video/subtitles/mv_joyita_voice.srt \
-             research/video/subtitles/mv_joyita_english.srt
+          python research/research/english_subtitle_generator.py
 
       - name: Check Subtitle
         run: |
-          echo "===== FIRST SUBTITLE LINES ====="
-          head -80 research/video/subtitles/mv_joyita_english.srt
+          echo "=========================================="
+          echo "FIRST SUBTITLE LINES"
+          echo "=========================================="
+          head -100 research/video/subtitles/mv_joyita_english.srt
 
       - name: Upload English Subtitle
         uses: actions/upload-artifact@v4
         with:
-          name: shadow-archive-english-subtitles
+          name: shadow-archive-english-subtitles-v2
           path: research/video/subtitles/mv_joyita_english.srt
           retention-days: 7
