@@ -512,7 +512,7 @@ def add_audio_and_subtitles(
             "[voice];"
 
             "[1:a]"
-            "volume=0.22"
+            "volume=0.35"
             "[music];"
 
             "[voice][music]"
