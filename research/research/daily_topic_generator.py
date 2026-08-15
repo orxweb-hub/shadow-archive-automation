@@ -21,7 +21,7 @@ def telegram(method, data):
     request = urllib.request.Request(
         url,
         data=encoded,
-        method="POST",
+        method="POST"
     )
 
     with urllib.request.urlopen(request, timeout=30) as response:
@@ -37,7 +37,7 @@ def generate_topic():
     prompt = """
 You are the topic director for Shadow Archive.
 
-Shadow Archive is a Turkish YouTube channel about:
+Shadow Archive is a Turkish YouTube channel focused on:
 
 - mysterious real events
 - unsolved cases
@@ -51,17 +51,12 @@ Shadow Archive is a Turkish YouTube channel about:
 
 Generate ONE strong video topic.
 
-IMPORTANT:
-
-Do NOT choose a topic that was already used.
-
-Prefer topics with:
-- real historical evidence
-- reliable sources
-- strong mystery
-- enough material for a 15+ minute video
-- high curiosity potential
-- no fabricated claims
+The topic must:
+- be based on real events
+- have enough reliable information for a 15+ minute video
+- have strong curiosity potential
+- avoid fabricated claims
+- avoid repeating common topics when possible
 
 Return ONLY valid JSON.
 
@@ -89,16 +84,18 @@ Required format:
   ]
 }
 
+The title should be highly clickable without misleading clickbait.
+
 The description must be suitable for YouTube.
 
-The hashtags must be relevant to the exact topic.
+The hashtags must be directly related to the topic.
 
-Do not use generic spam hashtags.
+Do not use spam hashtags.
 """
 
     response = client.models.generate_content(
         model=MODEL,
-        contents=prompt,
+        contents=prompt
     )
 
     text = response.text.strip()
@@ -153,11 +150,11 @@ def send_telegram(data):
             [
                 {
                     "text": "✅ ONAYLA",
-                    "callback_data": "approve"
+                    "callback_data": "topic_approve"
                 },
                 {
                     "text": "❌ REDDET",
-                    "callback_data": "reject"
+                    "callback_data": "topic_reject"
                 }
             ],
             [
@@ -174,12 +171,12 @@ def send_telegram(data):
         {
             "chat_id": TELEGRAM_CHAT_ID,
             "text": message,
-            "reply_markup": json.dumps(keyboard),
+            "reply_markup": json.dumps(keyboard)
         }
     )
 
     print("==========================================")
-    print("TELEGRAM TOPIC SENT")
+    print("SHADOW ARCHIVE TOPIC SENT")
     print("==========================================")
     print("Topic:", data["topic"])
     print("Title:", data["title"])
@@ -189,7 +186,7 @@ def send_telegram(data):
 def main():
 
     print("==========================================")
-    print("SHADOW ARCHIVE DAILY TOPIC")
+    print("SHADOW ARCHIVE DAILY TOPIC SYSTEM")
     print("==========================================")
 
     data = generate_topic()
