@@ -1,0 +1,30 @@
+name: Telegram Approval Listener
+
+on: workflow_dispatch
+
+jobs:
+  listen:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Read Telegram button
+        env:
+          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          RESPONSE=$(curl -s "https://api.telegram.org/bot${TOKEN}/getUpdates")
+
+          echo "$RESPONSE"
+
+          if echo "$RESPONSE" | grep -q '"callback_query"'; then
+            echo "BUTTON CLICK DETECTED"
+
+            if echo "$RESPONSE" | grep -q '"approve"'; then
+              echo "APPROVAL RECEIVED"
+            elif echo "$RESPONSE" | grep -q '"reject"'; then
+              echo "REJECTION RECEIVED"
+            elif echo "$RESPONSE" | grep -q '"change_time"'; then
+              echo "TIME CHANGE REQUESTED"
+            fi
+          else
+            echo "NO BUTTON CLICK FOUND"
+          fi
