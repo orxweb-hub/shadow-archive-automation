@@ -52,7 +52,6 @@ jobs:
       - name: TEST - Mix Voice And Music
         run: |
           mkdir -p research/video/test
-
           ffmpeg -y \
             -i research/audio/mv_joyita_voice.wav \
             -stream_loop -1 \
@@ -69,15 +68,25 @@ jobs:
       - name: TEST - Verify Mixed Audio
         run: |
           ls -lh research/video/test/audio_mix_test.m4a
-
           ffprobe -v error \
             -show_entries format=duration \
             -of default=noprint_wrappers=1:nokey=1 \
             research/video/test/audio_mix_test.m4a
-
           echo "=========================================="
           echo "AUDIO MIX TEST PASSED"
           echo "=========================================="
+
+      - name: Generate Cinematic Main Video
+        run: |
+          python research/research/cinematic_video_editor.py
+
+      - name: Check Final Video
+        run: |
+          ls -lh research/video/shadow_archive_mv_joyita_v4.mp4
+          ffprobe -v error \
+            -show_entries format=duration,size \
+            -of default=noprint_wrappers=1 \
+            research/video/shadow_archive_mv_joyita_v4.mp4
 
       - name: Upload Audio Test
         uses: actions/upload-artifact@v4
@@ -85,3 +94,10 @@ jobs:
           name: shadow-archive-audio-mix-test
           path: research/video/test/audio_mix_test.m4a
           retention-days: 2
+
+      - name: Upload Final Video
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadow-archive-final-video
+          path: research/video/shadow_archive_mv_joyita_v4.mp4
+          retention-days: 7
