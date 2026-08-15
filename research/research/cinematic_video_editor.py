@@ -1,9 +1,7 @@
-import json
 import subprocess
 from pathlib import Path
 
 
-ASSETS_FILE = Path("research/video/visual_assets.json")
 CLIPS_DIR = Path("research/video/clips")
 AUDIO_FILE = Path("research/audio/mv_joyita_voice.wav")
 MUSIC_FILE = Path("research/audio/shorts/mystery_ambient.wav")
@@ -42,15 +40,17 @@ def get_audio_duration():
 
 
 def create_segment(input_file, output_file, duration, index):
-    # Her sahnede hafif farklı kamera hareketi.
+
     if index % 3 == 0:
         zoom = "min(zoom+0.0007,1.10)"
         x = "iw/2-(iw/zoom/2)"
         y = "ih/2-(ih/zoom/2)"
+
     elif index % 3 == 1:
         zoom = "min(zoom+0.0005,1.08)"
         x = "iw/2-(iw/zoom/2)+sin(on/18)*25"
         y = "ih/2-(ih/zoom/2)"
+
     else:
         zoom = "min(zoom+0.0006,1.09)"
         x = "iw/2-(iw/zoom/2)"
@@ -95,6 +95,7 @@ def create_segment(input_file, output_file, duration, index):
 
 
 def create_segments(duration):
+
     clips = sorted(
         CLIPS_DIR.glob("*.mp4")
     )
@@ -110,6 +111,7 @@ def create_segments(duration):
     segments = []
 
     for index in range(count):
+
         clip = clips[index % len(clips)]
 
         output = (
@@ -121,7 +123,7 @@ def create_segments(duration):
             clip,
             output,
             segment_duration,
-            index,
+            index
         )
 
         segments.append(output)
@@ -130,12 +132,14 @@ def create_segments(duration):
 
 
 def create_concat_file(segments):
+
     concat_file = WORK_DIR / "concat.txt"
 
     with concat_file.open(
         "w",
         encoding="utf-8"
     ) as f:
+
         for segment in segments:
             f.write(
                 f"file '{segment.resolve()}'\n"
@@ -145,7 +149,10 @@ def create_concat_file(segments):
 
 
 def build_video(concat_file, duration):
+
     base_video = WORK_DIR / "base_video.mp4"
+
+    print("Video birleştiriliyor...")
 
     run(
         [
@@ -172,12 +179,16 @@ def build_video(concat_file, duration):
         ]
     )
 
-    # Gizemli atmosfer müziği mevcutsa kullan.
+    print("Ses ve gizemli müzik ekleniyor...")
+
     if MUSIC_FILE.exists():
+
         run(
             [
                 "ffmpeg",
                 "-y",
+                "-i",
+                str(base_video),
                 "-stream_loop",
                 "-1",
                 "-i",
@@ -186,7 +197,7 @@ def build_video(concat_file, duration):
                 str(AUDIO_FILE),
                 "-filter_complex",
                 (
-                    "[0:a]volume=1.0[voice];"
+                    "[2:a]volume=1.0[voice];"
                     "[1:a]volume=0.055[music];"
                     "[voice][music]"
                     "amix=inputs=2:"
@@ -210,7 +221,14 @@ def build_video(concat_file, duration):
                 str(OUTPUT_FILE),
             ]
         )
+
     else:
+
+        print(
+            "Müzik bulunamadı. "
+            "Sadece anlatıcı kullanılacak."
+        )
+
         run(
             [
                 "ffmpeg",
@@ -238,13 +256,14 @@ def build_video(concat_file, duration):
 
 
 def main():
+
     print("=" * 70)
     print("SHADOW ARCHIVE — CINEMATIC VIDEO EDITOR V2")
     print("=" * 70)
 
-    if not ASSETS_FILE.exists():
+    if not CLIPS_DIR.exists():
         raise RuntimeError(
-            "visual_assets.json bulunamadı."
+            "Video klip klasörü bulunamadı."
         )
 
     if not AUDIO_FILE.exists():
@@ -257,10 +276,15 @@ def main():
         exist_ok=True
     )
 
+    OUTPUT_FILE.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
     duration = get_audio_duration()
 
     print(
-        f"Ses süresi: {duration / 60:.2f} dakika"
+        f"Video süresi: {duration / 60:.2f} dakika"
     )
 
     segments = create_segments(
