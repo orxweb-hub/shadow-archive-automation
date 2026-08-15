@@ -37,6 +37,10 @@ def get_duration(path):
 
 def main():
 
+    print("==========================================")
+    print("SHADOW ARCHIVE CINEMATIC V4")
+    print("==========================================")
+
     if not AUDIO_FILE.exists():
         raise FileNotFoundError(f"Voice file not found: {AUDIO_FILE}")
 
@@ -60,16 +64,24 @@ def main():
 
     print(f"Voice duration: {duration:.2f}s")
     print(f"Available clips: {len(clips)}")
-    print(f"Music: {MUSIC_FILE}")
+    print(f"Music file: {MUSIC_FILE}")
 
     segment_files = []
 
     total_segments = int(duration / SEGMENT_DURATION) + 1
 
+    # --------------------------------------------------
+    # 1. CREATE MOVING VIDEO SEGMENTS
+    # --------------------------------------------------
+
     for i in range(total_segments):
 
         clip = clips[i % len(clips)]
         output = WORK_DIR / f"segment_{i:04d}.mp4"
+
+        print("")
+        print(f"Creating segment {i + 1}/{total_segments}")
+        print(f"Source: {clip}")
 
         vf = (
             f"scale={WIDTH}:{HEIGHT}:"
@@ -101,6 +113,10 @@ def main():
 
         segment_files.append(output)
 
+    # --------------------------------------------------
+    # 2. CONCAT VIDEO
+    # --------------------------------------------------
+
     concat_file = WORK_DIR / "concat.txt"
 
     with open(concat_file, "w", encoding="utf-8") as f:
@@ -108,6 +124,9 @@ def main():
             f.write(f"file '{segment.resolve()}'\n")
 
     base_video = WORK_DIR / "base_video.mp4"
+
+    print("")
+    print("Joining video segments...")
 
     run([
         "ffmpeg",
@@ -121,16 +140,25 @@ def main():
         str(base_video),
     ])
 
-    print("Mixing voice + Dead Forest music...")
+    # --------------------------------------------------
+    # 3. MIX VOICE + DEAD FOREST
+    # --------------------------------------------------
+
+    print("")
+    print("Mixing Turkish voice + Dead Forest music...")
 
     audio_filter = (
-        "[1:a]volume=0.16,"
+        "[1:a]"
+        "volume=0.16,"
         "afade=t=in:st=0:d=4,"
         "afade=t=out:st=1730:d=10"
         "[music];"
-        "[2:a]volume=1.0[voice];"
+        "[2:a]"
+        "volume=1.0"
+        "[voice];"
         "[voice][music]"
-        "amix=inputs=2:"
+        "amix="
+        "inputs=2:"
         "duration=first:"
         "dropout_transition=2:"
         "normalize=0,"
@@ -156,11 +184,10 @@ def main():
 
         "-t", str(duration),
 
-        "-c:v", "libx264",
-        "-preset", "veryfast",
-        "-crf", "23",
-        "-pix_fmt", "yuv420p",
+        # Video tekrar encode edilmiyor
+        "-c:v", "copy",
 
+        # Ses AAC olarak YouTube/iPad uyumlu
         "-c:a", "aac",
         "-b:a", "192k",
         "-ar", "44100",
@@ -171,15 +198,34 @@ def main():
         str(OUTPUT_FILE),
     ])
 
+    # --------------------------------------------------
+    # 4. FINAL CHECK
+    # --------------------------------------------------
+
+    print("")
+    print("Checking final video...")
+
+    run([
+        "ffprobe",
+        "-v", "error",
+        "-show_entries",
+        "format=duration,size",
+        "-of",
+        "default=noprint_wrappers=1",
+        str(OUTPUT_FILE),
+    ])
+
     print("")
     print("==========================================")
     print("SHADOW ARCHIVE CINEMATIC V4 COMPLETE")
     print("==========================================")
     print(f"Output: {OUTPUT_FILE}")
     print(f"Duration: {duration:.2f}s")
-    print("Real video motion: ENABLED")
+    print("Real Pexels motion: ENABLED")
     print("Dead Forest music: ENABLED")
+    print("Turkish voice: ENABLED")
     print("iPad compatibility: ENABLED")
+    print("YouTube compatibility: ENABLED")
     print("==========================================")
 
 
