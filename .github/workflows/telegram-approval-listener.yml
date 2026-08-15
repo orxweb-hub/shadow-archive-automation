@@ -1,30 +1,121 @@
 name: Telegram Approval Listener
 
-on: workflow_dispatch
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/5 * * * *"
 
 jobs:
   listen:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Read Telegram button
+      - name: Check Telegram
         env:
           TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
-          RESPONSE=$(curl -s "https://api.telegram.org/bot${TOKEN}/getUpdates")
+          python - <<'PY'
+          import os
+          import json
+          import urllib.request
+          import urllib.parse
 
-          echo "$RESPONSE"
+          token = os.environ["TOKEN"]
 
-          if echo "$RESPONSE" | grep -q '"callback_query"'; then
-            echo "BUTTON CLICK DETECTED"
+          url = f"https://api.telegram.org/bot{token}/getUpdates"
 
-            if echo "$RESPONSE" | grep -q '"approve"'; then
-              echo "APPROVAL RECEIVED"
-            elif echo "$RESPONSE" | grep -q '"reject"'; then
-              echo "REJECTION RECEIVED"
-            elif echo "$RESPONSE" | grep -q '"change_time"'; then
-              echo "TIME CHANGE REQUESTED"
-            fi
-          else
-            echo "NO BUTTON CLICK FOUND"
-          fi
+          with urllib.request.urlopen(url, timeout=30) as response:
+              data = json.loads(response.read().decode())
+
+          results = data.get("result", [])
+
+          if not results:
+              print("NO NEW TELEGRAM UPDATES")
+              raise SystemExit(0)
+
+          last_update_id = None
+
+          for update in results:
+              last_update_id = update["update_id"]
+
+              callback = update.get("callback_query")
+
+              if not callback:
+                  continue
+
+              callback_id = callback["id"]
+              action = callback.get("data")
+              message = callback.get("message")
+
+              print("BUTTON CLICK DETECTED")
+              print("ACTION:", action)
+
+              if action == "approve":
+                  text = "SHADOW ARCHIVE - YAYIN ONAYLANDI\n\nMV JOYITA\n\nYayin sistemi baslatilacak."
+
+              elif action == "reject":
+                  text = "SHADOW ARCHIVE - YAYIN REDDEDILDI\n\nMV JOYITA\n\nVideo yayinlanmayacak."
+
+              elif action == "change_time":
+                  text = "SHADOW ARCHIVE - SAAT DEGISIKLIGI\n\nYeni yayin saati bekleniyor."
+
+              else:
+                  text = "Bilinmeyen islem."
+
+              # Telegram'a buton cevabi
+              answer_url = f"https://api.telegram.org/bot{token}/answerCallbackQuery"
+
+              answer_data = urllib.parse.urlencode({
+                  "callback_query_id": callback_id
+              }).encode()
+
+              urllib.request.urlopen(
+                  urllib.request.Request(
+                      answer_url,
+                      data=answer_data,
+                      method="POST"
+                  ),
+                  timeout=30
+              )
+
+              # Mesaji guncelle
+              if message:
+                  chat_id = message["chat"]["id"]
+                  message_id = message["message_id"]
+
+                  edit_url = f"https://api.telegram.org/bot{token}/editMessageText"
+
+                  edit_data = urllib.parse.urlencode({
+                      "chat_id": chat_id,
+                      "message_id": message_id,
+                      "text": text
+                  }).encode()
+
+                  urllib.request.urlopen(
+                      urllib.request.Request(
+                          edit_url,
+                          data=edit_data,
+                          method="POST"
+                      ),
+                      timeout=30
+                  )
+
+          # Islenen update'leri Telegram'dan onayla
+          if last_update_id is not None:
+              confirm_url = f"https://api.telegram.org/bot{token}/getUpdates"
+
+              confirm_data = urllib.parse.urlencode({
+                  "offset": last_update_id + 1
+              }).encode()
+
+              urllib.request.urlopen(
+                  urllib.request.Request(
+                      confirm_url,
+                      data=confirm_data,
+                      method="POST"
+                  ),
+                  timeout=30
+              )
+
+          print("TELEGRAM CHECK COMPLETED")
+          PY
