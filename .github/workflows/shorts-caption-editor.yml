@@ -1,0 +1,32 @@
+name: Shadow Archive - Shorts Caption Editor
+
+on:
+  workflow_dispatch:
+
+jobs:
+  caption-editor:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Run Caption Editor
+        run: |
+          python research/research/shorts_caption_editor.py
+
+      - name: Check Final Shorts
+        run: |
+          ls -lh research/video/shorts_final/
+
+      - name: Upload Final Shorts
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadow-archive-shorts-final
+          path: research/video/shorts_final/shadow_archive_short_*_final.mp4
+          retention-days: 7
