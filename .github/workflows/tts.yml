@@ -19,32 +19,38 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: |
           pip install -r requirements.txt
 
-      - name: Generate WAV voice
-        run: |
-          python research/research/tts_generator.py
-
-      - name: Convert WAV to MP3
+      - name: Install FFmpeg
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
+
+      - name: Generate Natural V3 Voice
+        run: |
+          python research/research/tts_generator.py
+
+      - name: Check Audio
+        run: |
+          ls -lh research/audio/
+          ffprobe -v error \
+            -show_entries format=duration \
+            -of default=noprint_wrappers=1:nokey=1 \
+            research/audio/mv_joyita_voice.wav
+
+      - name: Convert WAV to MP3
+        run: |
           ffmpeg -y \
             -i research/audio/mv_joyita_voice.wav \
             -codec:a libmp3lame \
             -b:a 96k \
             research/audio/mv_joyita_voice.mp3
 
-      - name: Check audio
-        run: |
-          ls -lh research/audio/
-          du -h research/audio/mv_joyita_voice.mp3
-
       - name: Upload MP3
         uses: actions/upload-artifact@v4
         with:
-          name: shadow-archive-voice-test
+          name: shadow-archive-voice-v3
           path: research/audio/mv_joyita_voice.mp3
           retention-days: 7
