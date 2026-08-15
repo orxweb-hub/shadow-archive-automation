@@ -1,4 +1,4 @@
-name: Shadow Archive - Cinematic Main Video V3
+name: Shadow Archive - Cinematic Main Video V4
 
 on:
   workflow_dispatch:
@@ -28,34 +28,35 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      - name: Generate Natural V3 Voice
+      - name: Generate Natural Voice
         run: |
           python research/research/tts_generator.py
 
-      - name: Generate Mystery Music
+      - name: Check Dead Forest Music
         run: |
-          python research/research/mystery_music.py
+          test -f research/audio/dead_forest.mp3
+          ls -lh research/audio/dead_forest.mp3
 
       - name: Check Visual Clips
         run: |
           test -d research/video/clips
           find research/video/clips -type f -name "*.mp4" | head -20
 
-      - name: Build Cinematic V3
+      - name: Build Cinematic V4
         run: |
           python research/research/cinematic_video_editor.py
 
       - name: Check Final Video
         run: |
-          ls -lh research/video/shadow_archive_mv_joyita_v3.mp4
+          ls -lh research/video/shadow_archive_mv_joyita_v4.mp4
           ffprobe -v error \
             -show_entries format=duration \
             -of default=noprint_wrappers=1:nokey=1 \
-            research/video/shadow_archive_mv_joyita_v3.mp4
+            research/video/shadow_archive_mv_joyita_v4.mp4
 
-      - name: Upload Cinematic V3
+      - name: Upload Cinematic V4
         uses: actions/upload-artifact@v4
         with:
-          name: shadow-archive-main-cinematic-v3
-          path: research/video/shadow_archive_mv_joyita_v3.mp4
+          name: shadow-archive-main-cinematic-v4
+          path: research/video/shadow_archive_mv_joyita_v4.mp4
           retention-days: 7
