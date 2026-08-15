@@ -1,0 +1,59 @@
+name: Shadow Archive - English Subtitles
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  subtitles:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Whisper
+        run: |
+          pip install openai-whisper
+
+      - name: Check Voice
+        run: |
+          ls -lh research/audio/mv_joyita_voice.wav
+
+      - name: Generate English Subtitles
+        run: |
+          mkdir -p research/video/subtitles
+
+          whisper research/audio/mv_joyita_voice.wav \
+            --model base \
+            --language Turkish \
+            --task translate \
+            --output_format srt \
+            --output_dir research/video/subtitles
+
+          mv research/video/subtitles/mv_joyita_voice.srt \
+             research/video/subtitles/mv_joyita_english.srt
+
+      - name: Check Subtitle
+        run: |
+          echo "===== FIRST SUBTITLE LINES ====="
+          head -80 research/video/subtitles/mv_joyita_english.srt
+
+      - name: Upload English Subtitle
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadow-archive-english-subtitles
+          path: research/video/subtitles/mv_joyita_english.srt
+          retention-days: 7
