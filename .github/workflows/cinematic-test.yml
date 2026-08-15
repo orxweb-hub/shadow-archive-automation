@@ -1,0 +1,37 @@
+name: Shadow Archive - Cinematic Engine Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cinematic-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Run Cinematic Engine
+        run: |
+          python research/research/cinematic_engine.py
+
+      - name: Check Output
+        run: |
+          ls -lh research/video/cinematic_test/
+
+      - name: Upload Cinematic Test
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadow-archive-cinematic-test
+          path: research/video/cinematic_test/*.mp4
+          retention-days: 7
