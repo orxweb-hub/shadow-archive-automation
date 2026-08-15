@@ -19,16 +19,27 @@ jobs:
           import json
           import urllib.request
           import urllib.parse
-          import urllib.error
 
           token = os.environ["TOKEN"]
 
-          url = f"https://api.telegram.org/bot{token}/getUpdates"
+          def telegram(method, data):
+              url = f"https://api.telegram.org/bot{token}/{method}"
+              encoded = urllib.parse.urlencode(data).encode()
 
-          with urllib.request.urlopen(url, timeout=30) as response:
-              data = json.loads(response.read().decode())
+              request = urllib.request.Request(
+                  url,
+                  data=encoded,
+                  method="POST"
+              )
 
-          results = data.get("result", [])
+              with urllib.request.urlopen(request, timeout=30) as response:
+                  return json.loads(response.read().decode())
+
+          print("Telegram kontrol ediliyor...")
+
+          updates = telegram("getUpdates", {})
+
+          results = updates.get("result", [])
 
           if not results:
               print("NO NEW TELEGRAM UPDATES")
@@ -37,6 +48,7 @@ jobs:
           last_update_id = None
 
           for update in results:
+
               last_update_id = update["update_id"]
 
               callback = update.get("callback_query")
@@ -44,87 +56,79 @@ jobs:
               if not callback:
                   continue
 
-              callback_id = callback["id"]
               action = callback.get("data")
+              callback_id = callback.get("id")
               message = callback.get("message")
 
               print("BUTTON CLICK DETECTED")
               print("ACTION:", action)
 
+              # Buton yüklenmesini kapat
+              try:
+                  telegram(
+                      "answerCallbackQuery",
+                      {
+                          "callback_query_id": callback_id
+                      }
+                  )
+                  print("CALLBACK ANSWERED")
+              except Exception as e:
+                  print("CALLBACK ANSWER SKIPPED:", e)
+
               if action == "approve":
-                  text = "SHADOW ARCHIVE - YAYIN ONAYLANDI\n\nMV JOYITA\n\nYayin sistemi baslatilacak."
+                  text = (
+                      "SHADOW ARCHIVE - YAYIN ONAYLANDI\n\n"
+                      "MV JOYITA\n\n"
+                      "Yayin sistemi baslatilacak."
+                  )
 
               elif action == "reject":
-                  text = "SHADOW ARCHIVE - YAYIN REDDEDILDI\n\nMV JOYITA\n\nVideo yayinlanmayacak."
+                  text = (
+                      "SHADOW ARCHIVE - YAYIN REDDEDILDI\n\n"
+                      "MV JOYITA\n\n"
+                      "Video yayinlanmayacak."
+                  )
 
               elif action == "change_time":
-                  text = "SHADOW ARCHIVE - SAAT DEGISIKLIGI\n\nYeni yayin saati bekleniyor."
+                  text = (
+                      "SHADOW ARCHIVE - SAAT DEGISIKLIGI\n\n"
+                      "Yeni yayin saati bekleniyor."
+                  )
 
               else:
                   text = "Bilinmeyen islem."
 
-              answer_url = f"https://api.telegram.org/bot{token}/answerCallbackQuery"
-
-              answer_data = urllib.parse.urlencode({
-                  "callback_query_id": callback_id
-              }).encode()
-
-              urllib.request.urlopen(
-                  urllib.request.Request(
-                      answer_url,
-                      data=answer_data,
-                      method="POST"
-                  ),
-                  timeout=30
-              )
-
               if message:
+
                   chat_id = message["chat"]["id"]
                   message_id = message["message_id"]
 
-                  edit_url = f"https://api.telegram.org/bot{token}/editMessageText"
-
-                  edit_data = urllib.parse.urlencode({
-                      "chat_id": chat_id,
-                      "message_id": message_id,
-                      "text": text,
-                      "reply_markup": json.dumps({
-                          "inline_keyboard": []
-                      })
-                  }).encode()
-
                   try:
-                      urllib.request.urlopen(
-                          urllib.request.Request(
-                              edit_url,
-                              data=edit_data,
-                              method="POST"
-                          ),
-                          timeout=30
+                      result = telegram(
+                          "editMessageText",
+                          {
+                              "chat_id": chat_id,
+                              "message_id": message_id,
+                              "text": text
+                          }
                       )
 
                       print("TELEGRAM MESSAGE UPDATED")
+                      print(result)
 
-                  except urllib.error.HTTPError as error:
-                      error_body = error.read().decode()
-                      print("TELEGRAM ERROR:", error_body)
-                      raise
+                  except Exception as e:
+                      print("MESSAGE UPDATE ERROR:", e)
 
           if last_update_id is not None:
-              confirm_url = f"https://api.telegram.org/bot{token}/getUpdates"
 
-              confirm_data = urllib.parse.urlencode({
-                  "offset": last_update_id + 1
-              }).encode()
-
-              urllib.request.urlopen(
-                  urllib.request.Request(
-                      confirm_url,
-                      data=confirm_data,
-                      method="POST"
-                  ),
-                  timeout=30
+              telegram(
+                  "getUpdates",
+                  {
+                      "offset": last_update_id + 1
+                  }
               )
+
+              print("UPDATES CONFIRMED")
 
           print("TELEGRAM CHECK COMPLETED")
           PY
