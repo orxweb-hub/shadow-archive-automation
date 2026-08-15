@@ -1,11 +1,13 @@
-import os
 import json
+import os
 from pathlib import Path
 
 from google import genai
 
 SCRIPT_FILE = Path("research/scripts/mv_joyita_script.txt")
 OUTPUT_FILE = Path("research/video/shorts_selection.json")
+
+MODEL = "gemini-3.6-flash"
 
 
 def main():
@@ -15,66 +17,75 @@ def main():
         raise RuntimeError("GEMINI_API_KEY bulunamadı.")
 
     if not SCRIPT_FILE.exists():
-        raise FileNotFoundError("MV Joyita senaryosu bulunamadı.")
+        raise FileNotFoundError(
+            f"Script bulunamadı: {SCRIPT_FILE}"
+        )
 
-    script = SCRIPT_FILE.read_text(encoding="utf-8")
+    script = SCRIPT_FILE.read_text(
+        encoding="utf-8"
+    )
 
-    client = genai.Client(api_key=api_key)
+    client = genai.Client(
+        api_key=api_key
+    )
 
     prompt = f"""
-You are a professional YouTube Shorts editor.
+You are selecting two YouTube Shorts from a serious
+documentary script.
 
-Channel:
-Shadow Archive
-
-Topic:
-MV Joyita
-
-MAIN DOCUMENTARY SCRIPT:
+MAIN SCRIPT:
 {script}
 
-Select exactly 2 sections that would work best as YouTube Shorts.
+Create EXACTLY 2 Shorts.
 
-Each Short must:
-- Be approximately 30–60 seconds when narrated.
-- Start with a strong curiosity hook.
-- Contain a surprising or mysterious fact.
-- End with an unanswered question or curiosity gap.
-- Be based ONLY on the script.
-- Never invent facts.
-- Never invent dialogue.
-- Never exaggerate facts.
-- Avoid repeating the same information in both Shorts.
+Rules for each Short:
+- 30–60 seconds when narrated naturally
+- Strong first sentence / hook
+- Based ONLY on facts in the script
+- No invented facts
+- No fake dialogue
+- No exaggerated false claims
+- Must create curiosity
+- Must end with an unresolved question, mystery,
+  or reason to continue watching
+- Turkish narration
+- Natural spoken Turkish
+- Suitable for Shadow Archive
+- Serious documentary tone
 
-Return ONLY valid JSON in this format:
+Also create an English subtitle version of the
+EXACT SAME narration.
+
+The English version must:
+- Preserve the meaning
+- Sound natural to a native English speaker
+- Not be a literal word-for-word translation
+- Contain no extra facts
+
+Return ONLY valid JSON in this exact structure:
 
 {{
   "shorts": [
     {{
       "short": 1,
-      "title": "",
-      "hook": "",
-      "script": "",
-      "reason": ""
+      "title": "Turkish title",
+      "narration": "Turkish narration",
+      "english_script": "Natural English subtitle text"
     }},
     {{
       "short": 2,
-      "title": "",
-      "hook": "",
-      "script": "",
-      "reason": ""
+      "title": "Turkish title",
+      "narration": "Turkish narration",
+      "english_script": "Natural English subtitle text"
     }}
   ]
 }}
-
-The scripts should be natural Turkish narration.
-Do not include timestamps.
-Do not include camera directions.
-Do not include editing instructions.
 """
 
+    print("Gemini Shorts seçimini yapıyor...")
+
     response = client.models.generate_content(
-        model="gemini-3.6-flash",
+        model=MODEL,
         contents=prompt
     )
 
@@ -86,6 +97,16 @@ Do not include editing instructions.
         text = text.strip()
 
     data = json.loads(text)
+
+    if "shorts" not in data:
+        raise ValueError(
+            "Gemini çıktısında 'shorts' bulunamadı."
+        )
+
+    if len(data["shorts"]) != 2:
+        raise ValueError(
+            "Tam olarak 2 Shorts üretilmeliydi."
+        )
 
     OUTPUT_FILE.parent.mkdir(
         parents=True,
@@ -101,19 +122,12 @@ Do not include editing instructions.
         encoding="utf-8"
     )
 
-    print("=" * 60)
-    print("SHORTS SELECTION TAMAMLANDI")
-    print("=" * 60)
-
-    for short in data["shorts"]:
-        print()
-        print("SHORT:", short["short"])
-        print("TITLE:", short["title"])
-        print("HOOK:", short["hook"])
-        print("SCRIPT:", short["script"][:300], "...")
-
     print()
-    print(f"Dosya: {OUTPUT_FILE}")
+    print("2 Shorts başarıyla hazırlandı.")
+    print()
+    print(
+        OUTPUT_FILE
+    )
 
 
 if __name__ == "__main__":
