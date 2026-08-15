@@ -7,35 +7,11 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Send Telegram Approval
+      - name: Send Telegram
         env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          MESSAGE=$(cat <<'EOF'
-SHADOW ARCHIVE - YAYIN ONAYI
-
-MV JOYITA
-
-ANA VIDEO: HAZIR
-SHORT 1: HAZIR
-SHORT 2: HAZIR
-THUMBNAIL: HAZIR
-BASLIK: HAZIR
-ACIKLAMA: HAZIR
-ETIKETLER: HAZIR
-
-YAYIN PLANI
-
-09:00 - SHORT 1
-12:00 - ANA VIDEO
-21:00 - SHORT 2
-
-Bu icerikleri planlanan saatlerde yayinlamak icin onay bekleniyor.
-EOF
-)
-
-          curl -s -X POST \
-            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d "chat_id=${TELEGRAM_CHAT_ID}" \
-            --data-urlencode "text=${MESSAGE}"
+          curl -s -X POST "https://api.telegram.org/bot${TOKEN}/sendMessage" \
+            -d "chat_id=${CHAT_ID}" \
+            --data-urlencode "text=SHADOW ARCHIVE YAYIN ONAYI - MV JOYITA - ANA VIDEO HAZIR - SHORT 1 HAZIR - SHORT 2 HAZIR - THUMBNAIL HAZIR - BASLIK HAZIR - ACIKLAMA HAZIR - ETIKETLER HAZIR - YAYIN SAATLERI 09:00 SHORT 1 / 12:00 ANA VIDEO / 21:00 SHORT 2 - YAYIN ICIN ONAY BEKLENIYOR"
