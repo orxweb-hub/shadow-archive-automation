@@ -1,0 +1,41 @@
+name: Shadow Archive - Music Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  music-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate Music
+        run: |
+          python research/research/mystery_music.py
+
+      - name: Install FFmpeg
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Convert Music to MP3
+        run: |
+          ffmpeg -y \
+            -i research/audio/shorts/mystery_ambient.wav \
+            -codec:a libmp3lame \
+            -b:a 192k \
+            research/audio/shorts/mystery_ambient_test.mp3
+
+      - name: Upload Music Test
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadow-archive-music-test
+          path: research/audio/shorts/mystery_ambient_test.mp3
+          retention-days: 7
