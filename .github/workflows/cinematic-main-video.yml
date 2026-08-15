@@ -36,18 +36,16 @@ jobs:
         run: |
           python research/research/mystery_music.py
 
-      - name: Generate English Subtitles
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      - name: Check Existing Subtitles
         run: |
-          python research/research/main_subtitles.py
+          test -f research/video/subtitles/mv_joyita_english.srt
+          echo "Existing subtitles found."
 
-      - name: Download Visual Assets
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+      - name: Check Existing Visual Assets
         run: |
-          python research/research/visual_researcher.py
+          test -d research/video/clips
+          find research/video/clips -type f -name "*.mp4" | head -20
+          echo "Existing visual assets found."
 
       - name: Build Cinematic V3
         run: |
