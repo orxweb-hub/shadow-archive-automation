@@ -33,7 +33,7 @@ jobs:
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
-          python research/research/web_research.py
+          python research/research/web_researcher.py
 
       - name: Generate Script
         env:
