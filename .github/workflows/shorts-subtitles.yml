@@ -1,0 +1,41 @@
+name: Shadow Archive - English Shorts Subtitles
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  subtitles:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Generate English Subtitles
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python research/research/shorts_subtitles.py
+
+      - name: Check Subtitles
+        run: |
+          ls -lh research/video/subtitles/
+
+      - name: Upload Subtitles
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadow-archive-english-subtitles
+          path: research/video/subtitles/*.txt
+          retention-days: 7
