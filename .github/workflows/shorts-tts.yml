@@ -1,0 +1,56 @@
+name: Shadow Archive - Shorts TTS
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  shorts-tts:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Generate Shorts Voice
+        run: |
+          python research/research/shorts_tts.py
+
+      - name: Convert WAV to MP3
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+          mkdir -p research/audio/shorts
+
+          for file in research/audio/shorts/*.wav; do
+            output="${file%.wav}.mp3"
+
+            ffmpeg -y \
+              -i "$file" \
+              -codec:a libmp3lame \
+              -b:a 96k \
+              "$output"
+          done
+
+      - name: Check Audio
+        run: |
+          ls -lh research/audio/shorts/
+
+      - name: Upload Shorts Audio
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadow-archive-shorts-audio
+          path: research/audio/shorts/*.mp3
+          retention-days: 7
