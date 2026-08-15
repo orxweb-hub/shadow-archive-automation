@@ -2,17 +2,15 @@
   "shorts": [
     {
       "short": 1,
-      "title": "Batmayan Geminin Kayıp Mürettebatı",
-      "hook": "Denizciliğin en temel kuralı şudur: Gemiyi ancak batarken terk edersiniz. Peki ya gemi hiç batmadıysa?",
-      "script": "Denizciliğin en temel kuralı şudur: Gemiyi ancak batarken terk edersiniz. Peki ya gemi hiç batmadıysa? 1955 yılında Pasifik Okyanusu'nda sürüklenirken bulunan MV Joyita, denizcilik tarihinin en kafa karıştırıcı vakalarından biridir. Gemi bulunduğunda hâlâ suyun üstündeydi ve batmamıştı. Ancak içeride olması gereken 25 kişiden tek bir iz bile yoktu. Ne bir imdat çağrısı duyulmuştu ne de geride bir tanık kalmıştı. Yüzer durumdaki güvenli bir tekneyi, üzerindeki 25 insan neden ve nasıl terk etmiş olabilir?",
-      "reason": "Focuses on the core paradox of the mystery: abandoning a ship that was perfectly capable of floating. It immediately grabs attention with a universal maritime logic rule and highlights the unexplainable nature of the disappearance."
+      "title": "Batmayan Geminin Gizemi: MV Joyita",
+      "narration": "1955 yılında Pasifik Okyanusu'nda bulunan bu gemi, denizcilik tarihinin en büyük mantık çelişkilerinden birini barındırıyor. MV Joyita, açık denizde terk edilmiş ve sürüklenir halde bulundu. Geminin gövdesi hâlâ suyun üstündeydi, yani batmamıştı. Denizcilik kuralına göre batmayan bir gemiyi terk etmek büyük bir risktir. Ancak gemide bulunması gereken 25 insandan tek bir iz bile yoktu. Ne bir ceset, ne teyit edilmiş bir imdat çağrısı, ne de yaşananları anlatan bir tanık kaldı geride. Peki, batmayan bir gemiyi 25 insan neden ve nasıl terk etti? Onları gemiden ayrılmaya zorlayan şey neydi?",
+      "english_script": "Discovered in the Pacific Ocean in 1955, this vessel holds one of the greatest paradoxes in maritime history. The MV Joyita was found abandoned and drifting in open waters. Her hull was still floating—she had not sunk. Standard seamanship dictates that abandoning a ship that is still afloat is an extreme risk. Yet, not a single trace remained of the 25 people who were supposed to be aboard. No bodies, no confirmed distress calls, and no witnesses to tell the tale. So why would 25 people abandon a ship that refused to sink? What forced them off the vessel?"
     },
     {
       "short": 2,
-      "title": "Derby'li Doktorun Pasifik'teki Sırrı",
-      "hook": "İngiltere’nin Derby kentinden yola çıkan bir doktorun izi, Pasifik Okyanusu’nun ortasında nasıl tamamen silindi?",
-      "script": "İngiltere’nin Derby kentinden yola çıkan bir doktorun izi, Pasifik Okyanusu’nun ortasında nasıl tamamen silindi? 1955’teki kayıp MV Joyita vakasında, Tokelau seferine katılan 25 kişinin arasında Derby’li bir doktor da bulunuyordu. Olayın ardından Yeni Zelanda’da anma törenleri düzenlendi ve adli bir tahkikat çağrısı yapıldı. Ancak resmi makamlar çaresiz kaldı; çünkü ortada ne tek bir ceset ne de olayın gerçekleştiği yere dair somut bir delil vardı. Aradan geçen onlarca yıla rağmen adli tıp mekanizmalarını kilitleyen bu olayda, 25 insan arkalarında yanıtlanmamış sorular bırakarak nereye kayboldu?",
-      "reason": "Focuses on the human angle, specifically the UK doctor mentioned in the script, as well as the official legal inquiry standstill in New Zealand and Tokelau, offering a fresh narrative angle without repeating Short 1."
+      "title": "25 İnsanın Sırra Kadem Bastığı Gece",
+      "narration": "İngiltere’nin Derby kentinden yola çıkan bir doktorun kaderi, Pasifik’in ortasında 24 kişiyle birlikte sonsuz bir karanlığa gömüldü. 1955 yılında Tokelau seferine çıkan MV Joyita terk edilmiş halde bulunduğunda, içinde Derby’li bu doktor da dahil olmak üzere 25 insan kelimenin tam anlamıyla buharlaşmıştı. Olayın ardından Yeni Zelanda’da anma törenleri düzenlendi ve resmi adli tahkikat çağrıları yapıldı. Ancak adli makamlar kilitlendi; çünkü ortada ne tek bir ceset ne de olayın gerçekleştiği net bir konum vardı. Aradan geçen onca yıla rağmen Derby’li doktorun ve diğer 24 kişinin akıbeti hâlâ çözülemedi. Okyanusun ortasında o gün gerçekte ne yaşandı?",
+      "english_script": "The fate of a doctor who set out from the English city of Derby was swallowed by darkness alongside 24 others in the middle of the Pacific. In 1955, when the MV Joyita was found drifting on her Tokelau voyage, all 25 people aboard—including the doctor from Derby—had literally vanished into thin air. Memorial services were later held in New Zealand, and calls for an official inquest echoed across the region. But authorities were paralyzed: there were no bodies, no witnesses, and no verified location of the incident. Decades later, the fate of the Derby doctor and the 24 souls remains unsolved. What really happened out there in the silence of the ocean?"
     }
   ]
 }
