@@ -42,13 +42,13 @@ def main():
     print("==========================================")
 
     if not AUDIO_FILE.exists():
-        raise FileNotFoundError(f"Voice file not found: {AUDIO_FILE}")
+        raise FileNotFoundError(AUDIO_FILE)
 
     if not MUSIC_FILE.exists():
-        raise FileNotFoundError(f"Music file not found: {MUSIC_FILE}")
+        raise FileNotFoundError(MUSIC_FILE)
 
     if not CLIPS_DIR.exists():
-        raise FileNotFoundError(f"Clips directory not found: {CLIPS_DIR}")
+        raise FileNotFoundError(CLIPS_DIR)
 
     clips = sorted(CLIPS_DIR.glob("*.mp4"))
 
@@ -63,25 +63,23 @@ def main():
     duration = get_duration(AUDIO_FILE)
 
     print(f"Voice duration: {duration:.2f}s")
-    print(f"Available clips: {len(clips)}")
-    print(f"Music file: {MUSIC_FILE}")
+    print(f"Clips: {len(clips)}")
+    print(f"Music: {MUSIC_FILE}")
+
+    # ==========================================
+    # 1. CREATE VIDEO SEGMENTS
+    # ==========================================
 
     segment_files = []
 
     total_segments = int(duration / SEGMENT_DURATION) + 1
-
-    # --------------------------------------------------
-    # 1. CREATE MOVING VIDEO SEGMENTS
-    # --------------------------------------------------
 
     for i in range(total_segments):
 
         clip = clips[i % len(clips)]
         output = WORK_DIR / f"segment_{i:04d}.mp4"
 
-        print("")
         print(f"Creating segment {i + 1}/{total_segments}")
-        print(f"Source: {clip}")
 
         vf = (
             f"scale={WIDTH}:{HEIGHT}:"
@@ -113,9 +111,9 @@ def main():
 
         segment_files.append(output)
 
-    # --------------------------------------------------
+    # ==========================================
     # 2. CONCAT VIDEO
-    # --------------------------------------------------
+    # ==========================================
 
     concat_file = WORK_DIR / "concat.txt"
 
@@ -125,7 +123,6 @@ def main():
 
     base_video = WORK_DIR / "base_video.mp4"
 
-    print("")
     print("Joining video segments...")
 
     run([
@@ -140,69 +137,78 @@ def main():
         str(base_video),
     ])
 
-    # --------------------------------------------------
-    # 3. MIX VOICE + DEAD FOREST
-    # --------------------------------------------------
+    # ==========================================
+    # 3. CREATE MUSIC + VOICE AUDIO
+    # ==========================================
 
-    print("")
-    print("Mixing Turkish voice + Dead Forest music...")
+    mixed_audio = WORK_DIR / "final_audio.m4a"
+
+    print("Creating final audio...")
 
     audio_filter = (
-        "[1:a]"
-        "volume=0.16,"
+        "[0:a]volume=1.0[voice];"
+        "[1:a]volume=0.16,"
         "afade=t=in:st=0:d=4,"
-        "afade=t=out:st=1730:d=10"
-        "[music];"
-        "[2:a]"
-        "volume=1.0"
-        "[voice];"
+        "afade=t=out:st=1730:d=10[music];"
         "[voice][music]"
-        "amix="
-        "inputs=2:"
+        "amix=inputs=2:"
         "duration=first:"
         "dropout_transition=2:"
         "normalize=0,"
         "alimiter=limit=0.95"
-        "[audio]"
     )
 
     run([
         "ffmpeg",
         "-y",
 
-        "-i", str(base_video),
+        "-i", str(AUDIO_FILE),
 
         "-stream_loop", "-1",
         "-i", str(MUSIC_FILE),
 
-        "-i", str(AUDIO_FILE),
-
         "-filter_complex", audio_filter,
-
-        "-map", "0:v:0",
-        "-map", "[audio]",
 
         "-t", str(duration),
 
-        # Video tekrar encode edilmiyor
-        "-c:v", "copy",
-
-        # Ses AAC olarak YouTube/iPad uyumlu
         "-c:a", "aac",
         "-b:a", "192k",
         "-ar", "44100",
         "-ac", "2",
+
+        str(mixed_audio),
+    ])
+
+    # ==========================================
+    # 4. ADD AUDIO TO VIDEO
+    # ==========================================
+
+    print("Adding final audio to video...")
+
+    run([
+        "ffmpeg",
+        "-y",
+
+        "-i", str(base_video),
+        "-i", str(mixed_audio),
+
+        "-map", "0:v:0",
+        "-map", "1:a:0",
+
+        "-t", str(duration),
+
+        "-c:v", "copy",
+        "-c:a", "copy",
 
         "-movflags", "+faststart",
 
         str(OUTPUT_FILE),
     ])
 
-    # --------------------------------------------------
-    # 4. FINAL CHECK
-    # --------------------------------------------------
+    # ==========================================
+    # 5. CHECK OUTPUT
+    # ==========================================
 
-    print("")
     print("Checking final video...")
 
     run([
@@ -224,8 +230,7 @@ def main():
     print("Real Pexels motion: ENABLED")
     print("Dead Forest music: ENABLED")
     print("Turkish voice: ENABLED")
-    print("iPad compatibility: ENABLED")
-    print("YouTube compatibility: ENABLED")
+    print("YouTube/iPad format: ENABLED")
     print("==========================================")
 
 
