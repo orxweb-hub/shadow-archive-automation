@@ -32,6 +32,7 @@ def get_duration(path):
         text=True,
         check=True,
     )
+
     return float(result.stdout.strip())
 
 
@@ -42,13 +43,13 @@ def main():
     print("==========================================")
 
     if not AUDIO_FILE.exists():
-        raise FileNotFoundError(AUDIO_FILE)
+        raise FileNotFoundError(f"Voice file not found: {AUDIO_FILE}")
 
     if not MUSIC_FILE.exists():
-        raise FileNotFoundError(MUSIC_FILE)
+        raise FileNotFoundError(f"Music file not found: {MUSIC_FILE}")
 
     if not CLIPS_DIR.exists():
-        raise FileNotFoundError(CLIPS_DIR)
+        raise FileNotFoundError(f"Clips directory not found: {CLIPS_DIR}")
 
     clips = sorted(CLIPS_DIR.glob("*.mp4"))
 
@@ -57,13 +58,14 @@ def main():
 
     WORK_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Eski segmentleri temizle
     for old_file in WORK_DIR.glob("segment_*.mp4"):
         old_file.unlink()
 
     duration = get_duration(AUDIO_FILE)
 
     print(f"Voice duration: {duration:.2f}s")
-    print(f"Clips: {len(clips)}")
+    print(f"Available clips: {len(clips)}")
     print(f"Music: {MUSIC_FILE}")
 
     # ==========================================
@@ -95,17 +97,25 @@ def main():
         run([
             "ffmpeg",
             "-y",
+
             "-stream_loop", "-1",
             "-i", str(clip),
+
             "-t", str(SEGMENT_DURATION),
+
             "-vf", vf,
+
             "-an",
+
             "-r", str(FPS),
+
             "-c:v", "libx264",
             "-preset", "veryfast",
             "-crf", "23",
+
             "-pix_fmt", "yuv420p",
             "-movflags", "+faststart",
+
             str(output),
         ])
 
@@ -128,34 +138,40 @@ def main():
     run([
         "ffmpeg",
         "-y",
+
         "-f", "concat",
         "-safe", "0",
         "-i", str(concat_file),
+
         "-t", str(duration),
+
         "-c", "copy",
+
         "-movflags", "+faststart",
+
         str(base_video),
     ])
 
     # ==========================================
-    # 3. CREATE MUSIC + VOICE AUDIO
+    # 3. CREATE VOICE + DEAD FOREST
     # ==========================================
 
     mixed_audio = WORK_DIR / "final_audio.m4a"
 
-    print("Creating final audio...")
+    print("Creating final audio mix...")
+    print("Voice volume: 100%")
+    print("Dead Forest volume: 16%")
 
+    # Bu filtre, az önce 10 saniyelik testte
+    # başarıyla çalışan ses miksinin aynısıdır.
     audio_filter = (
         "[0:a]volume=1.0[voice];"
-        "[1:a]volume=0.16,"
-        "afade=t=in:st=0:d=4,"
-        "afade=t=out:st=1730:d=10[music];"
+        "[1:a]volume=0.16[music];"
         "[voice][music]"
-        "amix=inputs=2:"
+        "amix="
+        "inputs=2:"
         "duration=first:"
-        "dropout_transition=2:"
-        "normalize=0,"
-        "alimiter=limit=0.95"
+        "dropout_transition=2"
     )
 
     run([
@@ -214,10 +230,8 @@ def main():
     run([
         "ffprobe",
         "-v", "error",
-        "-show_entries",
-        "format=duration,size",
-        "-of",
-        "default=noprint_wrappers=1",
+        "-show_entries", "format=duration,size",
+        "-of", "default=noprint_wrappers=1",
         str(OUTPUT_FILE),
     ])
 
@@ -230,7 +244,7 @@ def main():
     print("Real Pexels motion: ENABLED")
     print("Dead Forest music: ENABLED")
     print("Turkish voice: ENABLED")
-    print("YouTube/iPad format: ENABLED")
+    print("1080p YouTube format: ENABLED")
     print("==========================================")
 
 
