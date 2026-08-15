@@ -60,7 +60,7 @@ def main():
     for short in data["shorts"]:
 
         number = short["short"]
-        script = short["script"]
+        script = short["narration"]
 
         output_file = (
             OUTPUT_DIR /
