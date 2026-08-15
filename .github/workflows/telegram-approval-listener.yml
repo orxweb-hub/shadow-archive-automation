@@ -1,4 +1,3 @@
-```yaml
 name: Telegram Approval Listener
 
 on:
@@ -32,13 +31,11 @@ jobs:
           def telegram(method, data):
               url = f"https://api.telegram.org/bot{TOKEN}/{method}"
               encoded = urllib.parse.urlencode(data).encode()
-
               request = urllib.request.Request(
                   url,
                   data=encoded,
                   method="POST"
               )
-
               with urllib.request.urlopen(request, timeout=30) as response:
                   return json.loads(response.read().decode())
 
@@ -56,7 +53,6 @@ jobs:
           last_update_id = None
 
           for update in results:
-
               last_update_id = update["update_id"]
 
               callback = update.get("callback_query")
@@ -81,19 +77,13 @@ jobs:
               except Exception as e:
                   print("CALLBACK ERROR:", e)
 
-              # ==========================================
-              # KONU ONAYLANDI
-              # ==========================================
-
               if action == "topic_approve":
-
                   print("TOPIC APPROVED")
 
                   text = (
                       "🤖 SHADOW ARCHIVE\n\n"
                       "✅ KONU ONAYLANDI\n\n"
-                      "Video üretim sistemi başlatılıyor...\n\n"
-                      "Araştırma → Senaryo → Ses → Görüntü → Kurgu"
+                      "Video üretim sistemi başlatılıyor..."
                   )
 
                   result = subprocess.run(
@@ -113,36 +103,20 @@ jobs:
                   print("GH STDERR:")
                   print(result.stderr)
 
-                  if result.returncode == 0:
-
-                      print("MASTER WORKFLOW STARTED")
-
-                  else:
-
+                  if result.returncode != 0:
                       text = (
                           "❌ MASTER WORKFLOW HATASI\n\n"
-                          "Video üretimi başlatılamadı.\n\n"
-                          "GitHub Actions kontrol edilmeli."
+                          "Video üretimi başlatılamadı."
                       )
 
-              # ==========================================
-              # KONU REDDEDİLDİ
-              # ==========================================
-
               elif action == "topic_reject":
-
                   text = (
                       "🤖 SHADOW ARCHIVE\n\n"
                       "❌ KONU REDDEDİLDİ\n\n"
                       "Bu konu için video oluşturulmayacak."
                   )
 
-              # ==========================================
-              # YAYIN ONAYI
-              # ==========================================
-
               elif action == "publish_approve":
-
                   print("PUBLISH APPROVED")
 
                   text = (
@@ -168,35 +142,20 @@ jobs:
                   print("GH STDERR:")
                   print(result.stderr)
 
-                  if result.returncode == 0:
-
-                      print("YOUTUBE WORKFLOW STARTED")
-
-                  else:
-
+                  if result.returncode != 0:
                       text = (
                           "❌ YOUTUBE WORKFLOW HATASI\n\n"
                           "GitHub Actions kontrol edilmeli."
                       )
 
-              # ==========================================
-              # YAYIN REDDİ
-              # ==========================================
-
               elif action == "publish_reject":
-
                   text = (
                       "🤖 SHADOW ARCHIVE\n\n"
                       "❌ YAYIN REDDEDİLDİ\n\n"
                       "Video yayınlanmayacak."
                   )
 
-              # ==========================================
-              # SAAT DEĞİŞİKLİĞİ
-              # ==========================================
-
               elif action == "change_time":
-
                   text = (
                       "🕐 SHADOW ARCHIVE\n\n"
                       "Yeni yayın saati bekleniyor.\n\n"
@@ -207,22 +166,13 @@ jobs:
                   )
 
               else:
-
-                  text = (
-                      "⚠️ Bilinmeyen Telegram işlemi."
-                  )
-
-              # ==========================================
-              # TELEGRAM MESAJINI GÜNCELLE
-              # ==========================================
+                  text = "⚠️ Bilinmeyen Telegram işlemi."
 
               if message:
-
                   chat_id = message["chat"]["id"]
                   message_id = message["message_id"]
 
                   try:
-
                       telegram(
                           "editMessageText",
                           {
@@ -231,22 +181,12 @@ jobs:
                               "text": text
                           }
                       )
-
                       print("TELEGRAM MESSAGE UPDATED")
 
                   except Exception as e:
-
-                      print(
-                          "MESSAGE UPDATE ERROR:",
-                          e
-                      )
-
-          # ==========================================
-          # UPDATE'LERİ TEMİZLE
-          # ==========================================
+                      print("MESSAGE UPDATE ERROR:", e)
 
           if last_update_id is not None:
-
               telegram(
                   "getUpdates",
                   {
@@ -260,4 +200,3 @@ jobs:
           print("TELEGRAM CHECK COMPLETED")
           print("==========================================")
           PY
-```
