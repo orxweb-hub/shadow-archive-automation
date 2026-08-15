@@ -1,7 +1,5 @@
 from pathlib import Path
 import subprocess
-import re
-import shutil
 
 CLIPS_DIR = Path("research/video/clips")
 AUDIO_FILE = Path("research/audio/mv_joyita_voice.wav")
@@ -38,6 +36,7 @@ def get_duration(path):
 
 
 def main():
+
     if not AUDIO_FILE.exists():
         raise FileNotFoundError(f"Voice file not found: {AUDIO_FILE}")
 
@@ -53,68 +52,53 @@ def main():
     print(f"Voice duration: {duration:.2f}s")
     print(f"Visual clips: {len(clips)}")
 
-    # Create cinematic segments
     segment_files = []
 
     total_segments = int(duration / SEGMENT_DURATION) + 1
 
     for i in range(total_segments):
+
         clip = clips[i % len(clips)]
         output = WORK_DIR / f"segment_{i:04d}.mp4"
 
-        zoom_direction = i % 4
+        mode = i % 4
 
-        if zoom_direction == 0:
-            vf = (
-                f"scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=increase,"
-                f"crop={WIDTH}:{HEIGHT},"
-                "zoompan="
-                f"z='min(zoom+0.0018,1.12)':"
-                f"x='iw/2-(iw/zoom/2)':"
-                f"y='ih/2-(ih/zoom/2)':"
-                f"d=210:s={WIDTH}x{HEIGHT}:fps={FPS},"
-                "eq=contrast=1.06:saturation=1.08:brightness=-0.03,"
-                "vignette"
-            )
+        if mode == 0:
+            zoom_expr = "min(zoom+0.0015,1.10)"
+            x_expr = "iw/2-(iw/zoom/2)"
+            y_expr = "ih/2-(ih/zoom/2)"
 
-        elif zoom_direction == 1:
-            vf = (
-                f"scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=increase,"
-                f"crop={WIDTH}:{HEIGHT},"
-                "zoompan="
-                f"z='min(zoom+0.0015,1.10)':"
-                f"x='iw/2-(iw/zoom/2)+18*t':"
-                f"y='ih/2-(ih/zoom/2)':"
-                f"d=210:s={WIDTH}x{HEIGHT}:fps={FPS},"
-                "eq=contrast=1.07:saturation=1.05:brightness=-0.04,"
-                "vignette"
-            )
+        elif mode == 1:
+            zoom_expr = "min(zoom+0.0013,1.08)"
+            x_expr = "iw/2-(iw/zoom/2)+on*0.25"
+            y_expr = "ih/2-(ih/zoom/2)"
 
-        elif zoom_direction == 2:
-            vf = (
-                f"scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=increase,"
-                f"crop={WIDTH}:{HEIGHT},"
-                "zoompan="
-                f"z='min(zoom+0.0015,1.10)':"
-                f"x='iw/2-(iw/zoom/2)-18*t':"
-                f"y='ih/2-(ih/zoom/2)':"
-                f"d=210:s={WIDTH}x{HEIGHT}:fps={FPS},"
-                "eq=contrast=1.08:saturation=1.06:brightness=-0.05,"
-                "vignette"
-            )
+        elif mode == 2:
+            zoom_expr = "min(zoom+0.0013,1.08)"
+            x_expr = "iw/2-(iw/zoom/2)-on*0.25"
+            y_expr = "ih/2-(ih/zoom/2)"
 
         else:
-            vf = (
-                f"scale={WIDTH}:{HEIGHT}:force_original_aspect_ratio=increase,"
-                f"crop={WIDTH}:{HEIGHT},"
-                "zoompan="
-                f"z='min(zoom+0.0017,1.11)':"
-                f"x='iw/2-(iw/zoom/2)':"
-                f"y='ih/2-(ih/zoom/2)+12*t':"
-                f"d=210:s={WIDTH}x{HEIGHT}:fps={FPS},"
-                "eq=contrast=1.07:saturation=1.07:brightness=-0.04,"
-                "vignette"
-            )
+            zoom_expr = "min(zoom+0.0014,1.09)"
+            x_expr = "iw/2-(iw/zoom/2)"
+            y_expr = "ih/2-(ih/zoom/2)+on*0.18"
+
+        vf = (
+            f"scale={WIDTH}:{HEIGHT}:"
+            "force_original_aspect_ratio=increase,"
+            f"crop={WIDTH}:{HEIGHT},"
+            "zoompan="
+            f"z='{zoom_expr}':"
+            f"x='{x_expr}':"
+            f"y='{y_expr}':"
+            f"d={SEGMENT_DURATION * FPS}:"
+            f"s={WIDTH}x{HEIGHT}:"
+            f"fps={FPS},"
+            "eq=contrast=1.07:"
+            "saturation=1.06:"
+            "brightness=-0.04,"
+            "vignette"
+        )
 
         run([
             "ffmpeg",
@@ -133,7 +117,6 @@ def main():
 
         segment_files.append(output)
 
-    # Concat file
     concat_file = WORK_DIR / "concat.txt"
 
     with open(concat_file, "w", encoding="utf-8") as f:
@@ -153,8 +136,8 @@ def main():
         str(base_video)
     ])
 
-    # Audio mix
     if MUSIC_FILE.exists():
+
         audio_filter = (
             "[2:a]"
             "volume=1.0"
@@ -193,6 +176,7 @@ def main():
         ])
 
     else:
+
         run([
             "ffmpeg",
             "-y",
@@ -207,7 +191,6 @@ def main():
             str(OUTPUT_FILE)
         ])
 
-    print("")
     print("====================================")
     print("CINEMATIC VIDEO V3 COMPLETE")
     print(f"OUTPUT: {OUTPUT_FILE}")
