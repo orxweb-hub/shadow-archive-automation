@@ -46,6 +46,20 @@ jobs:
           echo "=========================================="
           head -100 research/video/subtitles/mv_joyita_english.srt
 
+      - name: Save Subtitle To Repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add research/video/subtitles/mv_joyita_english.srt
+
+          if git diff --cached --quiet; then
+            echo "No subtitle changes to commit."
+          else
+            git commit -m "Add English subtitles for MV Joyita"
+            git push
+          fi
+
       - name: Upload English Subtitle
         uses: actions/upload-artifact@v4
         with:
