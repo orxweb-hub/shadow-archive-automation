@@ -83,7 +83,7 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          python - <<'PY'
+          python -c '
           import os
           import json
           import urllib.request
@@ -102,23 +102,15 @@ jobs:
 ✅ Görseller tamamlandı
 ✅ Ana video oluşturuldu
 
-Video YouTube'a yüklenmeye hazır.
+Video YouTubea yüklenmeye hazır.
 
 Yayınlansın mı?"""
 
           keyboard = {
-              "inline_keyboard": [
-                  [
-                      {
-                          "text": "▶️ YAYINLA",
-                          "callback_data": "publish_approve"
-                      },
-                      {
-                          "text": "❌ YAYINLAMA",
-                          "callback_data": "publish_reject"
-                      }
-                  ]
-              ]
+              "inline_keyboard": [[
+                  {"text": "▶️ YAYINLA", "callback_data": "publish_approve"},
+                  {"text": "❌ YAYINLAMA", "callback_data": "publish_reject"}
+              ]]
           }
 
           url = f"https://api.telegram.org/bot{token}/sendMessage"
@@ -138,7 +130,5 @@ Yayınlansın mı?"""
           with urllib.request.urlopen(request, timeout=30) as response:
               print(response.read().decode())
 
-          print("==========================================")
           print("TELEGRAM PUBLISH APPROVAL SENT")
-          print("==========================================")
-          PY
+          '
