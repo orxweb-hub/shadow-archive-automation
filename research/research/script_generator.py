@@ -13,7 +13,6 @@ SCRIPT_DIR = Path("research/scripts")
 
 MIN_WORDS = 2700
 TARGET_WORDS = 3000
-MAX_WORDS = 3400
 
 PRIMARY_MODEL = "gemini-3.6-flash"
 FALLBACK_MODEL = "gemini-3.5-flash-lite"
@@ -47,8 +46,7 @@ def load_topic():
 
     if not TOPIC_FILE.exists():
         raise FileNotFoundError(
-            "Güncel konu dosyası bulunamadı: "
-            f"{TOPIC_FILE}"
+            f"Güncel konu dosyası bulunamadı: {TOPIC_FILE}"
         )
 
     data = json.loads(
@@ -219,8 +217,7 @@ def call_model(
             if attempt == MAX_RETRIES:
 
                 raise RuntimeError(
-                    f"{model} ile üretim "
-                    "başarısız oldu."
+                    f"{model} ile üretim başarısız oldu."
                 ) from error
 
             delay = RETRY_DELAYS[
@@ -265,7 +262,6 @@ def generate_with_fallback(
         if not is_quota_error(
             primary_error
         ):
-
             raise
 
         print()
@@ -378,39 +374,16 @@ COVER:
 - The disappearance or incident.
 - Discovery or investigation.
 - Physical evidence.
-- Missing people if applicable.
 - Official investigation.
 - Official findings.
 - Major theories.
-- Problems and contradictions with those theories.
+- Problems and contradictions.
 - What remains unexplained.
 - Strong final conclusion.
-
-STRUCTURE:
-
-1. Strong opening and mystery
-2. Background
-3. Events before the incident
-4. The disappearance or main event
-5. Discovery
-6. Evidence
-7. People involved
-8. Investigation
-9. Official findings
-10. Major theories
-11. Problems and contradictions
-12. What remains unexplained
-13. Final conclusion
 
 IMPORTANT:
 
 Do not finish the narration before reaching the required length.
-
-Do not add filler.
-
-Do not repeat the same facts.
-
-Do not invent information just to reach the word count.
 
 Write ONLY the finished Turkish narration.
 
@@ -431,47 +404,41 @@ Do not include:
     )
 
 
-def expand_script(
+def generate_additional_section(
     client,
-    script,
     topic,
     report,
+    current_script,
     current_words
 ):
 
     missing_words = MIN_WORDS - current_words
 
     if missing_words <= 0:
-        return script
+        return ""
 
-    # Eksik miktarın üzerine güvenlik payı ekliyoruz.
-    # Örneğin 2618 -> en az 300 kelimelik yeni bölüm ister.
-    target_addition = max(
-        missing_words + 250,
-        400
-    )
-
-    print()
-    print(
-        f"Senaryo kısa kaldı: "
-        f"{current_words} kelime"
-    )
-
-    print(
-        f"Eksik kelime: "
-        f"{missing_words}"
-    )
-
-    print(
-        f"Yeni genişletme hedefi: "
-        f"{target_addition} kelime"
+    # Modelden eksikten daha fazla kelime istiyoruz.
+    # Böylece 2700 sınırını rahat geçmesi hedefleniyor.
+    requested_words = max(
+        missing_words + 350,
+        500
     )
 
     prompt = f"""
-You are the senior editor of a Turkish investigative
-documentary for the YouTube channel "Shadow Archive".
+You are a senior investigative documentary writer
+for the YouTube channel "Shadow Archive".
 
-The documentary narration is currently too short.
+We already have a finished Turkish documentary narration.
+
+IMPORTANT:
+DO NOT rewrite the existing narration.
+
+DO NOT summarize the existing narration.
+
+DO NOT return the existing narration.
+
+Your ONLY task is to write a NEW ADDITIONAL SECTION
+that can be appended to the END of the existing narration.
 
 TOPIC:
 {topic}
@@ -479,78 +446,68 @@ TOPIC:
 CURRENT WORD COUNT:
 {current_words}
 
-MINIMUM REQUIRED:
+MINIMUM FINAL WORD COUNT:
 {MIN_WORDS}
 
-WORDS STILL NEEDED:
+WORDS CURRENTLY MISSING:
 {missing_words}
 
-TARGET NEW WORDS:
-{target_addition}
+WRITE AT LEAST:
+{requested_words} Turkish words.
 
 RESEARCH REPORT:
 {json.dumps(report, ensure_ascii=False, indent=2)}
 
 CURRENT NARRATION:
-{script}
+{current_script}
 
-TASK:
+The additional section should naturally continue the story.
 
-Expand the current narration naturally.
+Use factual material that has not already been sufficiently
+developed in the current narration.
 
-Return the COMPLETE expanded narration.
+Good areas include:
 
-The final result MUST contain at least 2,700 Turkish words.
-
-Add enough useful material to safely exceed 2,700 words.
-
-Do NOT stop just a few words before the requirement.
-
-Aim to finish around 2,900–3,100 words.
-
-Use additional factual context from the research report.
-
-Possible areas to expand:
-
-- historical context
-- chronology
+- additional chronology
+- investigation details
+- evidence
 - people involved
 - locations
-- events before the incident
-- investigation
-- physical evidence
 - official findings
 - competing theories
 - contradictions
 - unanswered questions
-- confirmed facts
-- uncertain claims
-- consequences of the event
+- historical context
+- consequences
+- final analysis
 
-STRICT FACTUAL RULES:
+STRICT RULES:
 
-- Use only information supported by the research report
-  and current narration.
-- Never invent facts.
-- Never invent dialogue.
-- Never invent witnesses.
-- Never invent evidence.
-- Never invent events.
-- Never present speculation as fact.
-- Do not repeat entire paragraphs.
+- Do not invent facts.
+- Do not invent dialogue.
+- Do not invent witnesses.
+- Do not invent evidence.
+- Do not invent events.
+- Do not present theories as facts.
+- Do not repeat the current narration.
+- Do not copy existing paragraphs.
 - Do not use filler.
-- Do not artificially repeat sentences.
-- Keep the narration natural.
-- Keep the same documentary tone.
+- Do not use a generic conclusion unless it adds useful information.
+- Continue naturally from the existing story.
 
 VERY IMPORTANT:
 
-The final output must be longer than 2,700 words.
+The output will be directly appended to the existing narration.
 
-If the current narration is already close to the minimum,
-add a meaningful final section rather than stopping early.
+Therefore begin naturally as a continuation of the documentary.
 
-Return ONLY the complete Turkish narration.
+Do NOT write an introduction such as:
+"Tabii, işte..."
+"Elbette..."
+"Bu bölümde..."
+"Sonuç olarak..."
+
+Write ONLY the NEW ADDITIONAL SECTION.
 
 Do not include:
 
@@ -636,8 +593,6 @@ def main():
         f"{word_count}"
     )
 
-    # Artık sadece 3 tur değil,
-    # maksimum 6 genişletme turu yapılacak.
     MAX_EXPANSION_ROUNDS = 6
 
     expansion_round = 0
@@ -656,7 +611,7 @@ def main():
         )
 
         print(
-            f"SENARYO GENİŞLETME "
+            f"EK BÖLÜM ÜRETİMİ "
             f"{expansion_round}/{MAX_EXPANSION_ROUNDS}"
         )
 
@@ -664,39 +619,62 @@ def main():
             "=========================================="
         )
 
-        script = expand_script(
+        missing = MIN_WORDS - word_count
+
+        print(
+            f"Mevcut kelime: {word_count}"
+        )
+
+        print(
+            f"Eksik kelime: {missing}"
+        )
+
+        additional_section = generate_additional_section(
             client,
-            script,
             topic,
             report,
+            script,
             word_count
         )
 
-        new_word_count = len(
-            script.split()
+        additional_words = len(
+            additional_section.split()
         )
 
         print()
         print(
-            f"Yeni kelime sayısı: "
-            f"{new_word_count}"
+            f"Üretilen ek bölüm: "
+            f"{additional_words} kelime"
         )
 
-        # Eğer model bir önceki cevaptan daha kısa
-        # bir metin döndürürse eski metni koru.
-        if new_word_count < word_count:
+        # Ek bölüm gerçekten içerik ürettiyse
+        # mevcut senaryonun SONUNA ekliyoruz.
+        if additional_words > 0:
 
-            print(
-                "⚠️ Yeni cevap daha kısa geldi."
+            script = (
+                script.rstrip()
+                + "\n\n"
+                + additional_section.strip()
+            )
+
+            word_count = len(
+                script.split()
             )
 
             print(
-                "Önceki daha uzun senaryo korunuyor."
+                f"Yeni toplam kelime sayısı: "
+                f"{word_count}"
             )
 
         else:
 
-            word_count = new_word_count
+            print(
+                "⚠️ Ek bölüm boş geldi."
+            )
+
+            print(
+                "Bir sonraki tur denenecek."
+            )
 
         if word_count >= MIN_WORDS:
 
@@ -710,8 +688,8 @@ def main():
     if word_count < MIN_WORDS:
 
         raise RuntimeError(
-            "Senaryo maksimum genişletme turundan "
-            "sonra 2700 kelimeye ulaşamadı: "
+            "Ek bölüm üretimlerinden sonra "
+            "senaryo 2700 kelimeye ulaşamadı: "
             f"{word_count}"
         )
 
@@ -761,8 +739,8 @@ def main():
     )
 
     print(
-        f"Maksimum genişletme turu: "
-        f"{MAX_EXPANSION_ROUNDS}"
+        "Eksik kelimeler artık mevcut senaryonun "
+        "sonuna ek bölüm olarak tamamlanıyor."
     )
 
     print("=" * 60)
