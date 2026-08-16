@@ -441,9 +441,14 @@ def expand_script(
 
     missing_words = MIN_WORDS - current_words
 
+    if missing_words <= 0:
+        return script
+
+    # Eksik miktarın üzerine güvenlik payı ekliyoruz.
+    # Örneğin 2618 -> en az 300 kelimelik yeni bölüm ister.
     target_addition = max(
-        missing_words + 500,
-        1000
+        missing_words + 250,
+        400
     )
 
     print()
@@ -453,7 +458,12 @@ def expand_script(
     )
 
     print(
-        f"Eklenecek hedef: "
+        f"Eksik kelime: "
+        f"{missing_words}"
+    )
+
+    print(
+        f"Yeni genişletme hedefi: "
         f"{target_addition} kelime"
     )
 
@@ -461,7 +471,7 @@ def expand_script(
 You are the senior editor of a Turkish investigative
 documentary for the YouTube channel "Shadow Archive".
 
-The current documentary narration is too short.
+The documentary narration is currently too short.
 
 TOPIC:
 {topic}
@@ -469,11 +479,14 @@ TOPIC:
 CURRENT WORD COUNT:
 {current_words}
 
-MINIMUM FINAL WORD COUNT:
+MINIMUM REQUIRED:
 {MIN_WORDS}
 
-TARGET FINAL WORD COUNT:
-{TARGET_WORDS}
+WORDS STILL NEEDED:
+{missing_words}
+
+TARGET NEW WORDS:
+{target_addition}
 
 RESEARCH REPORT:
 {json.dumps(report, ensure_ascii=False, indent=2)}
@@ -483,33 +496,36 @@ CURRENT NARRATION:
 
 TASK:
 
-Expand the CURRENT NARRATION.
+Expand the current narration naturally.
 
 Return the COMPLETE expanded narration.
 
 The final result MUST contain at least 2,700 Turkish words.
 
-Add approximately {target_addition} useful words.
+Add enough useful material to safely exceed 2,700 words.
 
-Do not merely summarize the existing text.
+Do NOT stop just a few words before the requirement.
 
-Preserve the strongest parts of the current narration.
+Aim to finish around 2,900–3,100 words.
 
-Expand naturally through:
+Use additional factual context from the research report.
+
+Possible areas to expand:
 
 - historical context
-- chronological details
+- chronology
 - people involved
 - locations
-- events leading to the mystery
+- events before the incident
 - investigation
 - physical evidence
 - official findings
 - competing theories
 - contradictions
 - unanswered questions
-- what is confirmed
-- what remains uncertain
+- confirmed facts
+- uncertain claims
+- consequences of the event
 
 STRICT FACTUAL RULES:
 
@@ -524,9 +540,15 @@ STRICT FACTUAL RULES:
 - Do not repeat entire paragraphs.
 - Do not use filler.
 - Do not artificially repeat sentences.
-- Keep the narration natural and documentary-like.
+- Keep the narration natural.
+- Keep the same documentary tone.
 
-FORMAT:
+VERY IMPORTANT:
+
+The final output must be longer than 2,700 words.
+
+If the current narration is already close to the minimum,
+add a meaningful final section rather than stopping early.
 
 Return ONLY the complete Turkish narration.
 
@@ -614,12 +636,16 @@ def main():
         f"{word_count}"
     )
 
+    # Artık sadece 3 tur değil,
+    # maksimum 6 genişletme turu yapılacak.
+    MAX_EXPANSION_ROUNDS = 6
+
     expansion_round = 0
 
     while (
         word_count < MIN_WORDS
         and
-        expansion_round < 3
+        expansion_round < MAX_EXPANSION_ROUNDS
     ):
 
         expansion_round += 1
@@ -631,7 +657,7 @@ def main():
 
         print(
             f"SENARYO GENİŞLETME "
-            f"{expansion_round}/3"
+            f"{expansion_round}/{MAX_EXPANSION_ROUNDS}"
         )
 
         print(
@@ -646,21 +672,46 @@ def main():
             word_count
         )
 
-        word_count = len(
+        new_word_count = len(
             script.split()
         )
 
         print()
         print(
-            f"Genişletilmiş senaryo kelime sayısı: "
-            f"{word_count}"
+            f"Yeni kelime sayısı: "
+            f"{new_word_count}"
         )
+
+        # Eğer model bir önceki cevaptan daha kısa
+        # bir metin döndürürse eski metni koru.
+        if new_word_count < word_count:
+
+            print(
+                "⚠️ Yeni cevap daha kısa geldi."
+            )
+
+            print(
+                "Önceki daha uzun senaryo korunuyor."
+            )
+
+        else:
+
+            word_count = new_word_count
+
+        if word_count >= MIN_WORDS:
+
+            print()
+            print(
+                "✅ 2700 kelime sınırı aşıldı."
+            )
+
+            break
 
     if word_count < MIN_WORDS:
 
         raise RuntimeError(
-            "Senaryo 3 genişletme turundan sonra "
-            "2700 kelimeye ulaşamadı: "
+            "Senaryo maksimum genişletme turundan "
+            "sonra 2700 kelimeye ulaşamadı: "
             f"{word_count}"
         )
 
@@ -707,6 +758,11 @@ def main():
     print(
         "3.6 Flash → kota varsa → "
         "3.5 Flash Lite otomatik geçiş aktif."
+    )
+
+    print(
+        f"Maksimum genişletme turu: "
+        f"{MAX_EXPANSION_ROUNDS}"
     )
 
     print("=" * 60)
