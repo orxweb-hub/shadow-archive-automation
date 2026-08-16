@@ -1,34 +1,131 @@
 import re
 import subprocess
+import json
 from pathlib import Path
 
 
-SCRIPT_FILE = Path("research/scripts/mv_joyita_script.txt")
-RAW_AUDIO_FILE = Path("research/audio/mv_joyita_voice_raw.wav")
-OUTPUT_FILE = Path("research/audio/mv_joyita_voice.wav")
+TOPIC_FILE = Path(
+    "research/current_topic.json"
+)
+
+SCRIPT_DIR = Path(
+    "research/scripts"
+)
+
+AUDIO_DIR = Path(
+    "research/audio"
+)
 
 VOICE = "tr_TR-dfki-medium"
-VOICE_DIR = Path("research/voices")
+
+VOICE_DIR = Path(
+    "research/voices"
+)
+
+
+def create_safe_filename(text):
+
+    filename = text.lower()
+
+    filename = re.sub(
+        r"[^a-z0-9]+",
+        "_",
+        filename
+    )
+
+    filename = filename.strip("_")
+
+    if not filename:
+        filename = "daily_topic"
+
+    return filename[:80]
+
+
+def load_current_topic():
+
+    if not TOPIC_FILE.exists():
+
+        raise FileNotFoundError(
+            f"Güncel konu bulunamadı: {TOPIC_FILE}"
+        )
+
+    data = json.loads(
+        TOPIC_FILE.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    topic = data.get("topic")
+
+    if not topic:
+
+        raise RuntimeError(
+            "current_topic.json içinde topic bulunamadı."
+        )
+
+    return topic
+
+
+def find_script(topic):
+
+    safe_name = create_safe_filename(
+        topic
+    )
+
+    expected_file = (
+        SCRIPT_DIR /
+        f"{safe_name}_script.txt"
+    )
+
+    if expected_file.exists():
+
+        return expected_file
+
+    scripts = list(
+        SCRIPT_DIR.glob(
+            "*_script.txt"
+        )
+    )
+
+    if not scripts:
+
+        raise FileNotFoundError(
+            "Hiçbir senaryo dosyası bulunamadı."
+        )
+
+    scripts.sort(
+        key=lambda file: file.stat().st_mtime,
+        reverse=True
+    )
+
+    return scripts[0]
 
 
 def prepare_text(text):
-    """
-    TTS metnini daha doğal konuşulabilecek hale getirir.
 
-    Çok uzun cümlelerde küçük duraklamalar oluşturur.
-    Noktalama işaretlerinden sonra doğal boşluk bırakır.
-    """
+    text = text.replace(
+        "\r\n",
+        "\n"
+    )
 
-    text = text.replace("\r\n", "\n")
-    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(
+        r"[ \t]+",
+        " ",
+        text
+    )
 
-    # Cümle sonlarında Piper'ın doğal duraklamasını destekle
-    text = re.sub(r"([.!?])\s+", r"\1  ", text)
+    text = re.sub(
+        r"([.!?])\s+",
+        r"\1  ",
+        text
+    )
 
-    # Virgüllerden sonra hafif nefes/duraklama
-    text = re.sub(r",\s+", ",  ", text)
+    text = re.sub(
+        r",\s+",
+        ",  ",
+        text
+    )
 
-    # Çok uzun cümleleri küçük parçalara ayır
     text = re.sub(
         r"(\S{20,}),\s+",
         r"\1,  ",
@@ -39,7 +136,13 @@ def prepare_text(text):
 
 
 def run(command):
-    print("RUN:", " ".join(command))
+
+    print(
+        "RUN:",
+        " ".join(
+            map(str, command)
+        )
+    )
 
     result = subprocess.run(
         command,
@@ -48,20 +151,30 @@ def run(command):
     )
 
     if result.stdout:
-        print(result.stdout)
+        print(
+            result.stdout
+        )
 
     if result.returncode != 0:
+
         if result.stderr:
-            print(result.stderr)
+            print(
+                result.stderr
+            )
 
         raise RuntimeError(
             "Komut çalıştırılamadı."
         )
 
 
-def generate_piper_audio(text):
+def generate_piper_audio(
+    text,
+    raw_audio_file
+):
 
-    print("Türkçe ses modeli indiriliyor...")
+    print(
+        "Türkçe ses modeli indiriliyor..."
+    )
 
     download = subprocess.run(
         [
@@ -76,19 +189,32 @@ def generate_piper_audio(text):
         capture_output=True
     )
 
-    print(download.stdout)
+    print(
+        download.stdout
+    )
 
     if download.returncode != 0:
-        print(download.stderr)
+
+        print(
+            download.stderr
+        )
 
         raise RuntimeError(
             "Piper ses modeli indirilemedi."
         )
 
-    print("Ses modeli hazır.")
-    print("Ham anlatıcı sesi oluşturuluyor...")
+    print(
+        "Ses modeli hazır."
+    )
 
-    model_file = VOICE_DIR / f"{VOICE}.onnx"
+    print(
+        "Ham anlatıcı sesi oluşturuluyor..."
+    )
+
+    model_file = (
+        VOICE_DIR /
+        f"{VOICE}.onnx"
+    )
 
     process = subprocess.run(
         [
@@ -96,7 +222,7 @@ def generate_piper_audio(text):
             "--model",
             str(model_file),
             "--output_file",
-            str(RAW_AUDIO_FILE)
+            str(raw_audio_file)
         ],
         input=text,
         text=True,
@@ -104,31 +230,29 @@ def generate_piper_audio(text):
     )
 
     if process.returncode != 0:
-        print(process.stderr)
+
+        print(
+            process.stderr
+        )
 
         raise RuntimeError(
             "Piper TTS çalıştırılamadı."
         )
 
-    print("Ham ses hazır.")
+    print(
+        "Ham ses hazır."
+    )
 
 
-def improve_voice():
+def improve_voice(
+    raw_audio_file,
+    output_file
+):
 
     print()
-    print("V3 doğal ses işlemesi başlıyor...")
-
-    # Amaç:
-    # - hafif EQ
-    # - konuşmayı öne çıkarma
-    # - doğal ses yüksekliği
-    # - hafif kompresyon
-    # - çok küçük stereo genişlik
-    # - yumuşak limiter
-    #
-    # Aşırı efekt kullanılmıyor.
-    # Amaç robotik sesi efektle gizlemek değil,
-    # anlatımı daha temiz ve canlı hale getirmek.
+    print(
+        "V3 doğal ses işlemesi başlıyor..."
+    )
 
     audio_filter = (
         "highpass=f=70,"
@@ -152,7 +276,7 @@ def improve_voice():
             "ffmpeg",
             "-y",
             "-i",
-            str(RAW_AUDIO_FILE),
+            str(raw_audio_file),
             "-af",
             audio_filter,
             "-ar",
@@ -161,60 +285,112 @@ def improve_voice():
             "2",
             "-c:a",
             "pcm_s16le",
-            str(OUTPUT_FILE)
+            str(output_file)
         ]
     )
 
-    print("V3 ses işlemesi tamamlandı.")
+    print(
+        "V3 ses işlemesi tamamlandı."
+    )
 
 
 def main():
 
     print("=" * 60)
-    print("SHADOW ARCHIVE — NATURAL TTS V3")
+    print(
+        "SHADOW ARCHIVE — NATURAL TTS V3"
+    )
     print("=" * 60)
 
-    if not SCRIPT_FILE.exists():
-        raise FileNotFoundError(
-            f"Senaryo bulunamadı: {SCRIPT_FILE}"
-        )
+    topic = load_current_topic()
+
+    print()
+    print(
+        "GÜNCEL KONU:"
+    )
+    print(topic)
+
+    print()
+
+    script_file = find_script(
+        topic
+    )
+
+    print(
+        "SENARYO:"
+    )
+    print(script_file)
+
+    safe_name = create_safe_filename(
+        topic
+    )
+
+    AUDIO_DIR.mkdir(
+        parents=True,
+        exist_ok=True
+    )
 
     VOICE_DIR.mkdir(
         parents=True,
         exist_ok=True
     )
 
-    OUTPUT_FILE.parent.mkdir(
-        parents=True,
-        exist_ok=True
+    raw_audio_file = (
+        AUDIO_DIR /
+        f"{safe_name}_voice_raw.wav"
     )
 
-    text = SCRIPT_FILE.read_text(
+    output_file = (
+        AUDIO_DIR /
+        f"{safe_name}_voice.wav"
+    )
+
+    text = script_file.read_text(
         encoding="utf-8"
     )
 
     if not text.strip():
+
         raise RuntimeError(
             "Senaryo dosyası boş."
         )
 
+    print()
     print(
-        f"Senaryo uzunluğu: {len(text)} karakter"
+        f"Senaryo uzunluğu: "
+        f"{len(text)} karakter"
     )
 
-    prepared_text = prepare_text(text)
+    prepared_text = prepare_text(
+        text
+    )
 
     generate_piper_audio(
-        prepared_text
+        prepared_text,
+        raw_audio_file
     )
 
-    improve_voice()
+    improve_voice(
+        raw_audio_file,
+        output_file
+    )
 
     print()
     print("=" * 60)
-    print("NATURAL TTS V3 TAMAMLANDI")
+    print(
+        "NATURAL TTS V3 TAMAMLANDI"
+    )
     print("=" * 60)
-    print(f"Çıktı: {OUTPUT_FILE}")
+
+    print(
+        f"Konu: {topic}"
+    )
+
+    print(
+        f"Çıktı: {output_file}"
+    )
+
+    print("=" * 60)
 
 
 if __name__ == "__main__":
