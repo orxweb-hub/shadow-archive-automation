@@ -4,6 +4,7 @@ import time
 import urllib.parse
 import urllib.request
 from pathlib import Path
+import re
 
 from google import genai
 
@@ -28,7 +29,9 @@ PEXELS_API_URL = (
     "https://api.pexels.com/videos/search"
 )
 
-GEMINI_MODEL = "gemini-3.6-flash"
+PRIMARY_GEMINI_MODEL = "gemini-3.6-flash"
+
+FALLBACK_GEMINI_MODEL = "gemini-3.5-flash-lite"
 
 MAX_GEMINI_RETRIES = 5
 
@@ -43,8 +46,6 @@ RETRY_DELAYS = [
 
 def create_safe_filename(text):
 
-    import re
-
     filename = text.lower()
 
     filename = re.sub(
@@ -56,6 +57,7 @@ def create_safe_filename(text):
     filename = filename.strip("_")
 
     if not filename:
+
         filename = "daily_topic"
 
     return filename[:80]
@@ -138,6 +140,199 @@ def get_gemini_client():
     )
 
 
+def is_quota_error(error):
+
+    error_text = str(error).lower()
+
+    return (
+        "429" in error_text
+        or
+        "resource_exhausted" in error_text
+        or
+        "quota" in error_text
+        or
+        "rate limit" in error_text
+    )
+
+
+def is_temporary_error(error):
+
+    error_text = str(error).lower()
+
+    return (
+        "500" in error_text
+        or
+        "503" in error_text
+        or
+        "unavailable" in error_text
+        or
+        "internal" in error_text
+        or
+        "high demand" in error_text
+    )
+
+
+def generate_scenes_with_model(
+    client,
+    prompt,
+    model
+):
+
+    for attempt in range(
+        1,
+        MAX_GEMINI_RETRIES + 1
+    ):
+
+        try:
+
+            print()
+
+            print(
+                "Gemini Visual Research"
+            )
+
+            print(
+                f"Model: {model}"
+            )
+
+            print(
+                f"Deneme: "
+                f"{attempt}/{MAX_GEMINI_RETRIES}"
+            )
+
+            response = client.models.generate_content(
+                model=model,
+                contents=prompt
+            )
+
+            text = (
+                response.text.strip()
+                if response.text
+                else ""
+            )
+
+            if not text:
+
+                raise RuntimeError(
+                    "Gemini boş cevap döndürdü."
+                )
+
+            if text.startswith("```"):
+
+                text = text.replace(
+                    "```json",
+                    ""
+                )
+
+                text = text.replace(
+                    "```",
+                    ""
+                )
+
+                text = text.strip()
+
+            scenes = json.loads(
+                text
+            )
+
+            if not isinstance(
+                scenes,
+                list
+            ):
+
+                raise ValueError(
+                    "Gemini geçerli bir "
+                    "sahne listesi döndürmedi."
+                )
+
+            if len(scenes) < 10:
+
+                raise ValueError(
+                    "Gemini yeterli sayıda "
+                    "sahne üretmedi."
+                )
+
+            print()
+
+            print(
+                f"Gemini Visual Research başarılı: "
+                f"{model}"
+            )
+
+            print(
+                f"Sahne sayısı: {len(scenes)}"
+            )
+
+            return scenes
+
+        except Exception as error:
+
+            print()
+
+            print(
+                "Gemini hatası:"
+            )
+
+            print(error)
+
+            if is_quota_error(error):
+
+                print()
+
+                print(
+                    f"⚠️ {model} "
+                    "kota/rate limit hatası."
+                )
+
+                raise error
+
+            if is_temporary_error(error):
+
+                if attempt == MAX_GEMINI_RETRIES:
+
+                    raise RuntimeError(
+                        f"{model} geçici hatalar "
+                        "nedeniyle başarısız oldu."
+                    ) from error
+
+                delay = RETRY_DELAYS[
+                    attempt - 1
+                ]
+
+                print(
+                    f"{delay} saniye bekleniyor..."
+                )
+
+                time.sleep(
+                    delay
+                )
+
+                continue
+
+            if attempt == MAX_GEMINI_RETRIES:
+
+                raise RuntimeError(
+                    f"{model} Visual Research "
+                    "5 denemede de başarısız oldu."
+                ) from error
+
+            delay = RETRY_DELAYS[
+                attempt - 1
+            ]
+
+            print(
+                f"{delay} saniye bekleniyor..."
+            )
+
+            time.sleep(
+                delay
+            )
+
+    raise RuntimeError(
+        f"{model} sahne üretimini tamamlayamadı."
+    )
+
+
 def create_scenes(
     client,
     script
@@ -189,110 +384,87 @@ DOCUMENTARY SCRIPT:
 {script}
 """
 
-    for attempt in range(
-        1,
-        MAX_GEMINI_RETRIES + 1
-    ):
+    # Önce 3.6 Flash denenir.
+    try:
+
+        print()
+        print(
+            "=========================================="
+        )
+
+        print(
+            "1. GEMINI MODELİ:"
+        )
+
+        print(
+            PRIMARY_GEMINI_MODEL
+        )
+
+        print(
+            "=========================================="
+        )
+
+        return generate_scenes_with_model(
+            client,
+            prompt,
+            PRIMARY_GEMINI_MODEL
+        )
+
+    except Exception as primary_error:
+
+        # Sadece kota/rate-limit durumunda
+        # 3.5 Flash Lite'a geç.
+        if not is_quota_error(
+            primary_error
+        ):
+
+            raise
+
+        print()
+        print(
+            "=========================================="
+        )
+
+        print(
+            "⚠️ 3.6 FLASH KOTASI DOLU"
+        )
+
+        print(
+            "🔄 OTOMATİK MODEL DEĞİŞİMİ"
+        )
+
+        print(
+            f"{PRIMARY_GEMINI_MODEL}"
+            " → "
+            f"{FALLBACK_GEMINI_MODEL}"
+        )
+
+        print(
+            "=========================================="
+        )
 
         try:
 
-            print(
-                "Gemini Visual Research "
-                f"denemesi {attempt}/"
-                f"{MAX_GEMINI_RETRIES}"
+            return generate_scenes_with_model(
+                client,
+                prompt,
+                FALLBACK_GEMINI_MODEL
             )
 
-            response = client.models.generate_content(
-                model=GEMINI_MODEL,
-                contents=prompt
-            )
+        except Exception as fallback_error:
 
-            text = response.text.strip()
-
-            if text.startswith("```"):
-
-                text = text.replace(
-                    "```json",
-                    ""
-                )
-
-                text = text.replace(
-                    "```",
-                    ""
-                )
-
-                text = text.strip()
-
-            scenes = json.loads(
-                text
-            )
-
-            if not isinstance(
-                scenes,
-                list
-            ):
-
-                raise ValueError(
-                    "Gemini geçerli bir "
-                    "sahne listesi döndürmedi."
-                )
-
-            if len(scenes) < 10:
-
-                raise ValueError(
-                    "Gemini yeterli sayıda "
-                    "sahne üretmedi."
-                )
-
-            print(
-                "Gemini Visual Research başarılı."
-            )
-
-            return scenes
-
-        except Exception as error:
-
-            error_text = str(error)
-
-            print()
-            print(
-                "Gemini hatası:"
-            )
-            print(error)
-
-            if (
-                "429" in error_text
-                or "RESOURCE_EXHAUSTED"
-                in error_text
-                or "quota"
-                in error_text.lower()
+            if is_quota_error(
+                fallback_error
             ):
 
                 raise RuntimeError(
-                    "Gemini günlük ücretsiz "
-                    "kotası doldu. Visual "
-                    "Research durduruldu."
-                ) from error
+                    "Hem Gemini 3.6 Flash hem de "
+                    "Gemini 3.5 Flash Lite kota/"
+                    "rate limit nedeniyle "
+                    "kullanılamıyor."
+                ) from fallback_error
 
-            if attempt == MAX_GEMINI_RETRIES:
-
-                raise RuntimeError(
-                    "Gemini Visual Research "
-                    "5 denemede de başarısız oldu."
-                ) from error
-
-            delay = RETRY_DELAYS[
-                attempt - 1
-            ]
-
-            print(
-                f"{delay} saniye bekleniyor "
-                "ve tekrar deneniyor..."
-            )
-
-            time.sleep(
-                delay
-            )
+            raise
 
 
 def search_pexels(
@@ -358,11 +530,13 @@ def select_video(video):
         )
 
         if not link:
+
             continue
 
         if (
             width >= 1280
-            and height >= 720
+            and
+            height >= 720
         ):
 
             valid_files.append(
@@ -440,12 +614,14 @@ def main():
         "=========================================="
     )
 
+    print()
+
     topic = load_current_topic()
 
-    print()
     print(
         "GÜNCEL KONU:"
     )
+
     print(topic)
 
     print()
@@ -457,6 +633,7 @@ def main():
     print(
         "SENARYO:"
     )
+
     print(script_file)
 
     print()
@@ -556,6 +733,7 @@ def main():
                 )
 
                 if selected:
+
                     break
 
             if not selected:
@@ -639,6 +817,7 @@ def main():
     )
 
     print()
+
     print(
         "=========================================="
     )
