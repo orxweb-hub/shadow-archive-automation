@@ -1,8 +1,79 @@
 import json
+import re
 from pathlib import Path
 
-SELECTION_FILE = Path("research/video/shorts_selection.json")
+
+TOPIC_FILE = Path("research/current_topic.json")
+SELECTION_DIR = Path("research/video")
 OUTPUT_DIR = Path("research/video/subtitles")
+
+
+def create_safe_filename(text):
+    text = text.lower()
+    text = re.sub(r"[^a-z0-9]+", "_", text)
+    text = text.strip("_")
+
+    if not text:
+        text = "daily_topic"
+
+    return text[:80]
+
+
+def load_current_topic():
+    if not TOPIC_FILE.exists():
+        raise FileNotFoundError(
+            f"current_topic.json bulunamadı: {TOPIC_FILE}"
+        )
+
+    data = json.loads(
+        TOPIC_FILE.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    topic = data.get("topic")
+
+    if not topic:
+        raise RuntimeError(
+            "current_topic.json içinde topic bulunamadı."
+        )
+
+    return data
+
+
+def find_selection_file(topic):
+    safe_name = create_safe_filename(topic)
+
+    expected_file = (
+        SELECTION_DIR /
+        f"{safe_name}_shorts_selection.json"
+    )
+
+    if expected_file.exists():
+        return expected_file
+
+    fallback = (
+        SELECTION_DIR /
+        "shorts_selection.json"
+    )
+
+    if fallback.exists():
+        return fallback
+
+    files = sorted(
+        SELECTION_DIR.glob(
+            "*_shorts_selection.json"
+        ),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True
+    )
+
+    if files:
+        return files[0]
+
+    raise FileNotFoundError(
+        "Shorts seçim dosyası bulunamadı."
+    )
 
 
 def main():
@@ -11,44 +82,67 @@ def main():
     print("SHADOW ARCHIVE — ENGLISH SUBTITLES")
     print("=" * 60)
 
-    if not SELECTION_FILE.exists():
-        raise FileNotFoundError(
-            "shorts_selection.json bulunamadı."
-        )
+    topic_data = load_current_topic()
+
+    topic = topic_data["topic"]
+
+    selection_file = find_selection_file(
+        topic
+    )
+
+    print(
+        f"Shorts seçimi: {selection_file}"
+    )
 
     data = json.loads(
-        SELECTION_FILE.read_text(
+        selection_file.read_text(
             encoding="utf-8"
         )
     )
+
+    if "shorts" not in data:
+        raise RuntimeError(
+            "Shorts seçim dosyasında "
+            "'shorts' alanı bulunamadı."
+        )
+
+    if len(data["shorts"]) != 2:
+        raise RuntimeError(
+            "Tam olarak 2 Shorts bekleniyor."
+        )
 
     OUTPUT_DIR.mkdir(
         parents=True,
         exist_ok=True
     )
 
+    safe_name = create_safe_filename(
+        topic
+    )
+
     for short in data["shorts"]:
 
         number = short["short"]
 
-        # Shorts seçiminde İngilizce metin
-        # daha sonra eklenecek.
+        schedule = short.get(
+            "schedule",
+            ""
+        )
+
         english = short.get(
             "english_script",
             ""
         ).strip()
 
         if not english:
-            print(
-                f"Short {number}: "
-                "İngilizce metin henüz bulunmuyor."
+            raise RuntimeError(
+                f"Short {number} için "
+                "İngilizce metin bulunamadı."
             )
-
-            continue
 
         output_file = (
             OUTPUT_DIR /
-            f"short_{number}_english.txt"
+            f"{safe_name}_short_{number}_english.txt"
         )
 
         output_file.write_text(
@@ -57,7 +151,12 @@ def main():
         )
 
         print(
-            f"Short {number} altyazısı hazır."
+            f"✓ Short {number} "
+            f"({schedule}) altyazısı hazır."
+        )
+
+        print(
+            f"  {output_file}"
         )
 
     print()
