@@ -2,6 +2,7 @@ import json
 import os
 import urllib.parse
 import urllib.request
+from pathlib import Path
 
 from google import genai
 
@@ -11,6 +12,8 @@ TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 TELEGRAM_CHAT_ID = os.environ["TELEGRAM_CHAT_ID"]
 
 MODEL = "gemini-3.6-flash"
+
+TOPIC_FILE = Path("research/current_topic.json")
 
 
 def telegram(method, data):
@@ -37,7 +40,7 @@ def generate_topic():
     prompt = """
 You are the topic director for Shadow Archive.
 
-Shadow Archive is a Turkish YouTube channel focused on:
+Shadow Archive is a Turkish YouTube documentary channel focused on:
 
 - mysterious real events
 - unsolved cases
@@ -49,14 +52,22 @@ Shadow Archive is a Turkish YouTube channel focused on:
 - missing people
 - historical mysteries
 
-Generate ONE strong video topic.
+Generate ONE strong documentary topic.
+
+IMPORTANT:
 
 The topic must:
-- be based on real events
-- have enough reliable information for a 15+ minute video
+- be based on a real event
+- have enough reliable information for a 15+ minute documentary
 - have strong curiosity potential
+- have a clear timeline
+- contain enough people, locations and events to research
 - avoid fabricated claims
-- avoid repeating common topics when possible
+- avoid conspiracy presented as fact
+- avoid misleading clickbait
+- preferably be less overused than extremely famous cases
+
+The documentary should be possible to research using reliable web sources.
 
 Return ONLY valid JSON.
 
@@ -84,13 +95,17 @@ Required format:
   ]
 }
 
-The title should be highly clickable without misleading clickbait.
+The title should be highly clickable but factual.
 
 The description must be suitable for YouTube.
 
 The hashtags must be directly related to the topic.
 
 Do not use spam hashtags.
+
+Do not add markdown.
+
+Return JSON only.
 """
 
     response = client.models.generate_content(
@@ -105,7 +120,50 @@ Do not use spam hashtags.
         text = text.replace("```", "")
         text = text.strip()
 
-    return json.loads(text)
+    data = json.loads(text)
+
+    required_fields = [
+        "topic",
+        "category",
+        "summary",
+        "research_points",
+        "title",
+        "description",
+        "hashtags"
+    ]
+
+    for field in required_fields:
+        if field not in data:
+            raise RuntimeError(
+                f"Gemini çıktısında eksik alan: {field}"
+            )
+
+    return data
+
+
+def save_current_topic(data):
+
+    TOPIC_FILE.parent.mkdir(
+        parents=True,
+        exist_ok=True
+    )
+
+    TOPIC_FILE.write_text(
+        json.dumps(
+            data,
+            ensure_ascii=False,
+            indent=2
+        ),
+        encoding="utf-8"
+    )
+
+    print("==========================================")
+    print("CURRENT TOPIC SAVED")
+    print("==========================================")
+    print(f"File: {TOPIC_FILE}")
+    print(f"Topic: {data['topic']}")
+    print(f"Title: {data['title']}")
+    print("==========================================")
 
 
 def send_telegram(data):
@@ -190,6 +248,8 @@ def main():
     print("==========================================")
 
     data = generate_topic()
+
+    save_current_topic(data)
 
     send_telegram(data)
 
