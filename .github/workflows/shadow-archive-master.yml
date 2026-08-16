@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Checkout Repository
         uses: actions/checkout@v4
 
@@ -30,8 +31,6 @@ jobs:
           sudo apt-get install -y ffmpeg
 
       - name: Web Research
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           python research/research/web_researcher.py
 
@@ -86,5 +85,15 @@ jobs:
           curl -s -X POST \
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -d "chat_id=${TELEGRAM_CHAT_ID}" \
-            --data-urlencode "text=🤖 SHADOW ARCHIVE — VİDEO HAZIR\n\n✅ Araştırma tamamlandı\n✅ Senaryo tamamlandı\n✅ Seslendirme tamamlandı\n✅ Görseller tamamlandı\n✅ Ana video oluşturuldu\n\n🎬 Video YouTube'a yüklenmeye hazır.\n\nYayınlansın mı?" \
+            --data-urlencode "text=🤖 SHADOW ARCHIVE — VİDEO HAZIR
+
+          ✅ Araştırma tamamlandı
+          ✅ Senaryo tamamlandı
+          ✅ Seslendirme tamamlandı
+          ✅ Görseller tamamlandı
+          ✅ Ana video oluşturuldu
+
+          🎬 Video YouTube'a yüklenmeye hazır.
+
+          Yayınlansın mı?" \
             --data-urlencode 'reply_markup={"inline_keyboard":[[{"text":"▶️ YAYINLA","callback_data":"publish_approve"},{"text":"❌ YAYINLAMA","callback_data":"publish_reject"}]]}'
