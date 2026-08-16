@@ -14,7 +14,7 @@ SCRIPT_DIR = Path("research/scripts")
 MIN_WORDS = 2700
 MAX_WORDS = 3400
 
-MODEL = "gemini-3.6-flash"
+MODEL = "gemini-3.5-flash-lite"
 
 MAX_RETRIES = 5
 
@@ -149,11 +149,9 @@ def call_gemini(client, prompt):
             if (
                 "429" in error_text
                 or
-                "RESOURCE_EXHAUSTED"
-                in error_text
+                "RESOURCE_EXHAUSTED" in error_text
                 or
-                "quota"
-                in error_text.lower()
+                "quota" in error_text.lower()
             ):
 
                 raise RuntimeError(
@@ -164,11 +162,9 @@ def call_gemini(client, prompt):
             if (
                 "503" in error_text
                 or
-                "UNAVAILABLE"
-                in error_text
+                "UNAVAILABLE" in error_text
                 or
-                "high demand"
-                in error_text.lower()
+                "high demand" in error_text.lower()
             ):
 
                 if attempt == MAX_RETRIES:
