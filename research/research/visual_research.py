@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -13,6 +14,10 @@ CLIPS_DIR = OUTPUT_DIR / "clips"
 SCENE_FILE = OUTPUT_DIR / "scenes.json"
 
 PEXELS_API_URL = "https://api.pexels.com/videos/search"
+
+GEMINI_MODEL = "gemini-3.6-flash"
+MAX_GEMINI_RETRIES = 5
+RETRY_DELAYS = [30, 60, 120, 180, 300]
 
 
 def get_gemini_client():
@@ -87,19 +92,54 @@ Example:
 ]
 """
 
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt
-    )
+    for attempt in range(1, MAX_GEMINI_RETRIES + 1):
 
-    text = response.text.strip()
+        try:
+            print(
+                f"Gemini Visual Research denemesi "
+                f"{attempt}/{MAX_GEMINI_RETRIES}"
+            )
 
-    if text.startswith("```"):
-        text = text.replace("```json", "")
-        text = text.replace("```", "")
-        text = text.strip()
+            response = client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=prompt
+            )
 
-    return json.loads(text)
+            text = response.text.strip()
+
+            if text.startswith("```"):
+                text = text.replace("```json", "")
+                text = text.replace("```", "")
+                text = text.strip()
+
+            scenes = json.loads(text)
+
+            if not isinstance(scenes, list):
+                raise ValueError(
+                    "Gemini geçerli bir sahne listesi döndürmedi."
+                )
+
+            print("Gemini Visual Research başarılı.")
+            return scenes
+
+        except Exception as error:
+
+            print()
+            print("Gemini hatası:")
+            print(error)
+
+            if attempt == MAX_GEMINI_RETRIES:
+                raise RuntimeError(
+                    "Gemini Visual Research 5 denemede de başarısız oldu."
+                ) from error
+
+            delay = RETRY_DELAYS[attempt - 1]
+
+            print(
+                f"{delay} saniye bekleniyor ve tekrar deneniyor..."
+            )
+
+            time.sleep(delay)
 
 
 def search_pexels(query):
@@ -136,8 +176,6 @@ def select_video(videos):
     if not videos:
         return None
 
-    # Tercih edilen kalite:
-    # yatay video + HD/Full HD
     candidates = []
 
     for video in videos:
@@ -188,7 +226,7 @@ def download_video(video, output_file):
         }
     )
 
-    with urllib.request.urlopen(request, timeout=60) as response:
+    with urllib.request.urlopen(video_url, timeout=60) as response:
 
         with open(output_file, "wb") as file:
 
