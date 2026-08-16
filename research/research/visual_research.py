@@ -32,69 +32,50 @@ def get_gemini_client():
 def create_scenes(client, script):
 
     prompt = f"""
-You are a professional documentary visual director.
+You are a professional documentary visual researcher.
 
-Channel:
-Shadow Archive
+Analyze the following Turkish documentary script.
 
-Documentary topic:
-MV Joyita
+Create 25-35 visual scenes.
 
-Below is the narration:
+For each scene return:
+- scene_number
+- narration_summary
+- visual_description
+- search_query
 
-{script}
-
-Break this narration into approximately 25–35 visual scenes.
-
-For every scene return:
-
-{{
-  "scene": 1,
-  "description": "",
-  "search_queries": ["", "", ""],
-  "mood": "",
-  "duration_hint": 0
-}}
-
-Rules:
-
-- Search queries must be suitable for stock video searches.
-- Use concrete visual subjects.
-- Prefer locations, oceans, ships, maps, weather, documents,
-  historical atmosphere and investigative visuals.
-- Do not search for abstract concepts.
-- Do not invent historical footage.
-- Do not claim a stock clip is actual MV Joyita footage.
-- If real historical footage is unavailable, use atmospheric
-  B-roll that visually represents the narration.
-- Search queries should be in English because stock libraries
-  generally have better English results.
-- Keep queries short.
-- Avoid repeating the same query excessively.
-- Duration hints should generally be between 10 and 45 seconds.
+IMPORTANT:
+- search_query must be in English
+- search_query must work well with the Pexels video API
+- prefer cinematic landscape, ocean, ship, storm, night, archival atmosphere,
+  abandoned places, maps, waves, clouds, coastline and documentary B-roll
+- do NOT claim that stock footage is actual historical footage
+- visuals are atmospheric B-roll only
+- avoid copyrighted movie footage
+- avoid logos and text-heavy footage
 
 Return ONLY valid JSON.
 
-Example:
+JSON format:
 
 [
   {{
-    "scene": 1,
-    "description": "A cargo ship travelling across a dark ocean",
-    "search_queries": [
-      "cargo ship ocean",
-      "ship at sea",
-      "dark ocean waves"
-    ],
-    "mood": "mysterious",
-    "duration_hint": 20
+    "scene_number": 1,
+    "narration_summary": "...",
+    "visual_description": "...",
+    "search_query": "..."
   }}
 ]
+
+DOCUMENTARY SCRIPT:
+
+{script}
 """
 
     for attempt in range(1, MAX_GEMINI_RETRIES + 1):
 
         try:
+
             print(
                 f"Gemini Visual Research denemesi "
                 f"{attempt}/{MAX_GEMINI_RETRIES}"
@@ -119,138 +100,168 @@ Example:
                     "Gemini geçerli bir sahne listesi döndürmedi."
                 )
 
+            if len(scenes) < 10:
+                raise ValueError(
+                    "Gemini yeterli sayıda sahne üretmedi."
+                )
+
             print("Gemini Visual Research başarılı.")
+
             return scenes
 
         except Exception as error:
+
+            error_text = str(error)
 
             print()
             print("Gemini hatası:")
             print(error)
 
+            # 429 = günlük kota doldu.
+            # Tekrar denemek gereksiz.
+            if (
+                "429" in error_text
+                or "RESOURCE_EXHAUSTED" in error_text
+                or "quota" in error_text.lower()
+            ):
+                raise RuntimeError(
+                    "Gemini günlük ücretsiz kotası doldu. "
+                    "Visual Research durduruldu. "
+                    "Tekrar deneme yapılmayacak."
+                ) from error
+
+            # Diğer geçici hatalarda tekrar dene.
             if attempt == MAX_GEMINI_RETRIES:
                 raise RuntimeError(
-                    "Gemini Visual Research 5 denemede de başarısız oldu."
+                    "Gemini Visual Research "
+                    "5 denemede de başarısız oldu."
                 ) from error
 
             delay = RETRY_DELAYS[attempt - 1]
 
             print(
-                f"{delay} saniye bekleniyor ve tekrar deneniyor..."
+                f"{delay} saniye bekleniyor "
+                "ve tekrar deneniyor..."
             )
 
             time.sleep(delay)
 
 
-def search_pexels(query):
-
-    api_key = os.environ.get("PEXELS_API_KEY")
-
-    if not api_key:
-        raise RuntimeError("PEXELS_API_KEY bulunamadı.")
+def search_pexels(query, api_key):
 
     params = urllib.parse.urlencode({
         "query": query,
         "per_page": 5,
-        "orientation": "landscape"
+        "orientation": "landscape",
+        "size": "large"
     })
 
-    url = f"{PEXELS_API_URL}?{params}"
+    request = urllib.request.Request(
+        f"{PEXELS_API_URL}?{params}",
+        headers={
+            "Authorization": api_key
+        }
+    )
+
+    with urllib.request.urlopen(
+        request,
+        timeout=60
+    ) as response:
+
+        return json.loads(
+            response.read().decode("utf-8")
+        )
+
+
+def select_video(video):
+
+    files = video.get("video_files", [])
+
+    valid_files = []
+
+    for file in files:
+
+        width = file.get("width") or 0
+        height = file.get("height") or 0
+        link = file.get("link")
+
+        if not link:
+            continue
+
+        if width >= 1280 and height >= 720:
+            valid_files.append(file)
+
+    if not valid_files:
+
+        for file in files:
+
+            if file.get("link"):
+                valid_files.append(file)
+
+    if not valid_files:
+        return None
+
+    valid_files.sort(
+        key=lambda x: (
+            x.get("width", 0) * x.get("height", 0)
+        ),
+        reverse=True
+    )
+
+    return valid_files[0]["link"]
+
+
+def download_video(url, output):
 
     request = urllib.request.Request(
         url,
         headers={
-            "Authorization": api_key,
-            "User-Agent": "ShadowArchive/1.0"
+            "User-Agent": "Mozilla/5.0"
         }
     )
 
-    with urllib.request.urlopen(request, timeout=30) as response:
-        data = json.loads(response.read().decode("utf-8"))
+    with urllib.request.urlopen(
+        request,
+        timeout=120
+    ) as response:
 
-    return data.get("videos", [])
+        data = response.read()
 
-
-def select_video(videos):
-
-    if not videos:
-        return None
-
-    candidates = []
-
-    for video in videos:
-
-        width = video.get("width", 0)
-        height = video.get("height", 0)
-
-        if width >= 1280 and height >= 720:
-            candidates.append(video)
-
-    if candidates:
-        return candidates[0]
-
-    return videos[0]
-
-
-def download_video(video, output_file):
-
-    video_files = video.get("video_files", [])
-
-    if not video_files:
-        return False
-
-    suitable = []
-
-    for file in video_files:
-
-        width = file.get("width", 0)
-        height = file.get("height", 0)
-
-        if width >= 1280 and height >= 720:
-            suitable.append(file)
-
-    if not suitable:
-        suitable = video_files
-
-    selected = suitable[0]
-
-    video_url = selected.get("link")
-
-    if not video_url:
-        return False
-
-    request = urllib.request.Request(
-        video_url,
-        headers={
-            "User-Agent": "ShadowArchive/1.0"
-        }
-    )
-
-    with urllib.request.urlopen(video_url, timeout=60) as response:
-
-        with open(output_file, "wb") as file:
-
-            while True:
-
-                chunk = response.read(1024 * 1024)
-
-                if not chunk:
-                    break
-
-                file.write(chunk)
-
-    return True
+    output.write_bytes(data)
 
 
 def main():
 
-    print("SHADOW ARCHIVE — VISUAL RESEARCH")
-    print("=" * 60)
+    print("==========================================")
+    print("SHADOW ARCHIVE VISUAL RESEARCH")
+    print("==========================================")
 
     if not SCRIPT_FILE.exists():
         raise FileNotFoundError(
-            f"Senaryo bulunamadı: {SCRIPT_FILE}"
+            f"Script bulunamadı: {SCRIPT_FILE}"
         )
+
+    pexels_key = os.environ.get(
+        "PEXELS_API_KEY"
+    )
+
+    if not pexels_key:
+        raise RuntimeError(
+            "PEXELS_API_KEY bulunamadı."
+        )
+
+    script = SCRIPT_FILE.read_text(
+        encoding="utf-8"
+    )
+
+    client = get_gemini_client()
+
+    print("Gemini sahneleri oluşturuyor...")
+
+    scenes = create_scenes(
+        client,
+        script
+    )
 
     OUTPUT_DIR.mkdir(
         parents=True,
@@ -262,20 +273,95 @@ def main():
         exist_ok=True
     )
 
-    script = SCRIPT_FILE.read_text(
-        encoding="utf-8"
-    )
+    for old_file in CLIPS_DIR.glob("*.mp4"):
+        old_file.unlink()
 
-    client = get_gemini_client()
+    downloaded_scenes = []
 
-    print("Sahneler oluşturuluyor...")
+    for index, scene in enumerate(
+        scenes,
+        start=1
+    ):
 
-    scenes = create_scenes(
-        client,
-        script
-    )
+        query = scene.get(
+            "search_query",
+            "cinematic ocean"
+        )
 
-    print(f"Oluşturulan sahne sayısı: {len(scenes)}")
+        print()
+        print(
+            f"[{index}/{len(scenes)}] "
+            f"Pexels: {query}"
+        )
+
+        try:
+
+            result = search_pexels(
+                query,
+                pexels_key
+            )
+
+            videos = result.get(
+                "videos",
+                []
+            )
+
+            if not videos:
+                print("Video bulunamadı.")
+                continue
+
+            selected = None
+
+            for video in videos:
+
+                selected = select_video(
+                    video
+                )
+
+                if selected:
+                    break
+
+            if not selected:
+                print(
+                    "Uygun video bulunamadı."
+                )
+                continue
+
+            output = (
+                CLIPS_DIR /
+                f"scene_{index:03d}.mp4"
+            )
+
+            print(
+                f"Video indiriliyor: {output}"
+            )
+
+            download_video(
+                selected,
+                output
+            )
+
+            downloaded_scenes.append({
+                "scene_number": index,
+                "search_query": query,
+                "file": str(output),
+                "visual_description":
+                    scene.get(
+                        "visual_description",
+                        ""
+                    ),
+                "narration_summary":
+                    scene.get(
+                        "narration_summary",
+                        ""
+                    )
+            })
+
+        except Exception as error:
+
+            print(
+                f"Video alınamadı: {error}"
+            )
 
     SCENE_FILE.write_text(
         json.dumps(
@@ -286,73 +372,14 @@ def main():
         encoding="utf-8"
     )
 
-    print()
-    print("Pexels görüntüleri aranıyor...")
+    visual_assets_file = (
+        OUTPUT_DIR /
+        "visual_assets.json"
+    )
 
-    results = []
-
-    for index, scene in enumerate(scenes, start=1):
-
-        queries = scene.get(
-            "search_queries",
-            []
-        )
-
-        video = None
-        used_query = None
-
-        for query in queries:
-
-            print(
-                f"[{index}/{len(scenes)}] "
-                f"Aranıyor: {query}"
-            )
-
-            videos = search_pexels(query)
-
-            video = select_video(videos)
-
-            if video:
-                used_query = query
-                break
-
-        if not video:
-
-            print("  Görüntü bulunamadı.")
-            continue
-
-        filename = (
-            CLIPS_DIR /
-            f"scene_{index:03d}.mp4"
-        )
-
-        print(
-            f"  İndiriliyor: {filename.name}"
-        )
-
-        success = download_video(
-            video,
-            filename
-        )
-
-        if success:
-
-            results.append({
-                "scene": index,
-                "query": used_query,
-                "file": str(filename),
-                "pexels_id": video.get("id"),
-                "duration_hint": scene.get(
-                    "duration_hint",
-                    20
-                )
-            })
-
-    result_file = OUTPUT_DIR / "visual_assets.json"
-
-    result_file.write_text(
+    visual_assets_file.write_text(
         json.dumps(
-            results,
+            downloaded_scenes,
             ensure_ascii=False,
             indent=2
         ),
@@ -360,13 +387,24 @@ def main():
     )
 
     print()
-    print("=" * 60)
-    print("GÖRÜNTÜ TOPLAMA TAMAMLANDI")
-    print("=" * 60)
-    print(f"Sahneler: {SCENE_FILE}")
-    print(f"Görüntüler: {CLIPS_DIR}")
-    print(f"Sonuç: {result_file}")
-    print(f"Toplam indirilen klip: {len(results)}")
+    print("==========================================")
+    print("VISUAL RESEARCH TAMAMLANDI")
+    print("==========================================")
+    print(
+        f"Toplam sahne: {len(scenes)}"
+    )
+    print(
+        f"İndirilen klip: "
+        f"{len(downloaded_scenes)}"
+    )
+    print(
+        f"Scenes: {SCENE_FILE}"
+    )
+    print(
+        f"Visual assets: "
+        f"{visual_assets_file}"
+    )
+    print("==========================================")
 
 
 if __name__ == "__main__":
