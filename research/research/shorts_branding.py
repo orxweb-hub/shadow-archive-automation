@@ -1,17 +1,60 @@
+import json
+import re
 import subprocess
 from pathlib import Path
+
+
+TOPIC_FILE = Path("research/current_topic.json")
 
 VIDEO_DIR = Path("research/video/shorts_final")
 OUTPUT_DIR = Path("research/video/shorts_branded")
 
 
+def create_safe_filename(text):
+    text = text.lower()
+    text = re.sub(r"[^a-z0-9]+", "_", text)
+    text = text.strip("_")
+
+    if not text:
+        text = "daily_topic"
+
+    return text[:80]
+
+
+def load_current_topic():
+    if not TOPIC_FILE.exists():
+        raise FileNotFoundError(
+            f"current_topic.json bulunamadı: {TOPIC_FILE}"
+        )
+
+    data = json.loads(
+        TOPIC_FILE.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    topic = data.get("topic")
+
+    if not topic:
+        raise RuntimeError(
+            "current_topic.json içinde topic bulunamadı."
+        )
+
+    return data
+
+
 def run(command):
-    print(">", " ".join(str(x) for x in command))
+    print(
+        ">",
+        " ".join(str(x) for x in command)
+    )
 
     result = subprocess.run(command)
 
     if result.returncode != 0:
-        raise RuntimeError("FFmpeg işlemi başarısız oldu.")
+        raise RuntimeError(
+            "FFmpeg işlemi başarısız oldu."
+        )
 
 
 def get_duration(video):
@@ -30,11 +73,17 @@ def get_duration(video):
         text=True
     )
 
-    return float(result.stdout.strip())
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"Video süresi okunamadı: {video}"
+        )
+
+    return float(
+        result.stdout.strip()
+    )
 
 
 def create_brand_overlay(
-    number,
     video_file,
     output_file
 ):
@@ -43,7 +92,6 @@ def create_brand_overlay(
         video_file
     )
 
-    # Animasyon yaklaşık videonun ortasında
     start = max(
         5,
         min(
@@ -122,8 +170,22 @@ def create_brand_overlay(
 def main():
 
     print("=" * 60)
-    print("SHADOW ARCHIVE — SHORTS BRANDING")
+    print(
+        "SHADOW ARCHIVE — SHORTS BRANDING"
+    )
     print("=" * 60)
+
+    topic_data = load_current_topic()
+
+    topic = topic_data["topic"]
+
+    safe_name = create_safe_filename(
+        topic
+    )
+
+    print(
+        f"Konu: {topic}"
+    )
 
     if not VIDEO_DIR.exists():
         raise FileNotFoundError(
@@ -139,17 +201,18 @@ def main():
 
         video_file = (
             VIDEO_DIR /
-            f"shadow_archive_short_{number}_final.mp4"
+            f"{safe_name}_short_{number}_final.mp4"
         )
 
         output_file = (
             OUTPUT_DIR /
-            f"shadow_archive_short_{number}_branded.mp4"
+            f"{safe_name}_short_{number}_branded.mp4"
         )
 
         if not video_file.exists():
             raise FileNotFoundError(
-                f"Short {number} bulunamadı."
+                f"Short {number} bulunamadı: "
+                f"{video_file}"
             )
 
         print()
@@ -158,18 +221,23 @@ def main():
         )
 
         create_brand_overlay(
-            number,
             video_file,
             output_file
         )
 
         print(
-            f"Short {number} hazır."
+            f"✓ Short {number} hazır:"
+        )
+
+        print(
+            f"  {output_file}"
         )
 
     print()
     print("=" * 60)
-    print("SHORTS BRANDING TAMAMLANDI")
+    print(
+        "SHORTS BRANDING TAMAMLANDI"
+    )
     print("=" * 60)
 
 
