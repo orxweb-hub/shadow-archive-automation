@@ -1,24 +1,43 @@
 import json
+import re
 import subprocess
 from pathlib import Path
 
+
+TOPIC_FILE = Path("research/current_topic.json")
 VIDEO_DIR = Path("research/video")
 CLIPS_DIR = VIDEO_DIR / "clips"
 AUDIO_DIR = Path("research/audio/shorts")
-SELECTION_FILE = VIDEO_DIR / "shorts_selection.json"
+SELECTION_DIR = VIDEO_DIR
 OUTPUT_DIR = VIDEO_DIR / "shorts"
 
 WIDTH = 1080
 HEIGHT = 1920
 
 
+def create_safe_filename(text):
+    text = text.lower()
+    text = re.sub(r"[^a-z0-9]+", "_", text)
+    text = text.strip("_")
+
+    if not text:
+        text = "daily_topic"
+
+    return text[:80]
+
+
 def run(command):
-    print(">", " ".join(str(x) for x in command))
+    print(
+        ">",
+        " ".join(str(x) for x in command)
+    )
 
     result = subprocess.run(command)
 
     if result.returncode != 0:
-        raise RuntimeError("FFmpeg işlemi başarısız oldu.")
+        raise RuntimeError(
+            "FFmpeg işlemi başarısız oldu."
+        )
 
 
 def get_audio_duration(audio_file):
@@ -38,13 +57,76 @@ def get_audio_duration(audio_file):
     )
 
     if result.returncode != 0:
-        raise RuntimeError("Ses süresi okunamadı.")
+        raise RuntimeError(
+            "Ses süresi okunamadı."
+        )
 
-    return float(result.stdout.strip())
+    return float(
+        result.stdout.strip()
+    )
+
+
+def load_current_topic():
+    if not TOPIC_FILE.exists():
+        raise FileNotFoundError(
+            f"current_topic.json bulunamadı: {TOPIC_FILE}"
+        )
+
+    data = json.loads(
+        TOPIC_FILE.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    topic = data.get("topic")
+
+    if not topic:
+        raise RuntimeError(
+            "current_topic.json içinde topic bulunamadı."
+        )
+
+    return data
+
+
+def find_selection_file(topic):
+    safe_name = create_safe_filename(topic)
+
+    expected_file = (
+        SELECTION_DIR /
+        f"{safe_name}_shorts_selection.json"
+    )
+
+    if expected_file.exists():
+        return expected_file
+
+    fallback = (
+        SELECTION_DIR /
+        "shorts_selection.json"
+    )
+
+    if fallback.exists():
+        return fallback
+
+    files = sorted(
+        SELECTION_DIR.glob(
+            "*_shorts_selection.json"
+        ),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True
+    )
+
+    if files:
+        return files[0]
+
+    raise FileNotFoundError(
+        "Shorts seçim dosyası bulunamadı."
+    )
 
 
 def find_clips():
-    clips = sorted(CLIPS_DIR.glob("*.mp4"))
+    clips = sorted(
+        CLIPS_DIR.glob("*.mp4")
+    )
 
     if not clips:
         raise RuntimeError(
@@ -54,12 +136,24 @@ def find_clips():
     return clips
 
 
-def create_short(short_number, audio_file, clips):
-    duration = get_audio_duration(audio_file)
+def create_short(
+    topic,
+    short_number,
+    schedule,
+    audio_file,
+    clips
+):
+    safe_name = create_safe_filename(
+        topic
+    )
+
+    duration = get_audio_duration(
+        audio_file
+    )
 
     output_file = (
         OUTPUT_DIR /
-        f"shadow_archive_short_{short_number}.mp4"
+        f"{safe_name}_short_{short_number}.mp4"
     )
 
     selected_clips = []
@@ -68,9 +162,15 @@ def create_short(short_number, audio_file, clips):
     index = 0
 
     while current < duration:
-        clip = clips[index % len(clips)]
 
-        remaining = duration - current
+        clip = clips[
+            index % len(clips)
+        ]
+
+        remaining = (
+            duration - current
+        )
+
         clip_duration = min(
             6.0,
             remaining
@@ -88,13 +188,16 @@ def create_short(short_number, audio_file, clips):
 
     print()
     print(
-        f"SHORT {short_number}: "
-        f"{duration:.1f} saniye"
+        f"SHORT {short_number} "
+        f"| {schedule}"
+    )
+    print(
+        f"Süre: {duration:.1f} saniye"
     )
 
     segment_dir = (
         OUTPUT_DIR /
-        f"segments_{short_number}"
+        f"{safe_name}_segments_{short_number}"
     )
 
     segment_dir.mkdir(
@@ -153,11 +256,13 @@ def create_short(short_number, audio_file, clips):
             ]
         )
 
-        segments.append(segment)
+        segments.append(
+            segment
+        )
 
     concat_file = (
         OUTPUT_DIR /
-        f"concat_{short_number}.txt"
+        f"{safe_name}_concat_{short_number}.txt"
     )
 
     with concat_file.open(
@@ -166,6 +271,7 @@ def create_short(short_number, audio_file, clips):
     ) as file:
 
         for segment in segments:
+
             path = segment.resolve()
 
             file.write(
@@ -174,7 +280,7 @@ def create_short(short_number, audio_file, clips):
 
     silent_video = (
         OUTPUT_DIR /
-        f"silent_short_{short_number}.mp4"
+        f"{safe_name}_silent_short_{short_number}.mp4"
     )
 
     run(
@@ -219,20 +325,36 @@ def create_short(short_number, audio_file, clips):
     )
 
     print(
-        f"SHORT {short_number} HAZIR:"
-        f" {output_file}"
+        f"✓ SHORT {short_number} HAZIR:"
+    )
+    print(
+        f"  {output_file}"
     )
 
 
 def main():
+
     print("=" * 60)
-    print("SHADOW ARCHIVE — SHORTS VIDEO EDITOR")
+    print(
+        "SHADOW ARCHIVE — SHORTS VIDEO EDITOR"
+    )
     print("=" * 60)
 
-    if not SELECTION_FILE.exists():
-        raise FileNotFoundError(
-            "shorts_selection.json bulunamadı."
-        )
+    topic_data = load_current_topic()
+
+    topic = topic_data["topic"]
+
+    selection_file = find_selection_file(
+        topic
+    )
+
+    print(
+        f"Konu: {topic}"
+    )
+
+    print(
+        f"Shorts seçimi: {selection_file}"
+    )
 
     if not AUDIO_DIR.exists():
         raise FileNotFoundError(
@@ -245,10 +367,21 @@ def main():
     )
 
     data = json.loads(
-        SELECTION_FILE.read_text(
+        selection_file.read_text(
             encoding="utf-8"
         )
     )
+
+    if "shorts" not in data:
+        raise RuntimeError(
+            "Shorts seçim dosyasında "
+            "'shorts' bulunamadı."
+        )
+
+    if len(data["shorts"]) != 2:
+        raise RuntimeError(
+            "Tam olarak 2 Shorts bekleniyor."
+        )
 
     clips = find_clips()
 
@@ -256,34 +389,48 @@ def main():
         f"Pexels klip sayısı: {len(clips)}"
     )
 
+    safe_name = create_safe_filename(
+        topic
+    )
+
     for short in data["shorts"]:
 
         number = short["short"]
 
+        schedule = short.get(
+            "schedule",
+            ""
+        )
+
         audio_file = (
             AUDIO_DIR /
-            f"short_{number}.wav"
+            f"{safe_name}_short_{number}.wav"
         )
 
         if not audio_file.exists():
             raise FileNotFoundError(
-                f"Short {number} ses dosyası bulunamadı."
+                f"Short {number} ses dosyası bulunamadı: "
+                f"{audio_file}"
             )
 
         create_short(
+            topic,
             number,
+            schedule,
             audio_file,
             clips
         )
 
     print()
     print("=" * 60)
-    print("SHORTS VİDEO ÜRETİMİ TAMAMLANDI")
+    print(
+        "SHORTS VİDEO ÜRETİMİ TAMAMLANDI"
+    )
     print("=" * 60)
 
     for file in sorted(
         OUTPUT_DIR.glob(
-            "shadow_archive_short_*.mp4"
+            f"{safe_name}_short_*.mp4"
         )
     ):
         print(file)
