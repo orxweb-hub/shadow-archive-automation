@@ -2,10 +2,7 @@ name: Shadow Archive - Daily Topic Start
 
 on:
   schedule:
-    # Türkiye saatiyle 09:00
-    # GitHub Actions UTC kullandığı için 06:00 UTC
     - cron: "0 6 * * *"
-
   workflow_dispatch:
 
 permissions:
@@ -36,3 +33,25 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           python research/research/daily_topic_generator.py
+
+      - name: Save Current Topic To Repository
+        run: |
+          echo "=========================================="
+          echo "SAVING CURRENT TOPIC"
+          echo "=========================================="
+
+          git config user.name "Shadow Archive Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git add research/current_topic.json
+
+          if git diff --cached --quiet; then
+            echo "No topic changes detected."
+          else
+            git commit -m "Update daily Shadow Archive topic"
+            git push
+          fi
+
+          echo "=========================================="
+          echo "CURRENT TOPIC SAVED TO GITHUB"
+          echo "=========================================="
