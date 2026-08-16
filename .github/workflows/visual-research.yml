@@ -28,7 +28,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
         run: |
-          python research/research/visual_researcher.py
+          python research/research/visual_research.py
 
       - name: Check generated files
         run: |
