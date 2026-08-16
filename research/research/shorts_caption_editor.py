@@ -1,21 +1,94 @@
+import json
+import re
 import subprocess
 from pathlib import Path
+
+
+TOPIC_FILE = Path("research/current_topic.json")
 
 VIDEO_DIR = Path("research/video/shorts")
 SUBTITLE_DIR = Path("research/video/subtitles")
 OUTPUT_DIR = Path("research/video/shorts_final")
 
 
+def create_safe_filename(text):
+    text = text.lower()
+    text = re.sub(r"[^a-z0-9]+", "_", text)
+    text = text.strip("_")
+
+    if not text:
+        text = "daily_topic"
+
+    return text[:80]
+
+
+def load_current_topic():
+    if not TOPIC_FILE.exists():
+        raise FileNotFoundError(
+            f"current_topic.json bulunamadı: {TOPIC_FILE}"
+        )
+
+    data = json.loads(
+        TOPIC_FILE.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    topic = data.get("topic")
+
+    if not topic:
+        raise RuntimeError(
+            "current_topic.json içinde topic bulunamadı."
+        )
+
+    return data
+
+
 def run(command):
-    print(">", " ".join(str(x) for x in command))
+    print(
+        ">",
+        " ".join(str(x) for x in command)
+    )
 
     result = subprocess.run(command)
 
     if result.returncode != 0:
-        raise RuntimeError("FFmpeg işlemi başarısız oldu.")
+        raise RuntimeError(
+            "FFmpeg işlemi başarısız oldu."
+        )
 
 
-def create_subtitle_file(text_file, srt_file):
+def get_video_duration(video_file):
+    result = subprocess.run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "default=noprint_wrappers=1:nokey=1",
+            str(video_file)
+        ],
+        capture_output=True,
+        text=True
+    )
+
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"Video süresi okunamadı: {video_file}"
+        )
+
+    return float(
+        result.stdout.strip()
+    )
+
+
+def create_subtitle_file(
+    text_file,
+    srt_file,
+    video_file
+):
     text = text_file.read_text(
         encoding="utf-8"
     ).strip()
@@ -27,49 +100,27 @@ def create_subtitle_file(text_file, srt_file):
 
     words = text.split()
 
-    # Yaklaşık 2-5 kelimelik kısa altyazı grupları
     chunks = []
-
     current = []
 
     for word in words:
+
         current.append(word)
 
         if len(current) >= 4:
-            chunks.append(" ".join(current))
+            chunks.append(
+                " ".join(current)
+            )
             current = []
 
     if current:
-        chunks.append(" ".join(current))
-
-    total_seconds = 60.0
-
-    # Videonun gerçek süresini bul
-    result = subprocess.run(
-        [
-            "ffprobe",
-            "-v",
-            "error",
-            "-show_entries",
-            "format=duration",
-            "-of",
-            "default=noprint_wrappers=1:nokey=1",
-            str(
-                VIDEO_DIR /
-                text_file.name.replace(
-                    "_english.txt",
-                    ".mp4"
-                )
-            )
-        ],
-        capture_output=True,
-        text=True
-    )
-
-    if result.returncode == 0:
-        total_seconds = float(
-            result.stdout.strip()
+        chunks.append(
+            " ".join(current)
         )
+
+    total_seconds = get_video_duration(
+        video_file
+    )
 
     chunk_duration = (
         total_seconds /
@@ -77,11 +128,19 @@ def create_subtitle_file(text_file, srt_file):
     )
 
     def timestamp(seconds):
-        hours = int(seconds // 3600)
+
+        hours = int(
+            seconds // 3600
+        )
+
         minutes = int(
             (seconds % 3600) // 60
         )
-        secs = int(seconds % 60)
+
+        secs = int(
+            seconds % 60
+        )
+
         millis = int(
             (seconds - int(seconds)) * 1000
         )
@@ -132,8 +191,6 @@ def burn_subtitles(
     output_file
 ):
 
-    # Windows/Linux FFmpeg için güvenli
-    # subtitle dosya yolunu escape et
     subtitle_path = (
         str(srt_file)
         .replace("\\", "/")
@@ -184,8 +241,22 @@ def burn_subtitles(
 def main():
 
     print("=" * 60)
-    print("SHADOW ARCHIVE — SHORTS CAPTION EDITOR")
+    print(
+        "SHADOW ARCHIVE — SHORTS CAPTION EDITOR"
+    )
     print("=" * 60)
+
+    topic_data = load_current_topic()
+
+    topic = topic_data["topic"]
+
+    safe_name = create_safe_filename(
+        topic
+    )
+
+    print(
+        f"Konu: {topic}"
+    )
 
     if not VIDEO_DIR.exists():
         raise FileNotFoundError(
@@ -206,32 +277,34 @@ def main():
 
         video_file = (
             VIDEO_DIR /
-            f"shadow_archive_short_{number}.mp4"
+            f"{safe_name}_short_{number}.mp4"
         )
 
         text_file = (
             SUBTITLE_DIR /
-            f"short_{number}_english.txt"
+            f"{safe_name}_short_{number}_english.txt"
         )
 
         srt_file = (
             OUTPUT_DIR /
-            f"short_{number}.srt"
+            f"{safe_name}_short_{number}.srt"
         )
 
         output_file = (
             OUTPUT_DIR /
-            f"shadow_archive_short_{number}_final.mp4"
+            f"{safe_name}_short_{number}_final.mp4"
         )
 
         if not video_file.exists():
             raise FileNotFoundError(
-                f"Short {number} videosu bulunamadı."
+                f"Short {number} videosu bulunamadı: "
+                f"{video_file}"
             )
 
         if not text_file.exists():
             raise FileNotFoundError(
-                f"Short {number} altyazısı bulunamadı."
+                f"Short {number} altyazısı bulunamadı: "
+                f"{text_file}"
             )
 
         print()
@@ -241,7 +314,8 @@ def main():
 
         create_subtitle_file(
             text_file,
-            srt_file
+            srt_file,
+            video_file
         )
 
         print(
@@ -255,13 +329,22 @@ def main():
         )
 
         print(
-            f"SHORT {number} TAMAMLANDI"
+            f"✓ SHORT {number} TAMAMLANDI"
         )
 
     print()
     print("=" * 60)
-    print("SHORTS V2 TAMAMLANDI")
+    print(
+        "SHORTS V2 TAMAMLANDI"
+    )
     print("=" * 60)
+
+    for file in sorted(
+        OUTPUT_DIR.glob(
+            f"{safe_name}_short_*_final.mp4"
+        )
+    ):
+        print(file)
 
 
 if __name__ == "__main__":
