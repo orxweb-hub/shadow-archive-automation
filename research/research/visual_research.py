@@ -29,9 +29,18 @@ PEXELS_API_URL = (
     "https://api.pexels.com/videos/search"
 )
 
-PRIMARY_GEMINI_MODEL = "gemini-3.6-flash"
 
-FALLBACK_GEMINI_MODEL = "gemini-3.5-flash-lite"
+# ==========================================
+# GEMINI MODELS
+# ==========================================
+
+PRIMARY_GEMINI_MODEL = (
+    "gemini-3.6-flash"
+)
+
+FALLBACK_GEMINI_MODEL = (
+    "gemini-3.5-flash-lite"
+)
 
 MAX_GEMINI_RETRIES = 5
 
@@ -41,6 +50,24 @@ RETRY_DELAYS = [
     120,
     180,
     300
+]
+
+
+# ==========================================
+# PEXELS FALLBACK QUERIES
+# ==========================================
+
+GENERIC_PEXELS_QUERIES = [
+    "cinematic documentary",
+    "cinematic nature",
+    "dramatic landscape",
+    "ocean waves",
+    "storm ocean",
+    "dark clouds",
+    "night ocean",
+    "coastline",
+    "mysterious landscape",
+    "documentary b roll"
 ]
 
 
@@ -57,7 +84,6 @@ def create_safe_filename(text):
     filename = filename.strip("_")
 
     if not filename:
-
         filename = "daily_topic"
 
     return filename[:80]
@@ -140,6 +166,10 @@ def get_gemini_client():
     )
 
 
+# ==========================================
+# GEMINI ERROR DETECTION
+# ==========================================
+
 def is_quota_error(error):
 
     error_text = str(error).lower()
@@ -172,6 +202,10 @@ def is_temporary_error(error):
     )
 
 
+# ==========================================
+# GEMINI SCENE GENERATION
+# ==========================================
+
 def generate_scenes_with_model(
     client,
     prompt,
@@ -186,7 +220,6 @@ def generate_scenes_with_model(
         try:
 
             print()
-
             print(
                 "Gemini Visual Research"
             )
@@ -217,6 +250,7 @@ def generate_scenes_with_model(
                     "Gemini boş cevap döndürdü."
                 )
 
+            # Markdown JSON bloklarını temizle
             if text.startswith("```"):
 
                 text = text.replace(
@@ -253,10 +287,12 @@ def generate_scenes_with_model(
                 )
 
             print()
+            print(
+                "Gemini Visual Research başarılı."
+            )
 
             print(
-                f"Gemini Visual Research başarılı: "
-                f"{model}"
+                f"Model: {model}"
             )
 
             print(
@@ -268,24 +304,25 @@ def generate_scenes_with_model(
         except Exception as error:
 
             print()
-
             print(
                 "Gemini hatası:"
             )
 
             print(error)
 
+            # Kota hatasında bu modeli bırak.
+            # create_scenes() fallback modele geçecek.
             if is_quota_error(error):
 
                 print()
-
                 print(
                     f"⚠️ {model} "
                     "kota/rate limit hatası."
                 )
 
-                raise error
+                raise
 
+            # Geçici Google API hataları
             if is_temporary_error(error):
 
                 if attempt == MAX_GEMINI_RETRIES:
@@ -300,7 +337,8 @@ def generate_scenes_with_model(
                 ]
 
                 print(
-                    f"{delay} saniye bekleniyor..."
+                    f"{delay} saniye bekleniyor "
+                    "ve tekrar deneniyor..."
                 )
 
                 time.sleep(
@@ -309,6 +347,7 @@ def generate_scenes_with_model(
 
                 continue
 
+            # Diğer hatalarda tekrar dene
             if attempt == MAX_GEMINI_RETRIES:
 
                 raise RuntimeError(
@@ -321,7 +360,8 @@ def generate_scenes_with_model(
             ]
 
             print(
-                f"{delay} saniye bekleniyor..."
+                f"{delay} saniye bekleniyor "
+                "ve tekrar deneniyor..."
             )
 
             time.sleep(
@@ -365,6 +405,8 @@ IMPORTANT:
 - avoid copyrighted movie footage
 - avoid logos and text-heavy footage
 - avoid repeating the same visual idea unnecessarily
+- keep search queries short and concrete
+- prefer 2-5 English keywords per search query
 
 Return ONLY valid JSON.
 
@@ -384,7 +426,10 @@ DOCUMENTARY SCRIPT:
 {script}
 """
 
-    # Önce 3.6 Flash denenir.
+    # ==========================================
+    # 1. GEMINI 3.6
+    # ==========================================
+
     try:
 
         print()
@@ -393,7 +438,7 @@ DOCUMENTARY SCRIPT:
         )
 
         print(
-            "1. GEMINI MODELİ:"
+            "1. GEMINI MODELİ"
         )
 
         print(
@@ -412,13 +457,15 @@ DOCUMENTARY SCRIPT:
 
     except Exception as primary_error:
 
-        # Sadece kota/rate-limit durumunda
-        # 3.5 Flash Lite'a geç.
         if not is_quota_error(
             primary_error
         ):
 
             raise
+
+        # ======================================
+        # 2. GEMINI 3.5 FALLBACK
+        # ======================================
 
         print()
         print(
@@ -430,7 +477,7 @@ DOCUMENTARY SCRIPT:
         )
 
         print(
-            "🔄 OTOMATİK MODEL DEĞİŞİMİ"
+            "🔄 OTOMATİK FALLBACK"
         )
 
         print(
@@ -467,6 +514,10 @@ DOCUMENTARY SCRIPT:
             raise
 
 
+# ==========================================
+# PEXELS SEARCH
+# ==========================================
+
 def search_pexels(
     query,
     api_key
@@ -489,7 +540,8 @@ def search_pexels(
         f"{PEXELS_API_URL}?{params}",
 
         headers={
-            "Authorization": api_key
+            "Authorization": api_key,
+            "User-Agent": "ShadowArchive/1.0"
         }
 
     )
@@ -543,6 +595,8 @@ def select_video(video):
                 file
             )
 
+    # 720p+ yoksa mevcut herhangi bir
+    # kullanılabilir dosyayı kabul et.
     if not valid_files:
 
         for file in files:
@@ -595,10 +649,196 @@ def download_video(
 
         data = response.read()
 
+    if not data:
+
+        raise RuntimeError(
+            "Pexels video dosyası boş."
+        )
+
     output.write_bytes(
         data
     )
 
+    if not output.exists():
+
+        raise RuntimeError(
+            f"Video indirilemedi: {output}"
+        )
+
+    if output.stat().st_size < 10000:
+
+        raise RuntimeError(
+            f"İndirilen video dosyası geçersiz: "
+            f"{output}"
+        )
+
+
+# ==========================================
+# PEXELS FALLBACK SEARCH
+# ==========================================
+
+def build_fallback_queries(
+    original_query,
+    scene
+):
+
+    queries = []
+
+    if original_query:
+
+        queries.append(
+            original_query.strip()
+        )
+
+        # Çok uzun sorguları sadeleştir.
+        words = original_query.split()
+
+        if len(words) > 3:
+
+            queries.append(
+                " ".join(words[:3])
+            )
+
+    visual_description = (
+        scene.get(
+            "visual_description",
+            ""
+        )
+        .strip()
+    )
+
+    if visual_description:
+
+        words = re.findall(
+            r"[A-Za-z]+",
+            visual_description
+        )
+
+        if words:
+
+            queries.append(
+                " ".join(words[:4])
+            )
+
+    queries.extend(
+        GENERIC_PEXELS_QUERIES
+    )
+
+    # Aynı sorguları kaldır.
+    unique_queries = []
+
+    seen = set()
+
+    for query in queries:
+
+        clean_query = (
+            query
+            .strip()
+            .lower()
+        )
+
+        if not clean_query:
+
+            continue
+
+        if clean_query in seen:
+
+            continue
+
+        seen.add(
+            clean_query
+        )
+
+        unique_queries.append(
+            query.strip()
+        )
+
+    return unique_queries
+
+
+def find_pexels_video(
+    scene,
+    api_key
+):
+
+    original_query = scene.get(
+        "search_query",
+        ""
+    ).strip()
+
+    queries = build_fallback_queries(
+        original_query,
+        scene
+    )
+
+    for attempt, query in enumerate(
+        queries,
+        start=1
+    ):
+
+        print(
+            f"   Pexels arama "
+            f"{attempt}/{len(queries)}: "
+            f"{query}"
+        )
+
+        try:
+
+            result = search_pexels(
+                query,
+                api_key
+            )
+
+            videos = result.get(
+                "videos",
+                []
+            )
+
+            if not videos:
+
+                print(
+                    "   → Sonuç yok."
+                )
+
+                continue
+
+            for video in videos:
+
+                selected = select_video(
+                    video
+                )
+
+                if selected:
+
+                    print(
+                        "   → Video bulundu."
+                    )
+
+                    return (
+                        selected,
+                        query
+                    )
+
+            print(
+                "   → Uygun çözünürlükte "
+                "video yok."
+            )
+
+        except Exception as error:
+
+            print(
+                f"   → Pexels hatası: {error}"
+            )
+
+    return (
+        None,
+        None
+    )
+
+
+# ==========================================
+# MAIN
+# ==========================================
 
 def main():
 
@@ -679,13 +919,43 @@ def main():
         exist_ok=True
     )
 
-    for old_file in CLIPS_DIR.glob(
-        "*.mp4"
-    ):
+    # ==========================================
+    # ESKİ KLİPLERİ TEMİZLE
+    # ==========================================
+
+    old_clips = list(
+        CLIPS_DIR.glob("*.mp4")
+    )
+
+    if old_clips:
+
+        print()
+        print(
+            f"{len(old_clips)} eski klip temizleniyor..."
+        )
+
+    for old_file in old_clips:
 
         old_file.unlink()
 
     downloaded_scenes = []
+
+    # ==========================================
+    # PEXELS VIDEO RESEARCH
+    # ==========================================
+
+    print()
+    print(
+        "=========================================="
+    )
+
+    print(
+        "PEXELS VIDEO ARAŞTIRMASI"
+    )
+
+    print(
+        "=========================================="
+    )
 
     for index, scene in enumerate(
         scenes,
@@ -698,48 +968,27 @@ def main():
         )
 
         print()
+        print(
+            f"[{index}/{len(scenes)}]"
+        )
 
         print(
-            f"[{index}/{len(scenes)}] "
-            f"Pexels: {query}"
+            f"İlk sorgu: {query}"
         )
 
         try:
 
-            result = search_pexels(
-                query,
-                pexels_key
-            )
-
-            videos = result.get(
-                "videos",
-                []
-            )
-
-            if not videos:
-
-                print(
-                    "Video bulunamadı."
+            selected, used_query = (
+                find_pexels_video(
+                    scene,
+                    pexels_key
                 )
-
-                continue
-
-            selected = None
-
-            for video in videos:
-
-                selected = select_video(
-                    video
-                )
-
-                if selected:
-
-                    break
+            )
 
             if not selected:
 
                 print(
-                    "Uygun video bulunamadı."
+                    "❌ Bu sahne için video bulunamadı."
                 )
 
                 continue
@@ -750,9 +999,10 @@ def main():
             )
 
             print(
-                f"Video indiriliyor: "
-                f"{output}"
+                f"Video indiriliyor:"
             )
+
+            print(output)
 
             download_video(
                 selected,
@@ -763,7 +1013,11 @@ def main():
 
                 "scene_number": index,
 
-                "search_query": query,
+                "search_query":
+                    used_query,
+
+                "original_search_query":
+                    query,
 
                 "file": str(output),
 
@@ -781,11 +1035,19 @@ def main():
 
             })
 
+            print(
+                "✅ Klip başarıyla kaydedildi."
+            )
+
         except Exception as error:
 
             print(
-                f"Video alınamadı: {error}"
+                f"❌ Video alınamadı: {error}"
             )
+
+    # ==========================================
+    # SAVE SCENES
+    # ==========================================
 
     SCENE_FILE.write_text(
 
@@ -816,12 +1078,71 @@ def main():
 
     )
 
+    # ==========================================
+    # FINAL VALIDATION
+    # ==========================================
+
+    actual_clips = sorted(
+        CLIPS_DIR.glob("*.mp4")
+    )
+
     print()
+    print(
+        "=========================================="
+    )
+
+    print(
+        "PEXELS SONUÇ"
+    )
 
     print(
         "=========================================="
     )
 
+    print(
+        f"Toplam Gemini sahnesi: "
+        f"{len(scenes)}"
+    )
+
+    print(
+        f"Başarılı Pexels klibi: "
+        f"{len(actual_clips)}"
+    )
+
+    print(
+        f"Başarısız/atlanmış sahne: "
+        f"{len(scenes) - len(actual_clips)}"
+    )
+
+    # Hiç klip yoksa Cinematic Editor'e
+    # boş klasör gönderme.
+    if len(actual_clips) == 0:
+
+        raise RuntimeError(
+            "PEXELS'TEN HİÇ VİDEO KLİBİ ALINAMADI. "
+            "Tüm alternatif aramalar başarısız oldu."
+        )
+
+    # En az birkaç gerçek klip olması daha sağlıklı.
+    if len(actual_clips) < 3:
+
+        print()
+        print(
+            "⚠️ UYARI:"
+        )
+
+        print(
+            "Yalnızca "
+            f"{len(actual_clips)} "
+            "klip bulundu."
+        )
+
+        print(
+            "Cinematic Video Editor "
+            "bu klipleri tekrar kullanabilir."
+        )
+
+    print()
     print(
         "VISUAL RESEARCH TAMAMLANDI"
     )
@@ -840,7 +1161,7 @@ def main():
 
     print(
         f"İndirilen klip: "
-        f"{len(downloaded_scenes)}"
+        f"{len(actual_clips)}"
     )
 
     print(
