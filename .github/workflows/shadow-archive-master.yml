@@ -45,19 +45,35 @@ jobs:
         run: |
           python research/research/tts_generator.py
 
-      - name: Check Production Files
+      - name: Visual Research
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+        run: |
+          python research/research/visual_research.py
+
+      - name: Generate Cinematic Main Video
+        run: |
+          python research/research/cinematic_video_editor.py
+
+      - name: Check Main Video
         run: |
           echo "=========================================="
-          echo "MASTER FIRST STAGE COMPLETE"
+          echo "MAIN VIDEO GENERATED"
           echo "=========================================="
 
-          echo "Research:"
-          ls -lh research/reports/
+          ls -lh research/video/shadow_archive_mv_joyita_v4.mp4
 
-          echo "Script:"
-          ls -lh research/scripts/
-
-          echo "Voice:"
-          ls -lh research/audio/
+          ffprobe -v error \
+            -show_entries format=duration,size \
+            -of default=noprint_wrappers=1 \
+            research/video/shadow_archive_mv_joyita_v4.mp4
 
           echo "=========================================="
+
+      - name: Upload Main Video Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadow-archive-master-video
+          path: research/video/shadow_archive_mv_joyita_v4.mp4
+          retention-days: 7
