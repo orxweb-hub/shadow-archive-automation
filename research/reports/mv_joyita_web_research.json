@@ -1,81 +1,96 @@
 {
   "topic": "MV Joyita disappearance 1955",
-  "summary": "Note on source limitations: The provided sources consist exclusively of news article headlines and link metadata. Based strictly on the provided text, the MV Joyita was found drifting abandoned in the Pacific Ocean while still afloat, with all 25 people on board having vanished. The event is associated with Tokelau, involved a doctor from Derby, and has prompted calls for a coronial hearing as well as a memorial service held in New Zealand.",
+  "summary": "Bu rapor, Google News RSS üzerinden toplanan kaynakların ham araştırma özetidir. Kaynaklarda bulunmayan bilgiler doğrulanmış gerçek olarak eklenmemiştir.",
   "timeline": [],
-  "people": [
-    {
-      "name": "Unnamed Derby doctor",
-      "role": "Subject of a mysterious, unsolved disappearance linked to the incident."
-    }
-  ],
-  "locations": [
-    "Pacific Ocean",
-    "Tokelau",
-    "New Zealand"
-  ],
-  "confirmed_facts": [
-    "The MV Joyita was discovered drifting abandoned in the Pacific Ocean.",
-    "The vessel remained afloat when found.",
-    "All 25 people on board vanished / disappeared.",
-    "The incident is associated with Tokelau.",
-    "A memorial service for MV Joyita victims was held in New Zealand.",
-    "There have been calls for a coronial hearing regarding the Tokelau Joyita tragedy."
-  ],
+  "people": [],
+  "locations": [],
+  "confirmed_facts": [],
   "disputed_claims": [],
   "unverified_claims": [],
   "possible_explanations": [],
   "important_details": [
-    "The supplied source material contains only high-level news titles and web headlines; detailed context, timeline entries, or explicit cause of abandonment are not present in the provided text.",
-    "The vessel is frequently grouped in media listings of historical 'ghost ship' mysteries."
+    {
+      "title": "A ship found drifting in the Pacific was still afloat but all 25 passengers had vanished - Boing Boing",
+      "description": "A ship found drifting in the Pacific was still afloat but all 25 passengers had vanished Boing Boing",
+      "published": "Mon, 15 Jun 2026 07:00:00 GMT"
+    },
+    {
+      "title": "The Mystery Behind The Abandoned MV Joyita Ship - grunge.com",
+      "description": "The Mystery Behind The Abandoned MV Joyita Ship grunge.com",
+      "published": "Tue, 23 Nov 2021 08:00:00 GMT"
+    },
+    {
+      "title": "10 Mysterious Ghost Ships That No One Can Explain - Reader's Digest",
+      "description": "10 Mysterious Ghost Ships That No One Can Explain Reader's Digest",
+      "published": "Wed, 03 Sep 2025 07:00:00 GMT"
+    },
+    {
+      "title": "Memorial service in NZ for MV Joyita victims - Fijivillage",
+      "description": "Memorial service in NZ for MV Joyita victims Fijivillage",
+      "published": "Tue, 17 Sep 2019 01:26:35 GMT"
+    },
+    {
+      "title": "The 'Ghost Ship' mysteries yet to be solved - The Telegraph",
+      "description": "The 'Ghost Ship' mysteries yet to be solved The Telegraph",
+      "published": "Tue, 21 Jan 2014 08:00:00 GMT"
+    },
+    {
+      "title": "Call for coronial hearing into Tokelau's Joyita tragedy - RNZ",
+      "description": "Call for coronial hearing into Tokelau's Joyita tragedy RNZ",
+      "published": "Thu, 08 Mar 2012 08:00:00 GMT"
+    },
+    {
+      "title": "Top Ten Unsolved Mysteries from New Zealand - listverse.com",
+      "description": "Top Ten Unsolved Mysteries from New Zealand listverse.com",
+      "published": "Fri, 01 Apr 2022 07:00:00 GMT"
+    },
+    {
+      "title": "Derby doctor's mysterious disappearance remains unsolved 64 years later - derbytelegraph.co.uk",
+      "description": "Derby doctor's mysterious disappearance remains unsolved 64 years later derbytelegraph.co.uk",
+      "published": "Wed, 06 Feb 2019 08:00:00 GMT"
+    },
+    {
+      "title": "Your Fiji Your Voice - fijitimes.com.fj",
+      "description": "Your Fiji Your Voice fijitimes.com.fj",
+      "published": "Wed, 07 May 2014 07:00:00 GMT"
+    }
   ],
   "sources": [
     {
       "title": "A ship found drifting in the Pacific was still afloat but all 25 passengers had vanished - Boing Boing",
-      "url": "https://news.google.com/rss/articles/CBMixgFBVV95cUxNaElhYllKNHAxQy0tV3c4amF0SkVkeGxqMzdIVHRMSV9ZdjhUdnB2Sy15RlBqZTdVYm5PRVV3OEE2NzBiWGFXUTk4RWxRWERyZmw5U2d2MzdvXzFCMW9iZDVfczc5ZmhxSGxuVDd0Y293NmJiTjZFNy1MWVJheDFqQmFacWJaNnNGZVUzWjJMV0V5TjllLVk4RlBqM1hTWkVvdkpzZl9fNlBpamg4blEwNENiTVZrZVVxaUJkQ3JnLW5tbWN4dEHSAcsBQVVfeXFMUDZrM3NrUm1xSlA5OTAtUlRtYVRWTzFMY2EzSTE1N1NIUnpJbWg1UF_iZVppSWdOa0JVNEhBUFNnTEpPNXoyaEdpSURHOTJEb1lQQ2RHM0dlLWlUeWxxU19UREJkbGhOT1ZZMmFNRVdodHJjdDI3Wlo4Z1c0UGVqbmpCQzVsR2VEakozMllWbHVWVl9LWVdPa0pkUFZQMzcwQ3pMVjdVNmJEVmEwSWdfenBEVTZIRWhwRDJxYVAzVVBFNXBQd2NKSHVsbzg?oc=5"
+      "url": "https://news.google.com/rss/articles/CBMixgFBVV95cUxNaElhYllKNHAxQy0tV3c4amF0SkVkeGxqMzdIVHRMSV9ZdjhUdnB2Sy15RlBqZTdVYm5PRVV3OEE2NzBiWGFXUTk4RWxRWERyZmw5U2d2MzdvXzFCMW9iZDVfczc5ZmhxSGxuVDd0Y293NmJiTjZFNy1MWVJheDFqQmFacWJaNnNGZVUzWjJMV0V5TjllLVk4RlBqM1hTWkVvdkpzZl9fNlBpamg4blEwNENiTVZrZVVxaUJkQ3JnLW5tbWN4dEHSAcsBQVVfeXFMUDZrM3NrUm1xSlA5OTAtUlRtYVRWTzFMY2EzSTE1N1NIUnpJbWg1UF9iZVppSWdOa0JVNEhBUFNnTEpPNXoyaEdpSURHOTJEb1lQQ2RHM0dlLWlUeWxxU19UREJkbGhOT1ZZMmFNRVdodHJjdDI3Wlo4Z1c0UGVqbmpCQzVsR2VEakozMllWbHVWVl9LWVdPa0pkUFZQMzcwQ3pMVjdVNmJEVmEwSWdfenBEVTZIRWhwRDJxYVAzVVBFNXBQd2NKSHVsbzg?oc=5"
     },
     {
       "title": "The Mystery Behind The Abandoned MV Joyita Ship - grunge.com",
       "url": "https://news.google.com/rss/articles/CBMihAFBVV95cUxNOUgzbWxBNkRDNnZERmx6Xy13aUFxeWVwa1NpY21vUzFZQ2VOWVk0emJyd0tsaVpRMS1xMUFRN3RVb0wwRXBpZ3BwdEJ5ejF2ZVkyTVo4RzVjVXRiMU9KSWN2SmtDWG9ac1E1T2xHTkY5RDhPOXVieHJwTzhmVko2MEdvd0Q?oc=5"
     },
     {
-      "title": "The Stories Behind History’s Eeriest Ghost Ships - All That's Interesting",
-      "url": "https://news.google.com/rss/articles/CBMibkFVX3lxTFB1UFQtYUxWbnVMeWU5TzNXaUF5SGZ4QUpYb1NXRUMtTTVrUmZ5eTRJNEpqaVJlREE0aVA2TzF1NTRNdXNYdTRMdjBsLUhnUlRPYWpiYk1oVDRXalVaMzNGcThIRTZhdnhNeGtVRW1B?oc=5"
-    },
-    {
       "title": "10 Mysterious Ghost Ships That No One Can Explain - Reader's Digest",
       "url": "https://news.google.com/rss/articles/CBMiTEFVX3lxTE5CaG9laUFaU0FTWlpCZVhtUTN1VldTZnR5Sk1YOVZXR083eWRHMTN5U0ZRTXZMOWFRNUlXcGVSU0o2aEJVSUF1VWQ3dW4?oc=5"
     },
     {
-      "title": "Exploration Mysteries: Ghost Ships - Explorersweb »",
-      "url": "https://news.google.com/rss/articles/CBMia0FVX3lxTE9pSExyS1BIVHRlQzFLUEM0bGtmYXJxVXNTcVV1S3RtclhNMjBRTWdTLVJSSnVwREd0ZWFrNU8yQ1o3aWhTNzFXMmkwOVVYVDFiR09xOVVBVXFLUWp2RUpsRFo0aGFsbmJ4YnRN?oc=5"
-    },
-    {
       "title": "Memorial service in NZ for MV Joyita victims - Fijivillage",
-      "url": "https://news.google.com/rss/articles/CBMid0FVX3lxTFBBVjRfY2taZU9nMGM5elFlVnJVUFhoekVaSTgtaFJKRV9SQ3RKc0hicFliNzJOQUNGMGFmcGVwdWVDNVZ0bmlYSzYzZFVsbHkxVDhRRFdnV1p2ZzBXTnVMZ3cyTjkwa1ZYSXZXNm1OeVpQUTRmM0Nz?oc=5"
-    },
-    {
-      "title": "9 Mysterious Ghost Ships - Oddee",
-      "url": "https://news.google.com/rss/articles/CBMiTkFVX3lxTFBtWlpONlhmaFVwT1B6M1BRdkxodDNmdDlsVU5LNkRPZTF2ejh5M2MxblZhVVUxRGlwenNET2FiZ05ndTUzYVRoUUJ1ZjJaQQ?oc=5"
+      "url": "https://news.google.com/rss/articles/CBMijgFBVV95cUxQZ2VnZDRSRE5Ta3IySlZvYmNvUFYxemxKaEtIMGdYbG1NQl8wWjJhSTFwN0FrYWhCVzZ1MFNOQVRoU1g5eWRHV09GVTlMaGdZcTJhSlFxQWx4Q0JjZDE1MXBfQU5BM0RXdElMUk9YdnA1ck0xOHdFYktXTTlzZFRfSnJIejBSRV9Qa3JXR0tR?oc=5"
     },
     {
       "title": "The 'Ghost Ship' mysteries yet to be solved - The Telegraph",
-      "url": "https://news.google.com/rss/articles/CBMisgFBVV95cUxPVFpGSzhPeDVNNGh2MlBiNi1HcmdnY3ZHdDBMU2NWUmtwbjBnQ052VWJMMkVaLUQ0QXZobjRreE5aQzFXZlBwck00M3FOQ0F4bVVzdUh0NERnejQxYllxMmtiM0o0c2lzUjNhRXpzYXZBeDRhUHRfZmxsUl_Vc2JzVTZPeGY5V18zWlNmVzNGUVV1aGxlN3I5MFpaYjZ3NW1NbnBMQ2pQVUozWko3YlZPODRn?oc=5"
+      "url": "https://news.google.com/rss/articles/CBMisgFBVV95cUxPVFpGSzhPeDVNNGh2MlBiNi1HcmdnY3ZHdDBMU2NWUmtwbjBnQ052VWJMMkVaLUQ0QXZobjRreE5aQzFXZlBwck00M3FOQ0F4bVVzdUh0NERnejQxYllxMmtiM0o0c2lzUjNhRXpzYXZBeDRhUHRfZmxsUl9Vc2JzVTZPeGY5V18zWlNmVzNGUVV1aGxlN3I5MFpaYjZ3NW1NbnBMQ2pQVUozWko3YlZPODRn?oc=5"
     },
     {
       "title": "Call for coronial hearing into Tokelau's Joyita tragedy - RNZ",
       "url": "https://news.google.com/rss/articles/CBMingFBVV95cUxOUXNleE5Xb0Z4VzZWUzlUNmNIaHlGcmxMc01fVnJsLTJFdlhoY2pFVFF2REVBdVlYbVVrSlZLbjlLSy1TS1AtYTNSZkp1STJ6a2lhVjkzODdRUWdHVkRBcldWVk5nRlBmV1dnZW12dC12c2tOQ0NiRzVCQm9wcVB4ckEyOTZEcEJYVVVYSEJUQ0wtWC1VYXZFTWx2V0VtQQ?oc=5"
     },
     {
-      "title": "Your Fiji Your Voice - The Fiji Times",
+      "title": "Top Ten Unsolved Mysteries from New Zealand - listverse.com",
+      "url": "https://news.google.com/rss/articles/CBMigwFBVV95cUxNbjdCb0l5OWE0c1IxcXdWX0VzUk9qNUFLNkpqajRlZEMyc1F5VWRmcVhLVVJQbEFjdDEwbzltTmtRUTVCY2JFY1BuLXVjXzg5UmpiLVNvUS1JQ3h3bTFWdjdiVlFla3k0NkdGb1pLam1VbHdRVU9kM19kMGRBc1lBVURpZw?oc=5"
+    },
+    {
+      "title": "Derby doctor's mysterious disappearance remains unsolved 64 years later - derbytelegraph.co.uk",
+      "url": "https://news.google.com/rss/articles/CBMikAFBVV95cUxNdE9RS1NVaE9URW11ZlFNSEU4N0ZVSjA4YmJNQzVOSjg5NEhrYnQxUVNFaFFkX2FMX1pEOUpfU1ZucHg3RmJwVlEySUJncll6ZDg4aUEwRVpHVDVSTUVlYVA1SHdIQllzeGhZLWFjY3hZeV90dWZabXV4bW00UEtFYWtlZFktUHZXdE5aVEw4NnXSAZYBQVVfeXFMT1M5bEI5U09NREZ4RTIybHAxb3pnSUprX2dmY3JTOXlZdFZZY1JKSVBuTGRnZWlBR3hpaVFUSndUUDJQR1BXTUctaEdDUjFNYXVzWXBsUFVJbmlab1FRNExZSFA4VWs0cEpEU2Z4akl6aVdZR2hka2dsMUJVdnRTV1BhWTV6a2hqblNrUkNBaC13MVFubU1n?oc=5"
+    },
+    {
+      "title": "Your Fiji Your Voice - fijitimes.com.fj",
       "url": "https://news.google.com/rss/articles/CBMiY0FVX3lxTFBTelUxYWZTSFhxcjBYTGNTVXMwa3F5cU9MMTgwdmhDWnF5TE9nd3FrdGU5WVJNNjVZaDNrbkZjVTJfSVFwYkFWVDNNVlZRUkRNREEzV2tFa1BGcjlMUTdxUk1rTQ?oc=5"
-    },
-    {
-      "title": "Derby doctor's mysterious disappearance remains unsolved 64 years later - Derbyshire Live",
-      "url": "https://news.google.com/rss/articles/CBMikAFBVV95cUxNdE9RS1NVaE9URW11ZlFNSEU4N0ZVSjA4YmJNQzVOSjg5NEhrYnQxUVNFaFFkX2FMX1pEOUpfU1ZucHg3RmJwVlEySUJncll6ZDg4aUEwRVpHVDVSTUVlYVA1SHdIQllzeGhZLWFjY3hZeV90dWZabXV4bW00UEtFYWtlZFktUHZXdE5aVEw4NnXSAZYBQVVfeXFMT1M5bEI5U09NREZ4RTIybHAxb3pnSUprX2dmY3JTOXlZdFZZY1JKSVBuTGRnZWlBR3hpaVFUSndUUDJQR1BXTUctaEdDUjFNYXVzWXBsUFVJbmlab1FRNExZSFA4VWs0cEpEU2Z4akl6aVdZR2hka2dsMUJVdnRTV1BhWTV6a2hjblNrUkNBaC13MVFubU1n?oc=5"
-    },
-    {
-      "title": "Ghost Ship Stories That Will Scare The Scurvy Out of You - thechive.com",
-      "url": "https://news.google.com/rss/articles/CBMioAFBVV95cUxON00yZXFrSDFkQm10TGc1STRZRG5zUGRxcjRWVDdWdDI5dmotV0JRblR5NkVRM1N6UkdSdXZwSVZWUFNQYmVIbXgzVjFwcU5BazY4SWpkdzNidm5ya1_GaUQzZ2p2aUYwRkJHZXR2a0pQaWJ3cjRqLTN0OFZNaDhfR1hBU0pEQUxVQzJXV21FaklXSzBaUENQNG9yRzhsRGxv?oc=5"
     }
   ]
 }
