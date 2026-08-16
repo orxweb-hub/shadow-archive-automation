@@ -12,9 +12,11 @@ REPORT_DIR = Path("research/reports")
 SCRIPT_DIR = Path("research/scripts")
 
 MIN_WORDS = 2700
+TARGET_WORDS = 3000
 MAX_WORDS = 3400
 
-MODEL = "gemini-3.5-flash-lite"
+PRIMARY_MODEL = "gemini-3.6-flash"
+FALLBACK_MODEL = "gemini-3.5-flash-lite"
 
 MAX_RETRIES = 5
 
@@ -102,7 +104,43 @@ def create_safe_filename(text):
     return filename[:80]
 
 
-def call_gemini(client, prompt):
+def is_quota_error(error):
+
+    error_text = str(error).lower()
+
+    return (
+        "429" in error_text
+        or
+        "resource_exhausted" in error_text
+        or
+        "quota" in error_text
+        or
+        "rate limit" in error_text
+    )
+
+
+def is_temporary_error(error):
+
+    error_text = str(error).lower()
+
+    return (
+        "503" in error_text
+        or
+        "unavailable" in error_text
+        or
+        "high demand" in error_text
+        or
+        "500" in error_text
+        or
+        "internal" in error_text
+    )
+
+
+def call_model(
+    client,
+    prompt,
+    model
+):
 
     for attempt in range(
         1,
@@ -111,13 +149,18 @@ def call_gemini(client, prompt):
 
         try:
 
+            print()
+            print(
+                f"MODEL: {model}"
+            )
+
             print(
                 f"Gemini isteği "
                 f"{attempt}/{MAX_RETRIES}"
             )
 
             response = client.models.generate_content(
-                model=MODEL,
+                model=model,
                 contents=prompt
             )
 
@@ -133,43 +176,32 @@ def call_gemini(client, prompt):
                 )
 
             print(
-                "Gemini üretimi başarılı."
+                f"Gemini üretimi başarılı: {model}"
             )
 
             return text
 
         except Exception as error:
 
-            error_text = str(error)
-
             print()
             print("Gemini hatası:")
             print(error)
 
-            if (
-                "429" in error_text
-                or
-                "RESOURCE_EXHAUSTED" in error_text
-                or
-                "quota" in error_text.lower()
-            ):
+            if is_quota_error(error):
 
-                raise RuntimeError(
-                    "Gemini kotası dolu veya rate limit "
-                    "aşıldı."
-                ) from error
+                print(
+                    f"{model} kota/rate limit nedeniyle "
+                    "kullanılamıyor."
+                )
 
-            if (
-                "503" in error_text
-                or
-                "UNAVAILABLE" in error_text
-                or
-                "high demand" in error_text.lower()
-            ):
+                raise error
+
+            if is_temporary_error(error):
 
                 if attempt == MAX_RETRIES:
                     raise RuntimeError(
-                        "Gemini 503 hatası çözülemedi."
+                        f"{model} geçici hata nedeniyle "
+                        "başarısız oldu."
                     ) from error
 
                 delay = RETRY_DELAYS[
@@ -185,8 +217,10 @@ def call_gemini(client, prompt):
                 continue
 
             if attempt == MAX_RETRIES:
+
                 raise RuntimeError(
-                    "Gemini senaryo üretimi başarısız."
+                    f"{model} ile üretim "
+                    "başarısız oldu."
                 ) from error
 
             delay = RETRY_DELAYS[
@@ -200,8 +234,59 @@ def call_gemini(client, prompt):
             time.sleep(delay)
 
     raise RuntimeError(
-        "Gemini cevap üretemedi."
+        f"{model} cevap üretemedi."
     )
+
+
+def generate_with_fallback(
+    client,
+    prompt
+):
+
+    try:
+
+        print()
+        print(
+            "1. ÖNCELİKLİ MODEL:"
+        )
+
+        print(
+            PRIMARY_MODEL
+        )
+
+        return call_model(
+            client,
+            prompt,
+            PRIMARY_MODEL
+        )
+
+    except Exception as primary_error:
+
+        if not is_quota_error(
+            primary_error
+        ):
+
+            raise
+
+        print()
+        print(
+            "⚠️ 3.6 Flash kota/rate limit."
+        )
+
+        print(
+            "🔄 Otomatik olarak "
+            "3.5 Flash Lite'a geçiliyor..."
+        )
+
+        print(
+            FALLBACK_MODEL
+        )
+
+        return call_model(
+            client,
+            prompt,
+            FALLBACK_MODEL
+        )
 
 
 def generate_initial_script(
@@ -246,20 +331,17 @@ RESEARCH REPORT:
 
 LENGTH REQUIREMENT:
 
-Write BETWEEN 2,700 and 3,200 Turkish words.
+Write approximately 3,000 Turkish words.
 
-This requirement is mandatory.
+The final narration MUST contain at least 2,700 words.
 
-Aim for approximately 3,000 words.
+Aim for 2,900–3,200 words.
 
-Do NOT stop at 2,000 words.
+Do not stop early.
 
-Do NOT stop at 2,200 words.
+Do not produce a short summary.
 
-Do NOT stop at 2,500 words.
-
-Continue developing the investigation naturally until the
-narration reaches approximately 3,000 words.
+Develop the story fully from beginning to end.
 
 FACTUAL RULES:
 
@@ -320,6 +402,10 @@ STRUCTURE:
 12. What remains unexplained
 13. Final conclusion
 
+IMPORTANT:
+
+Do not finish the narration before reaching the required length.
+
 Do not add filler.
 
 Do not repeat the same facts.
@@ -339,7 +425,7 @@ Do not include:
 - production notes
 """
 
-    return call_gemini(
+    return generate_with_fallback(
         client,
         prompt
     )
@@ -355,6 +441,11 @@ def expand_script(
 
     missing_words = MIN_WORDS - current_words
 
+    target_addition = max(
+        missing_words + 500,
+        1000
+    )
+
     print()
     print(
         f"Senaryo kısa kaldı: "
@@ -362,15 +453,15 @@ def expand_script(
     )
 
     print(
-        f"Eksik yaklaşık: "
-        f"{missing_words} kelime"
+        f"Eklenecek hedef: "
+        f"{target_addition} kelime"
     )
 
     prompt = f"""
-You are editing a Turkish investigative documentary
-for the YouTube channel "Shadow Archive".
+You are the senior editor of a Turkish investigative
+documentary for the YouTube channel "Shadow Archive".
 
-The current narration is too short.
+The current documentary narration is too short.
 
 TOPIC:
 {topic}
@@ -378,10 +469,11 @@ TOPIC:
 CURRENT WORD COUNT:
 {current_words}
 
-MINIMUM REQUIRED WORD COUNT:
+MINIMUM FINAL WORD COUNT:
 {MIN_WORDS}
 
-The narration must reach at least 2,700 words.
+TARGET FINAL WORD COUNT:
+{TARGET_WORDS}
 
 RESEARCH REPORT:
 {json.dumps(report, ensure_ascii=False, indent=2)}
@@ -391,59 +483,68 @@ CURRENT NARRATION:
 
 TASK:
 
-Expand the narration naturally.
+Expand the CURRENT NARRATION.
 
-Add approximately
-{max(missing_words + 200, 700)}
-new Turkish words.
+Return the COMPLETE expanded narration.
 
-Do NOT rewrite the entire story from zero.
+The final result MUST contain at least 2,700 Turkish words.
 
-Keep the existing useful information.
+Add approximately {target_addition} useful words.
 
-Add factual depth using only the research report.
+Do not merely summarize the existing text.
 
-Useful expansion areas include:
+Preserve the strongest parts of the current narration.
 
-- historical background
-- chronology
+Expand naturally through:
+
+- historical context
+- chronological details
 - people involved
 - locations
-- investigation details
+- events leading to the mystery
+- investigation
 - physical evidence
 - official findings
 - competing theories
 - contradictions
 - unanswered questions
-- context surrounding the event
-- careful explanation of what is known and unknown
+- what is confirmed
+- what remains uncertain
 
-STRICT RULES:
+STRICT FACTUAL RULES:
 
+- Use only information supported by the research report
+  and current narration.
 - Never invent facts.
 - Never invent dialogue.
 - Never invent witnesses.
 - Never invent evidence.
 - Never invent events.
 - Never present speculation as fact.
-- Do not repeat paragraphs.
+- Do not repeat entire paragraphs.
 - Do not use filler.
-- Keep the narration natural.
-- Keep the tone serious and investigative.
-- Do not add headings.
-- Do not add bullet points.
-- Do not add timestamps.
-- Do not add production notes.
+- Do not artificially repeat sentences.
+- Keep the narration natural and documentary-like.
 
-Return ONLY the complete expanded Turkish narration.
+FORMAT:
+
+Return ONLY the complete Turkish narration.
+
+Do not include:
+
+- headings
+- bullet points
+- timestamps
+- camera directions
+- sound effects
+- editing instructions
+- production notes
 """
 
-    expanded = call_gemini(
+    return generate_with_fallback(
         client,
         prompt
     )
-
-    return expanded
 
 
 def main():
@@ -458,14 +559,22 @@ def main():
 
     topic = topic_data["topic"]
 
-    print("GÜNCEL KONU:")
+    print(
+        "GÜNCEL KONU:"
+    )
+
     print(topic)
+
     print()
 
     report_file = find_latest_report()
 
-    print("ARAŞTIRMA RAPORU:")
+    print(
+        "ARAŞTIRMA RAPORU:"
+    )
+
     print(report_file)
+
     print()
 
     report = json.loads(
@@ -476,8 +585,17 @@ def main():
 
     client = get_client()
 
+    print()
     print(
         "Uzun Türkçe senaryo oluşturuluyor..."
+    )
+
+    print(
+        f"Öncelik: {PRIMARY_MODEL}"
+    )
+
+    print(
+        f"Otomatik yedek: {FALLBACK_MODEL}"
     )
 
     script = generate_initial_script(
@@ -496,7 +614,29 @@ def main():
         f"{word_count}"
     )
 
-    if word_count < MIN_WORDS:
+    expansion_round = 0
+
+    while (
+        word_count < MIN_WORDS
+        and
+        expansion_round < 3
+    ):
+
+        expansion_round += 1
+
+        print()
+        print(
+            "=========================================="
+        )
+
+        print(
+            f"SENARYO GENİŞLETME "
+            f"{expansion_round}/3"
+        )
+
+        print(
+            "=========================================="
+        )
 
         script = expand_script(
             client,
@@ -519,7 +659,8 @@ def main():
     if word_count < MIN_WORDS:
 
         raise RuntimeError(
-            "Senaryo hâlâ 2700 kelimenin altında: "
+            "Senaryo 3 genişletme turundan sonra "
+            "2700 kelimeye ulaşamadı: "
             f"{word_count}"
         )
 
@@ -533,8 +674,8 @@ def main():
     )
 
     script_file = (
-        SCRIPT_DIR /
-        f"{safe_name}_script.txt"
+        SCRIPT_DIR
+        / f"{safe_name}_script.txt"
     )
 
     script_file.write_text(
@@ -544,9 +685,11 @@ def main():
 
     print()
     print("=" * 60)
+
     print(
         "SENARYO BAŞARIYLA HAZIRLANDI"
     )
+
     print("=" * 60)
 
     print(
@@ -559,6 +702,11 @@ def main():
 
     print(
         f"Dosya: {script_file}"
+    )
+
+    print(
+        "3.6 Flash → kota varsa → "
+        "3.5 Flash Lite otomatik geçiş aktif."
     )
 
     print("=" * 60)
