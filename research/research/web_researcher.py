@@ -7,19 +7,8 @@ from html import unescape
 import re
 
 
+TOPIC_FILE = Path("research/current_topic.json")
 REPORT_DIR = Path("research/reports")
-
-TOPIC = "MV Joyita disappearance 1955"
-
-RSS_SOURCES = [
-    "https://news.google.com/rss/search?"
-    + urllib.parse.urlencode({
-        "q": TOPIC,
-        "hl": "en-US",
-        "gl": "US",
-        "ceid": "US:en"
-    }),
-]
 
 
 def clean_text(text):
@@ -33,8 +22,46 @@ def clean_text(text):
     return text.strip()
 
 
+def load_current_topic():
+
+    if not TOPIC_FILE.exists():
+        raise FileNotFoundError(
+            f"Güncel konu dosyası bulunamadı: {TOPIC_FILE}"
+        )
+
+    data = json.loads(
+        TOPIC_FILE.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    topic = data.get("topic")
+
+    if not topic:
+        raise RuntimeError(
+            "current_topic.json içinde topic bulunamadı."
+        )
+
+    return data
+
+
+def create_rss_url(topic):
+
+    return (
+        "https://news.google.com/rss/search?"
+        + urllib.parse.urlencode({
+            "q": topic,
+            "hl": "en-US",
+            "gl": "US",
+            "ceid": "US:en"
+        })
+    )
+
+
 def fetch_rss(url):
+
     try:
+
         request = urllib.request.Request(
             url,
             headers={
@@ -56,7 +83,10 @@ def fetch_rss(url):
         for item in root.findall(".//item"):
 
             title = clean_text(
-                item.findtext("title", "")
+                item.findtext(
+                    "title",
+                    ""
+                )
             )
 
             link = item.findtext(
@@ -80,12 +110,14 @@ def fetch_rss(url):
 
             if title:
 
-                articles.append({
-                    "title": title,
-                    "url": link,
-                    "description": description,
-                    "published": pub_date
-                })
+                articles.append(
+                    {
+                        "title": title,
+                        "url": link,
+                        "description": description,
+                        "published": pub_date
+                    }
+                )
 
         return articles
 
@@ -94,32 +126,37 @@ def fetch_rss(url):
         print(
             f"RSS kaynağı okunamadı: {url}"
         )
+
         print(error)
 
         return []
 
 
-def collect_sources():
+def collect_sources(topic):
 
-    all_articles = []
+    rss_url = create_rss_url(topic)
 
-    for source in RSS_SOURCES:
+    print(
+        "Araştırma konusu:"
+    )
 
-        print(
-            f"Kaynak okunuyor: {source}"
-        )
+    print(topic)
 
-        articles = fetch_rss(
-            source
-        )
+    print()
 
-        all_articles.extend(
-            articles
-        )
+    print(
+        "Kaynak okunuyor:"
+    )
+
+    print(rss_url)
+
+    articles = fetch_rss(
+        rss_url
+    )
 
     unique = {}
 
-    for article in all_articles:
+    for article in articles:
 
         title = article.get(
             "title",
@@ -127,24 +164,51 @@ def collect_sources():
         ).strip().lower()
 
         if title and title not in unique:
+
             unique[title] = article
 
-    return list(unique.values())[:20]
+    return list(
+        unique.values()
+    )[:20]
 
 
-def build_report(topic, sources):
+def build_report(
+    topic_data,
+    sources
+):
 
-    confirmed_facts = []
+    topic = topic_data.get(
+        "topic",
+        ""
+    )
+
+    category = topic_data.get(
+        "category",
+        ""
+    )
+
+    summary = topic_data.get(
+        "summary",
+        ""
+    )
+
+    research_points = topic_data.get(
+        "research_points",
+        []
+    )
+
+    title = topic_data.get(
+        "title",
+        ""
+    )
 
     important_details = []
 
     source_list = []
 
-    timeline = []
-
     for source in sources:
 
-        title = source.get(
+        title_text = source.get(
             "title",
             ""
         )
@@ -164,11 +228,11 @@ def build_report(topic, sources):
             ""
         )
 
-        if title:
+        if title_text:
 
             important_details.append(
                 {
-                    "title": title,
+                    "title": title_text,
                     "description": description,
                     "published": published
                 }
@@ -178,29 +242,38 @@ def build_report(topic, sources):
 
             source_list.append(
                 {
-                    "title": title,
+                    "title": title_text,
                     "url": url
                 }
             )
 
     report = {
+
         "topic": topic,
 
+        "category": category,
+
+        "suggested_title": title,
+
+        "topic_summary": summary,
+
+        "research_points": research_points,
+
         "summary": (
-            "Bu rapor, Google News RSS üzerinden "
-            "toplanan kaynakların ham araştırma "
-            "özetidir. Kaynaklarda bulunmayan "
-            "bilgiler doğrulanmış gerçek olarak "
-            "eklenmemiştir."
+            "Bu rapor, günlük konu için "
+            "Google News RSS üzerinden "
+            "toplanan kaynakları içerir. "
+            "RSS sonuçları ham araştırma "
+            "verisi olarak değerlendirilmelidir."
         ),
 
-        "timeline": timeline,
+        "timeline": [],
 
         "people": [],
 
         "locations": [],
 
-        "confirmed_facts": confirmed_facts,
+        "confirmed_facts": [],
 
         "disputed_claims": [],
 
@@ -216,72 +289,60 @@ def build_report(topic, sources):
     return report
 
 
+def create_filename(topic):
+
+    filename = topic.lower()
+
+    filename = re.sub(
+        r"[^a-z0-9]+",
+        "_",
+        filename
+    )
+
+    filename = filename.strip("_")
+
+    if not filename:
+
+        filename = "daily_topic"
+
+    return (
+        filename[:80]
+        + "_web_research.json"
+    )
+
+
 def main():
 
     print(
         "SHADOW ARCHIVE — FREE WEB RESEARCH"
     )
 
-    print("=" * 50)
+    print("=" * 60)
 
     print(
-        "Gemini kullanılmadan web kaynakları "
-        "toplanıyor..."
-    )
-
-    sources = collect_sources()
-
-    print(
-        f"Toplanan kaynak sayısı: {len(sources)}"
-    )
-
-    if not sources:
-
-        raise RuntimeError(
-            "Hiç web kaynağı bulunamadı."
-        )
-
-    report = build_report(
-        TOPIC,
-        sources
-    )
-
-    REPORT_DIR.mkdir(
-        parents=True,
-        exist_ok=True
-    )
-
-    output_file = (
-        REPORT_DIR /
-        "mv_joyita_web_research.json"
-    )
-
-    output_file.write_text(
-        json.dumps(
-            report,
-            ensure_ascii=False,
-            indent=2
-        ),
-        encoding="utf-8"
+        "Gemini kullanılmadan "
+        "güncel konu araştırılıyor..."
     )
 
     print()
-    print(
-        "ARAŞTIRMA TAMAMLANDI"
-    )
 
-    print("=" * 50)
+    topic_data = load_current_topic()
 
-    print(
-        f"Rapor: {output_file}"
-    )
+    topic = topic_data["topic"]
 
     print(
-        "Gemini isteği: 0"
+        "CURRENT TOPIC:"
     )
 
-    print("=" * 50)
+    print(topic)
 
+    print()
 
-if __name__ == "__main__":
-    main()
+    sources = collect_sources(
+        topic
+    )
+
+    print()
+
+    print(
+        f"Toplanan kaynak
