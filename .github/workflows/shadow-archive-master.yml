@@ -13,59 +13,27 @@ jobs:
 
     steps:
 
-      # =========================================================
-      # 1 — REPOSITORY
-      # =========================================================
-
       - name: Checkout Repository
         uses: actions/checkout@v4
-
-      # =========================================================
-      # 2 — PYTHON
-      # =========================================================
 
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      # =========================================================
-      # 3 — DEPENDENCIES
-      # =========================================================
-
       - name: Install Dependencies
         run: |
           pip install -r requirements.txt
-
-      # =========================================================
-      # 4 — FFMPEG
-      # =========================================================
 
       - name: Install FFmpeg
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      # =========================================================
-      # 5 — CHECK CURRENT TOPIC
-      # =========================================================
-
       - name: Check Current Topic
         run: |
-          echo "=========================================="
-          echo "CURRENT SHADOW ARCHIVE TOPIC"
-          echo "=========================================="
-
           test -f research/current_topic.json
-
           cat research/current_topic.json
-
-          echo ""
-          echo "=========================================="
-
-      # =========================================================
-      # 6 — WEB RESEARCH
-      # =========================================================
 
       - name: Web Research
         env:
@@ -73,27 +41,15 @@ jobs:
         run: |
           python research/research/web_researcher.py
 
-      # =========================================================
-      # 7 — SCRIPT
-      # =========================================================
-
       - name: Generate Script
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           python research/research/script_generator.py
 
-      # =========================================================
-      # 8 — MAIN VIDEO VOICE
-      # =========================================================
-
       - name: Generate Natural Voice
         run: |
           python research/research/tts_generator.py
-
-      # =========================================================
-      # 9 — VISUAL RESEARCH
-      # =========================================================
 
       - name: Visual Research
         env:
@@ -102,46 +58,51 @@ jobs:
         run: |
           python research/research/visual_research.py
 
-      # =========================================================
-      # 10 — MAIN CINEMATIC VIDEO
-      # =========================================================
-
       - name: Generate Cinematic Main Video
         run: |
           python research/research/cinematic_video_editor.py
 
-      # =========================================================
-      # 11 — CHECK MAIN VIDEO
-      # =========================================================
-
       - name: Check Main Video
         run: |
-          echo "=========================================="
-          echo "MAIN VIDEO CHECK"
-          echo "=========================================="
-
           MAIN_VIDEO=$(find research/video -maxdepth 1 -type f -name "*_v4.mp4" | head -n 1)
 
           if [ -z "$MAIN_VIDEO" ]; then
-            echo "ERROR: Main video bulunamadı."
+            echo "Main video bulunamadı."
             exit 1
           fi
 
-          echo "Main video:"
-          echo "$MAIN_VIDEO"
-
           ls -lh "$MAIN_VIDEO"
 
-          ffprobe -v error \
+          ffprobe \
+            -v error \
             -show_entries format=duration,size \
             -of default=noprint_wrappers=1 \
             "$MAIN_VIDEO"
 
-          echo "=========================================="
+      # ==========================================
+      # MAIN VIDEO ENGLISH SUBTITLES
+      # ==========================================
 
-      # =========================================================
-      # 12 — SELECT TWO SHORTS
-      # =========================================================
+      - name: Generate Main Video English Subtitles
+        run: |
+          python research/research/english_subtitle_generator.py
+
+      - name: Check Main Video English Subtitles
+        run: |
+          SUBTITLE=$(find research/video/subtitles -maxdepth 1 -type f -name "*_english.srt" | head -n 1)
+
+          if [ -z "$SUBTITLE" ]; then
+            echo "Ana video İngilizce altyazısı bulunamadı."
+            exit 1
+          fi
+
+          ls -lh "$SUBTITLE"
+
+          echo "MAIN VIDEO ENGLISH SUBTITLE READY"
+
+      # ==========================================
+      # SHORTS
+      # ==========================================
 
       - name: Select Shorts
         env:
@@ -149,90 +110,47 @@ jobs:
         run: |
           python research/research/shorts_selector.py
 
-      # =========================================================
-      # 13 — SHORTS VOICE
-      # =========================================================
-
       - name: Generate Shorts Voice
         run: |
           python research/research/shorts_tts.py
-
-      # =========================================================
-      # 14 — SHORTS SUBTITLE TEXT
-      # =========================================================
 
       - name: Generate Shorts Subtitle Text
         run: |
           python research/research/shorts_subtitles.py
 
-      # =========================================================
-      # 15 — SHORTS VIDEO EDITING
-      # =========================================================
-
       - name: Generate Shorts
         run: |
           python research/research/shorts_editor.py
-
-      # =========================================================
-      # 16 — BURN ENGLISH SUBTITLES
-      # =========================================================
 
       - name: Add Shorts English Subtitles
         run: |
           python research/research/shorts_caption_editor.py
 
-      # =========================================================
-      # 17 — SHORTS BRANDING
-      # =========================================================
-
       - name: Add Shadow Archive Branding
         run: |
           python research/research/shorts_branding.py
 
-      # =========================================================
-      # 18 — CHECK SHORTS
-      # =========================================================
-
       - name: Check Shorts
         run: |
-          echo "=========================================="
-          echo "SHORTS CHECK"
-          echo "=========================================="
-
-          SHORT_1=$(find research/video/shorts_branded \
-            -maxdepth 1 \
-            -type f \
-            -name "*_short_1_branded.mp4" | head -n 1)
-
-          SHORT_2=$(find research/video/shorts_branded \
-            -maxdepth 1 \
-            -type f \
-            -name "*_short_2_branded.mp4" | head -n 1)
+          SHORT_1=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_1_branded.mp4" | head -n 1)
+          SHORT_2=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_2_branded.mp4" | head -n 1)
 
           if [ -z "$SHORT_1" ]; then
-            echo "ERROR: Short #1 bulunamadı."
+            echo "Short #1 bulunamadı."
             exit 1
           fi
 
           if [ -z "$SHORT_2" ]; then
-            echo "ERROR: Short #2 bulunamadı."
+            echo "Short #2 bulunamadı."
             exit 1
           fi
 
-          echo "Short #1:"
           ls -lh "$SHORT_1"
-
-          echo ""
-          echo "Short #2:"
           ls -lh "$SHORT_2"
 
-          echo ""
-          echo "SHORTS HAZIR"
-          echo "=========================================="
-
-      # =========================================================
-      # 19 — CREATE COMPLETE VIDEO PACKAGE
-      # =========================================================
+      # ==========================================
+      # PRODUCTION PACKAGE
+      # ==========================================
 
       - name: Prepare Production Package
         run: |
@@ -240,35 +158,29 @@ jobs:
           mkdir -p production_package/shorts
           mkdir -p production_package/research
 
-          MAIN_VIDEO=$(find research/video \
-            -maxdepth 1 \
-            -type f \
-            -name "*_v4.mp4" | head -n 1)
+          MAIN_VIDEO=$(find research/video -maxdepth 1 -type f -name "*_v4.mp4" | head -n 1)
 
-          SHORT_1=$(find research/video/shorts_branded \
-            -maxdepth 1 \
-            -type f \
-            -name "*_short_1_branded.mp4" | head -n 1)
+          SHORT_1=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_1_branded.mp4" | head -n 1)
 
-          SHORT_2=$(find research/video/shorts_branded \
-            -maxdepth 1 \
-            -type f \
-            -name "*_short_2_branded.mp4" | head -n 1)
+          SHORT_2=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_2_branded.mp4" | head -n 1)
+
+          SUBTITLE=$(find research/video/subtitles -maxdepth 1 -type f -name "*_english.srt" | head -n 1)
 
           cp "$MAIN_VIDEO" production_package/main/main_video.mp4
+
           cp "$SHORT_1" production_package/shorts/short_1.mp4
+
           cp "$SHORT_2" production_package/shorts/short_2.mp4
 
-          cp research/current_topic.json \
-            production_package/research/current_topic.json
+          cp "$SUBTITLE" production_package/main/main_video_english.srt
 
-          echo "Production package hazır."
+          cp research/current_topic.json production_package/research/current_topic.json
 
           find production_package -type f -exec ls -lh {} \;
 
-      # =========================================================
-      # 20 — UPLOAD COMPLETE ARTIFACT
-      # =========================================================
+      # ==========================================
+      # ARTIFACT
+      # ==========================================
 
       - name: Upload Complete Production Package
         uses: actions/upload-artifact@v4
@@ -277,9 +189,9 @@ jobs:
           path: production_package
           retention-days: 7
 
-      # =========================================================
-      # 21 — TELEGRAM PUBLISH APPROVAL
-      # =========================================================
+      # ==========================================
+      # TELEGRAM PUBLISH APPROVAL
+      # ==========================================
 
       - name: Send Publish Approval To Telegram
         env:
@@ -290,24 +202,40 @@ jobs:
           TOPIC=$(python - <<'PY'
           import json
 
-          with open("research/current_topic.json", "r", encoding="utf-8") as f:
+          with open(
+              "research/current_topic.json",
+              "r",
+              encoding="utf-8"
+          ) as f:
               data = json.load(f)
 
-          print(data.get("topic", "Günlük Konu"))
+          print(
+              data.get(
+                  "topic",
+                  "Günlük Konu"
+              )
+          )
           PY
           )
 
           TITLE=$(python - <<'PY'
           import json
 
-          with open("research/current_topic.json", "r", encoding="utf-8") as f:
+          with open(
+              "research/current_topic.json",
+              "r",
+              encoding="utf-8"
+          ) as f:
               data = json.load(f)
 
-          print(data.get("title", "Shadow Archive"))
+          print(
+              data.get(
+                  "title",
+                  "Shadow Archive"
+              )
+          )
           PY
           )
-
-          echo "Telegram yayın onayı gönderiliyor..."
 
           curl -s -X POST \
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
@@ -327,6 +255,7 @@ ${TITLE}
 ✅ Ana seslendirme tamamlandı
 ✅ Görsel araştırma tamamlandı
 ✅ Ana video tamamlandı
+✅ Ana video İngilizce altyazı tamamlandı
 ✅ Short #1 tamamlandı
 ✅ Short #2 tamamlandı
 ✅ Shorts altyazıları tamamlandı
@@ -347,7 +276,4 @@ ${TITLE}
 Yayınlamak için onay ver:" \
             --data-urlencode 'reply_markup={"inline_keyboard":[[{"text":"▶️ YAYINLA","callback_data":"publish_approve"},{"text":"❌ YAYINLAMA","callback_data":"publish_reject"}],[{"text":"🕐 SAATİ DEĞİŞTİR","callback_data":"change_time"}]]}'
 
-          echo ""
-          echo "=========================================="
           echo "MASTER PRODUCTION TAMAMLANDI"
-          echo "=========================================="
