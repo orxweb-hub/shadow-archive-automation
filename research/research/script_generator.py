@@ -1,21 +1,38 @@
 import os
 import json
+import time
 from pathlib import Path
 
 from google import genai
 
 
-REPORT_FILE = Path("research/reports/mv_joyita_web_research.json")
-SCRIPT_DIR = Path("research/scripts")
+REPORT_FILE = Path(
+    "research/reports/mv_joyita_web_research.json"
+)
+
+SCRIPT_DIR = Path(
+    "research/scripts"
+)
 
 MIN_WORDS = 2700
-MAX_WORDS = 3200
 MODEL = "gemini-3.6-flash"
+
+MAX_RETRIES = 5
+
+RETRY_DELAYS = [
+    30,
+    60,
+    120,
+    180,
+    300
+]
 
 
 def get_client():
 
-    api_key = os.environ.get("GEMINI_API_KEY")
+    api_key = os.environ.get(
+        "GEMINI_API_KEY"
+    )
 
     if not api_key:
         raise RuntimeError(
@@ -67,7 +84,7 @@ STYLE:
 - Gradually increasing suspense.
 - Natural transitions.
 - Varied sentence lengths.
-- Clear and human-sounding narration.
+- Clear and natural narration.
 - No repetitive AI-style phrases.
 - No excessive clickbait.
 - Every paragraph should provide useful information.
@@ -121,19 +138,118 @@ Do not include:
 - production notes
 """
 
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=prompt
+    for attempt in range(
+        1,
+        MAX_RETRIES + 1
+    ):
+
+        try:
+
+            print(
+                f"Gemini senaryo üretimi "
+                f"denemesi {attempt}/{MAX_RETRIES}"
+            )
+
+            response = client.models.generate_content(
+                model=MODEL,
+                contents=prompt
+            )
+
+            text = response.text.strip()
+
+            if not text:
+
+                raise RuntimeError(
+                    "Gemini boş senaryo döndürdü."
+                )
+
+            print(
+                "Gemini senaryo üretimi başarılı."
+            )
+
+            return text
+
+        except Exception as error:
+
+            error_text = str(error)
+
+            print()
+            print(
+                "Gemini hatası:"
+            )
+            print(error)
+
+            # 429 = günlük kota / rate limit.
+            # Tekrar denemiyoruz.
+            if (
+                "429" in error_text
+                or
+                "RESOURCE_EXHAUSTED"
+                in error_text
+                or
+                "quota"
+                in error_text.lower()
+            ):
+
+                raise RuntimeError(
+                    "Gemini kotası dolu veya rate limit "
+                    "aşıldı. Tekrar denenmeyecek."
+                ) from error
+
+            # 503 = geçici servis yoğunluğu.
+            if (
+                "503" in error_text
+                or
+                "UNAVAILABLE"
+                in error_text
+                or
+                "high demand"
+                in error_text.lower()
+            ):
+
+                if attempt == MAX_RETRIES:
+
+                    raise RuntimeError(
+                        "Gemini 503 hatası "
+                        f"{MAX_RETRIES} denemede "
+                        "de çözülemedi."
+                    ) from error
+
+                delay = RETRY_DELAYS[
+                    attempt - 1
+                ]
+
+                print()
+                print(
+                    f"Gemini yoğun. "
+                    f"{delay} saniye bekleniyor..."
+                )
+
+                time.sleep(delay)
+
+                continue
+
+            # Diğer geçici hatalar.
+            if attempt == MAX_RETRIES:
+
+                raise RuntimeError(
+                    "Gemini senaryo üretimi "
+                    f"{MAX_RETRIES} denemede başarısız."
+                ) from error
+
+            delay = RETRY_DELAYS[
+                attempt - 1
+            ]
+
+            print(
+                f"{delay} saniye bekleniyor..."
+            )
+
+            time.sleep(delay)
+
+    raise RuntimeError(
+        "Gemini senaryo üretilemedi."
     )
-
-    text = response.text.strip()
-
-    if not text:
-        raise RuntimeError(
-            "Gemini boş bir senaryo döndürdü."
-        )
-
-    return text
 
 
 def main():
@@ -147,7 +263,7 @@ def main():
     if not REPORT_FILE.exists():
 
         raise FileNotFoundError(
-            f"Web araştırma raporu bulunamadı: "
+            "Web araştırma raporu bulunamadı: "
             f"{REPORT_FILE}"
         )
 
@@ -160,8 +276,7 @@ def main():
     client = get_client()
 
     print(
-        "Gemini ile tek seferlik uzun "
-        "senaryo oluşturuluyor..."
+        "Uzun Türkçe senaryo oluşturuluyor..."
     )
 
     script = generate_script(
@@ -173,6 +288,7 @@ def main():
         script.split()
     )
 
+    print()
     print(
         f"Senaryo kelime sayısı: "
         f"{word_count}"
@@ -182,9 +298,7 @@ def main():
 
         raise RuntimeError(
             f"Senaryo çok kısa kaldı: "
-            f"{word_count} kelime. "
-            f"İkinci Gemini isteği yapılmadı; "
-            f"günlük kota korunuyor."
+            f"{word_count} kelime."
         )
 
     SCRIPT_DIR.mkdir(
@@ -215,7 +329,7 @@ def main():
         f"Dosya: {script_file}"
     )
     print(
-        "Gemini isteği: 1"
+        "Gemini başarılı üretim: 1"
     )
     print("=" * 60)
 
