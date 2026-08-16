@@ -7,19 +7,12 @@ from pathlib import Path
 from google import genai
 
 
-TOPIC_FILE = Path(
-    "research/current_topic.json"
-)
-
-REPORT_DIR = Path(
-    "research/reports"
-)
-
-SCRIPT_DIR = Path(
-    "research/scripts"
-)
+TOPIC_FILE = Path("research/current_topic.json")
+REPORT_DIR = Path("research/reports")
+SCRIPT_DIR = Path("research/scripts")
 
 MIN_WORDS = 2700
+MAX_WORDS = 3400
 
 MODEL = "gemini-3.6-flash"
 
@@ -36,12 +29,9 @@ RETRY_DELAYS = [
 
 def get_client():
 
-    api_key = os.environ.get(
-        "GEMINI_API_KEY"
-    )
+    api_key = os.environ.get("GEMINI_API_KEY")
 
     if not api_key:
-
         raise RuntimeError(
             "GEMINI_API_KEY bulunamadı."
         )
@@ -54,7 +44,6 @@ def get_client():
 def load_topic():
 
     if not TOPIC_FILE.exists():
-
         raise FileNotFoundError(
             "Güncel konu dosyası bulunamadı: "
             f"{TOPIC_FILE}"
@@ -66,12 +55,9 @@ def load_topic():
         )
     )
 
-    topic = data.get(
-        "topic"
-    )
+    topic = data.get("topic")
 
     if not topic:
-
         raise RuntimeError(
             "current_topic.json içinde topic bulunamadı."
         )
@@ -82,13 +68,10 @@ def load_topic():
 def find_latest_report():
 
     reports = list(
-        REPORT_DIR.glob(
-            "*_web_research.json"
-        )
+        REPORT_DIR.glob("*_web_research.json")
     )
 
     if not reports:
-
         raise FileNotFoundError(
             "Web araştırma raporu bulunamadı."
         )
@@ -114,13 +97,118 @@ def create_safe_filename(text):
     filename = filename.strip("_")
 
     if not filename:
-
         filename = "daily_topic"
 
     return filename[:80]
 
 
-def generate_script(
+def call_gemini(client, prompt):
+
+    for attempt in range(
+        1,
+        MAX_RETRIES + 1
+    ):
+
+        try:
+
+            print(
+                f"Gemini isteği "
+                f"{attempt}/{MAX_RETRIES}"
+            )
+
+            response = client.models.generate_content(
+                model=MODEL,
+                contents=prompt
+            )
+
+            text = (
+                response.text.strip()
+                if response.text
+                else ""
+            )
+
+            if not text:
+                raise RuntimeError(
+                    "Gemini boş cevap döndürdü."
+                )
+
+            print(
+                "Gemini üretimi başarılı."
+            )
+
+            return text
+
+        except Exception as error:
+
+            error_text = str(error)
+
+            print()
+            print("Gemini hatası:")
+            print(error)
+
+            if (
+                "429" in error_text
+                or
+                "RESOURCE_EXHAUSTED"
+                in error_text
+                or
+                "quota"
+                in error_text.lower()
+            ):
+
+                raise RuntimeError(
+                    "Gemini kotası dolu veya rate limit "
+                    "aşıldı."
+                ) from error
+
+            if (
+                "503" in error_text
+                or
+                "UNAVAILABLE"
+                in error_text
+                or
+                "high demand"
+                in error_text.lower()
+            ):
+
+                if attempt == MAX_RETRIES:
+                    raise RuntimeError(
+                        "Gemini 503 hatası çözülemedi."
+                    ) from error
+
+                delay = RETRY_DELAYS[
+                    attempt - 1
+                ]
+
+                print(
+                    f"{delay} saniye bekleniyor..."
+                )
+
+                time.sleep(delay)
+
+                continue
+
+            if attempt == MAX_RETRIES:
+                raise RuntimeError(
+                    "Gemini senaryo üretimi başarısız."
+                ) from error
+
+            delay = RETRY_DELAYS[
+                attempt - 1
+            ]
+
+            print(
+                f"{delay} saniye bekleniyor..."
+            )
+
+            time.sleep(delay)
+
+    raise RuntimeError(
+        "Gemini cevap üretemedi."
+    )
+
+
+def generate_initial_script(
     client,
     topic_data,
     report
@@ -146,7 +234,7 @@ You are the senior documentary writer for the YouTube channel
 "Shadow Archive".
 
 Write a professional, original Turkish documentary narration
-about this real-world mystery:
+about this real-world mystery.
 
 TOPIC:
 {topic}
@@ -160,12 +248,22 @@ SUGGESTED TITLE:
 RESEARCH REPORT:
 {json.dumps(report, ensure_ascii=False, indent=2)}
 
-TARGET LENGTH:
-2,700–3,200 Turkish words.
+LENGTH REQUIREMENT:
 
-IMPORTANT:
-The narration MUST aim for at least 2,700 words in a SINGLE
-generation.
+Write BETWEEN 2,700 and 3,200 Turkish words.
+
+This requirement is mandatory.
+
+Aim for approximately 3,000 words.
+
+Do NOT stop at 2,000 words.
+
+Do NOT stop at 2,200 words.
+
+Do NOT stop at 2,500 words.
+
+Continue developing the investigation naturally until the
+narration reaches approximately 3,000 words.
 
 FACTUAL RULES:
 
@@ -179,7 +277,7 @@ FACTUAL RULES:
 - Clearly separate confirmed facts from theories.
 - If something is uncertain, explain that it is uncertain.
 - Do not repeat information simply to increase length.
-- Do not treat atmospheric stock footage as historical evidence.
+- Do not use filler.
 
 STYLE:
 
@@ -189,7 +287,7 @@ STYLE:
 - Gradually increasing suspense.
 - Natural transitions.
 - Varied sentence lengths.
-- Clear and natural narration.
+- Clear narration.
 - No repetitive AI-style phrases.
 - No excessive clickbait.
 - Every paragraph should provide useful information.
@@ -245,125 +343,111 @@ Do not include:
 - production notes
 """
 
-
-    for attempt in range(
-        1,
-        MAX_RETRIES + 1
-    ):
-
-        try:
-
-            print(
-                "Gemini senaryo üretimi "
-                f"denemesi {attempt}/{MAX_RETRIES}"
-            )
-
-            response = client.models.generate_content(
-                model=MODEL,
-                contents=prompt
-            )
-
-            text = response.text.strip()
-
-            if not text:
-
-                raise RuntimeError(
-                    "Gemini boş senaryo döndürdü."
-                )
-
-            print(
-                "Gemini senaryo üretimi başarılı."
-            )
-
-            return text
-
-        except Exception as error:
-
-            error_text = str(error)
-
-            print()
-            print(
-                "Gemini hatası:"
-            )
-            print(error)
-
-            # 429 = günlük kota / rate limit.
-            # Tekrar denemiyoruz.
-
-            if (
-                "429" in error_text
-                or
-                "RESOURCE_EXHAUSTED"
-                in error_text
-                or
-                "quota"
-                in error_text.lower()
-            ):
-
-                raise RuntimeError(
-                    "Gemini kotası dolu veya rate limit "
-                    "aşıldı. Tekrar denenmeyecek."
-                ) from error
-
-            # 503 = geçici servis yoğunluğu.
-
-            if (
-                "503" in error_text
-                or
-                "UNAVAILABLE"
-                in error_text
-                or
-                "high demand"
-                in error_text.lower()
-            ):
-
-                if attempt == MAX_RETRIES:
-
-                    raise RuntimeError(
-                        "Gemini 503 hatası "
-                        f"{MAX_RETRIES} denemede "
-                        "de çözülemedi."
-                    ) from error
-
-                delay = RETRY_DELAYS[
-                    attempt - 1
-                ]
-
-                print(
-                    f"Gemini yoğun. "
-                    f"{delay} saniye bekleniyor..."
-                )
-
-                time.sleep(
-                    delay
-                )
-
-                continue
-
-            # Diğer geçici hatalar.
-
-            if attempt == MAX_RETRIES:
-
-                raise RuntimeError(
-                    "Gemini senaryo üretimi "
-                    f"{MAX_RETRIES} denemede başarısız."
-                ) from error
-
-            delay = RETRY_DELAYS[
-                attempt - 1
-            ]
-
-            print(
-                f"{delay} saniye bekleniyor..."
-            )
-
-            time.sleep(
-                delay
-            )
-
-    raise RuntimeError(
-        "Gemini senaryo üretilemedi."
+    return call_gemini(
+        client,
+        prompt
     )
+
+
+def expand_script(
+    client,
+    script,
+    topic,
+    report,
+    current_words
+):
+
+    missing_words = MIN_WORDS - current_words
+
+    print()
+    print(
+        f"Senaryo kısa kaldı: "
+        f"{current_words} kelime"
+    )
+
+    print(
+        f"Eksik yaklaşık: "
+        f"{missing_words} kelime"
+    )
+
+    prompt = f"""
+You are editing a Turkish investigative documentary
+for the YouTube channel "Shadow Archive".
+
+The current narration is too short.
+
+TOPIC:
+{topic}
+
+CURRENT WORD COUNT:
+{current_words}
+
+MINIMUM REQUIRED WORD COUNT:
+{MIN_WORDS}
+
+The narration must reach at least 2,700 words.
+
+RESEARCH REPORT:
+{json.dumps(report, ensure_ascii=False, indent=2)}
+
+CURRENT NARRATION:
+{script}
+
+TASK:
+
+Expand the narration naturally.
+
+Add approximately
+{max(missing_words + 200, 700)}
+new Turkish words.
+
+Do NOT rewrite the entire story from zero.
+
+Keep the existing useful information.
+
+Add factual depth using only the research report.
+
+Useful expansion areas include:
+
+- historical background
+- chronology
+- people involved
+- locations
+- investigation details
+- physical evidence
+- official findings
+- competing theories
+- contradictions
+- unanswered questions
+- context surrounding the event
+- careful explanation of what is known and unknown
+
+STRICT RULES:
+
+- Never invent facts.
+- Never invent dialogue.
+- Never invent witnesses.
+- Never invent evidence.
+- Never invent events.
+- Never present speculation as fact.
+- Do not repeat paragraphs.
+- Do not use filler.
+- Keep the narration natural.
+- Keep the tone serious and investigative.
+- Do not add headings.
+- Do not add bullet points.
+- Do not add timestamps.
+- Do not add production notes.
+
+Return ONLY the complete expanded Turkish narration.
+"""
+
+    expanded = call_gemini(
+        client,
+        prompt
+    )
+
+    return expanded
 
 
 def main():
@@ -378,22 +462,14 @@ def main():
 
     topic = topic_data["topic"]
 
-    print(
-        "GÜNCEL KONU:"
-    )
-
+    print("GÜNCEL KONU:")
     print(topic)
-
     print()
 
     report_file = find_latest_report()
 
-    print(
-        "ARAŞTIRMA RAPORU:"
-    )
-
+    print("ARAŞTIRMA RAPORU:")
     print(report_file)
-
     print()
 
     report = json.loads(
@@ -408,7 +484,7 @@ def main():
         "Uzun Türkçe senaryo oluşturuluyor..."
     )
 
-    script = generate_script(
+    script = generate_initial_script(
         client,
         topic_data,
         report
@@ -419,16 +495,35 @@ def main():
     )
 
     print()
-
     print(
-        f"Senaryo kelime sayısı: "
+        f"İlk senaryo kelime sayısı: "
         f"{word_count}"
     )
 
     if word_count < MIN_WORDS:
 
+        script = expand_script(
+            client,
+            script,
+            topic,
+            report,
+            word_count
+        )
+
+        word_count = len(
+            script.split()
+        )
+
+        print()
+        print(
+            f"Genişletilmiş senaryo kelime sayısı: "
+            f"{word_count}"
+        )
+
+    if word_count < MIN_WORDS:
+
         raise RuntimeError(
-            f"Senaryo 2700 kelimenin altında kaldı: "
+            "Senaryo hâlâ 2700 kelimenin altında: "
             f"{word_count}"
         )
 
@@ -453,11 +548,9 @@ def main():
 
     print()
     print("=" * 60)
-
     print(
         "SENARYO BAŞARIYLA HAZIRLANDI"
     )
-
     print("=" * 60)
 
     print(
@@ -470,10 +563,6 @@ def main():
 
     print(
         f"Dosya: {script_file}"
-    )
-
-    print(
-        "Gemini başarılı üretim: 1"
     )
 
     print("=" * 60)
