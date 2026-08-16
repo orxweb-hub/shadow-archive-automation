@@ -1,21 +1,36 @@
 import json
 import urllib.request
+import urllib.parse
 import xml.etree.ElementTree as ET
 from pathlib import Path
-
-from google import genai
-import os
+from html import unescape
+import re
 
 
 REPORT_DIR = Path("research/reports")
 
 TOPIC = "MV Joyita disappearance 1955"
 
-
 RSS_SOURCES = [
-    "https://news.google.com/rss/search?q=MV+Joyita",
-    "https://www.google.com/alerts/feeds/00000000000000000000",
+    "https://news.google.com/rss/search?"
+    + urllib.parse.urlencode({
+        "q": TOPIC,
+        "hl": "en-US",
+        "gl": "US",
+        "ceid": "US:en"
+    }),
 ]
+
+
+def clean_text(text):
+    if not text:
+        return ""
+
+    text = unescape(text)
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"\s+", " ", text)
+
+    return text.strip()
 
 
 def fetch_rss(url):
@@ -27,7 +42,11 @@ def fetch_rss(url):
             }
         )
 
-        with urllib.request.urlopen(request, timeout=15) as response:
+        with urllib.request.urlopen(
+            request,
+            timeout=20
+        ) as response:
+
             data = response.read()
 
         root = ET.fromstring(data)
@@ -35,130 +54,194 @@ def fetch_rss(url):
         articles = []
 
         for item in root.findall(".//item"):
-            title = item.findtext("title", "")
-            link = item.findtext("link", "")
-            description = item.findtext("description", "")
+
+            title = clean_text(
+                item.findtext("title", "")
+            )
+
+            link = item.findtext(
+                "link",
+                ""
+            ).strip()
+
+            description = clean_text(
+                item.findtext(
+                    "description",
+                    ""
+                )
+            )
+
+            pub_date = clean_text(
+                item.findtext(
+                    "pubDate",
+                    ""
+                )
+            )
 
             if title:
+
                 articles.append({
                     "title": title,
                     "url": link,
-                    "description": description
+                    "description": description,
+                    "published": pub_date
                 })
 
         return articles
 
-    except Exception as e:
-        print(f"RSS kaynağı okunamadı: {url}")
-        print(e)
+    except Exception as error:
+
+        print(
+            f"RSS kaynağı okunamadı: {url}"
+        )
+        print(error)
+
         return []
 
 
 def collect_sources():
+
     all_articles = []
 
     for source in RSS_SOURCES:
-        articles = fetch_rss(source)
-        all_articles.extend(articles)
 
-    # Aynı başlıkları temizle
+        print(
+            f"Kaynak okunuyor: {source}"
+        )
+
+        articles = fetch_rss(
+            source
+        )
+
+        all_articles.extend(
+            articles
+        )
+
     unique = {}
+
     for article in all_articles:
-        unique[article["title"]] = article
+
+        title = article.get(
+            "title",
+            ""
+        ).strip().lower()
+
+        if title and title not in unique:
+            unique[title] = article
 
     return list(unique.values())[:20]
 
 
-def research_with_gemini(topic, sources):
-    api_key = os.environ.get("GEMINI_API_KEY")
+def build_report(topic, sources):
 
-    if not api_key:
-        raise RuntimeError("GEMINI_API_KEY bulunamadı.")
+    confirmed_facts = []
 
-    client = genai.Client(api_key=api_key)
+    important_details = []
 
-    source_text = json.dumps(
-        sources,
-        ensure_ascii=False,
-        indent=2
-    )
+    source_list = []
 
-    prompt = f"""
-You are the factual research engine for the YouTube documentary
-channel "Shadow Archive".
+    timeline = []
 
-Research topic:
+    for source in sources:
 
-{topic}
+        title = source.get(
+            "title",
+            ""
+        )
 
-Below are web sources collected externally.
+        description = source.get(
+            "description",
+            ""
+        )
 
-SOURCE MATERIAL:
-{source_text}
+        url = source.get(
+            "url",
+            ""
+        )
 
-Create a factual research report.
+        published = source.get(
+            "published",
+            ""
+        )
 
-Return ONLY valid JSON:
+        if title:
 
-{{
-  "topic": "",
-  "summary": "",
-  "timeline": [],
-  "people": [],
-  "locations": [],
-  "confirmed_facts": [],
-  "disputed_claims": [],
-  "unverified_claims": [],
-  "possible_explanations": [],
-  "important_details": [],
-  "sources": []
-}}
+            important_details.append(
+                {
+                    "title": title,
+                    "description": description,
+                    "published": published
+                }
+            )
 
-Rules:
+        if url:
 
-- Use only information supported by the supplied sources.
-- Never invent facts.
-- Never present rumors as confirmed facts.
-- Clearly separate confirmed facts from theories.
-- If the sources are insufficient, say so.
-- Keep source URLs.
-- Do not write a documentary script.
-- This is a research report only.
-"""
+            source_list.append(
+                {
+                    "title": title,
+                    "url": url
+                }
+            )
 
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt
-    )
+    report = {
+        "topic": topic,
 
-    text = response.text.strip()
+        "summary": (
+            "Bu rapor, Google News RSS üzerinden "
+            "toplanan kaynakların ham araştırma "
+            "özetidir. Kaynaklarda bulunmayan "
+            "bilgiler doğrulanmış gerçek olarak "
+            "eklenmemiştir."
+        ),
 
-    if text.startswith("```"):
-        text = text.replace("```json", "")
-        text = text.replace("```", "")
-        text = text.strip()
+        "timeline": timeline,
 
-    return json.loads(text)
+        "people": [],
+
+        "locations": [],
+
+        "confirmed_facts": confirmed_facts,
+
+        "disputed_claims": [],
+
+        "unverified_claims": [],
+
+        "possible_explanations": [],
+
+        "important_details": important_details,
+
+        "sources": source_list
+    }
+
+    return report
 
 
 def main():
-    print("SHADOW ARCHIVE — FREE WEB RESEARCH")
+
+    print(
+        "SHADOW ARCHIVE — FREE WEB RESEARCH"
+    )
+
     print("=" * 50)
 
-    print("Web kaynakları toplanıyor...")
+    print(
+        "Gemini kullanılmadan web kaynakları "
+        "toplanıyor..."
+    )
 
     sources = collect_sources()
 
-    print(f"Toplanan kaynak sayısı: {len(sources)}")
+    print(
+        f"Toplanan kaynak sayısı: {len(sources)}"
+    )
 
     if not sources:
+
         raise RuntimeError(
             "Hiç web kaynağı bulunamadı."
         )
 
-    print("Gemini kaynakları analiz ediyor...")
-
-    report = research_with_gemini(
+    report = build_report(
         TOPIC,
         sources
     )
@@ -183,9 +266,21 @@ def main():
     )
 
     print()
-    print("ARAŞTIRMA TAMAMLANDI")
+    print(
+        "ARAŞTIRMA TAMAMLANDI"
+    )
+
     print("=" * 50)
-    print(f"Rapor: {output_file}")
+
+    print(
+        f"Rapor: {output_file}"
+    )
+
+    print(
+        "Gemini isteği: 0"
+    )
+
+    print("=" * 50)
 
 
 if __name__ == "__main__":
