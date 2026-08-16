@@ -1,13 +1,18 @@
 import os
 import json
 import time
+import re
 from pathlib import Path
 
 from google import genai
 
 
-REPORT_FILE = Path(
-    "research/reports/mv_joyita_web_research.json"
+TOPIC_FILE = Path(
+    "research/current_topic.json"
+)
+
+REPORT_DIR = Path(
+    "research/reports"
 )
 
 SCRIPT_DIR = Path(
@@ -15,6 +20,7 @@ SCRIPT_DIR = Path(
 )
 
 MIN_WORDS = 2700
+
 MODEL = "gemini-3.6-flash"
 
 MAX_RETRIES = 5
@@ -35,6 +41,7 @@ def get_client():
     )
 
     if not api_key:
+
         raise RuntimeError(
             "GEMINI_API_KEY bulunamadı."
         )
@@ -44,14 +51,111 @@ def get_client():
     )
 
 
-def generate_script(client, report):
+def load_topic():
+
+    if not TOPIC_FILE.exists():
+
+        raise FileNotFoundError(
+            "Güncel konu dosyası bulunamadı: "
+            f"{TOPIC_FILE}"
+        )
+
+    data = json.loads(
+        TOPIC_FILE.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    topic = data.get(
+        "topic"
+    )
+
+    if not topic:
+
+        raise RuntimeError(
+            "current_topic.json içinde topic bulunamadı."
+        )
+
+    return data
+
+
+def find_latest_report():
+
+    reports = list(
+        REPORT_DIR.glob(
+            "*_web_research.json"
+        )
+    )
+
+    if not reports:
+
+        raise FileNotFoundError(
+            "Web araştırma raporu bulunamadı."
+        )
+
+    reports.sort(
+        key=lambda file: file.stat().st_mtime,
+        reverse=True
+    )
+
+    return reports[0]
+
+
+def create_safe_filename(text):
+
+    filename = text.lower()
+
+    filename = re.sub(
+        r"[^a-z0-9]+",
+        "_",
+        filename
+    )
+
+    filename = filename.strip("_")
+
+    if not filename:
+
+        filename = "daily_topic"
+
+    return filename[:80]
+
+
+def generate_script(
+    client,
+    topic_data,
+    report
+):
+
+    topic = topic_data.get(
+        "topic",
+        ""
+    )
+
+    category = topic_data.get(
+        "category",
+        ""
+    )
+
+    suggested_title = topic_data.get(
+        "title",
+        ""
+    )
 
     prompt = f"""
 You are the senior documentary writer for the YouTube channel
 "Shadow Archive".
 
 Write a professional, original Turkish documentary narration
-about the MV Joyita mystery.
+about this real-world mystery:
+
+TOPIC:
+{topic}
+
+CATEGORY:
+{category}
+
+SUGGESTED TITLE:
+{suggested_title}
 
 RESEARCH REPORT:
 {json.dumps(report, ensure_ascii=False, indent=2)}
@@ -61,7 +165,7 @@ TARGET LENGTH:
 
 IMPORTANT:
 The narration MUST aim for at least 2,700 words in a SINGLE
-generation. Do not intentionally make it short.
+generation.
 
 FACTUAL RULES:
 
@@ -75,6 +179,7 @@ FACTUAL RULES:
 - Clearly separate confirmed facts from theories.
 - If something is uncertain, explain that it is uncertain.
 - Do not repeat information simply to increase length.
+- Do not treat atmospheric stock footage as historical evidence.
 
 STYLE:
 
@@ -91,28 +196,29 @@ STYLE:
 
 COVER:
 
-- The background of MV Joyita.
-- The voyage.
-- The disappearance.
-- The discovery of the abandoned vessel.
-- The missing people.
-- The physical evidence.
-- The investigation.
-- The official findings.
-- The major theories.
-- Problems with each theory.
+- Background of the event.
+- Important people and locations.
+- Events before the mystery.
+- The disappearance or incident.
+- Discovery or investigation.
+- Physical evidence.
+- Missing people if applicable.
+- Official investigation.
+- Official findings.
+- Major theories.
+- Problems and contradictions with those theories.
 - What remains unexplained.
-- A strong final conclusion.
+- Strong final conclusion.
 
 STRUCTURE:
 
 1. Strong opening and mystery
-2. Background of the vessel
-3. Events before the disappearance
-4. The disappearance
-5. Discovery of MV Joyita
-6. Evidence found aboard
-7. Missing people
+2. Background
+3. Events before the incident
+4. The disappearance or main event
+5. Discovery
+6. Evidence
+7. People involved
 8. Investigation
 9. Official findings
 10. Major theories
@@ -129,6 +235,7 @@ Do not invent information just to reach the word count.
 Write ONLY the finished Turkish narration.
 
 Do not include:
+
 - headings
 - bullet points
 - timestamps
@@ -138,6 +245,7 @@ Do not include:
 - production notes
 """
 
+
     for attempt in range(
         1,
         MAX_RETRIES + 1
@@ -146,7 +254,7 @@ Do not include:
         try:
 
             print(
-                f"Gemini senaryo üretimi "
+                "Gemini senaryo üretimi "
                 f"denemesi {attempt}/{MAX_RETRIES}"
             )
 
@@ -181,6 +289,7 @@ Do not include:
 
             # 429 = günlük kota / rate limit.
             # Tekrar denemiyoruz.
+
             if (
                 "429" in error_text
                 or
@@ -197,6 +306,7 @@ Do not include:
                 ) from error
 
             # 503 = geçici servis yoğunluğu.
+
             if (
                 "503" in error_text
                 or
@@ -219,17 +329,19 @@ Do not include:
                     attempt - 1
                 ]
 
-                print()
                 print(
                     f"Gemini yoğun. "
                     f"{delay} saniye bekleniyor..."
                 )
 
-                time.sleep(delay)
+                time.sleep(
+                    delay
+                )
 
                 continue
 
             # Diğer geçici hatalar.
+
             if attempt == MAX_RETRIES:
 
                 raise RuntimeError(
@@ -245,7 +357,9 @@ Do not include:
                 f"{delay} saniye bekleniyor..."
             )
 
-            time.sleep(delay)
+            time.sleep(
+                delay
+            )
 
     raise RuntimeError(
         "Gemini senaryo üretilemedi."
@@ -260,15 +374,30 @@ def main():
 
     print("=" * 60)
 
-    if not REPORT_FILE.exists():
+    topic_data = load_topic()
 
-        raise FileNotFoundError(
-            "Web araştırma raporu bulunamadı: "
-            f"{REPORT_FILE}"
-        )
+    topic = topic_data["topic"]
+
+    print(
+        "GÜNCEL KONU:"
+    )
+
+    print(topic)
+
+    print()
+
+    report_file = find_latest_report()
+
+    print(
+        "ARAŞTIRMA RAPORU:"
+    )
+
+    print(report_file)
+
+    print()
 
     report = json.loads(
-        REPORT_FILE.read_text(
+        report_file.read_text(
             encoding="utf-8"
         )
     )
@@ -281,6 +410,7 @@ def main():
 
     script = generate_script(
         client,
+        topic_data,
         report
     )
 
@@ -289,16 +419,17 @@ def main():
     )
 
     print()
+
     print(
         f"Senaryo kelime sayısı: "
         f"{word_count}"
     )
 
-    if word_count < 1800:
+    if word_count < MIN_WORDS:
 
         raise RuntimeError(
-            f"Senaryo çok kısa kaldı: "
-            f"{word_count} kelime."
+            f"Senaryo 2700 kelimenin altında kaldı: "
+            f"{word_count}"
         )
 
     SCRIPT_DIR.mkdir(
@@ -306,9 +437,13 @@ def main():
         exist_ok=True
     )
 
+    safe_name = create_safe_filename(
+        topic
+    )
+
     script_file = (
         SCRIPT_DIR /
-        "mv_joyita_script.txt"
+        f"{safe_name}_script.txt"
     )
 
     script_file.write_text(
@@ -318,19 +453,29 @@ def main():
 
     print()
     print("=" * 60)
+
     print(
         "SENARYO BAŞARIYLA HAZIRLANDI"
     )
+
     print("=" * 60)
+
+    print(
+        f"Konu: {topic}"
+    )
+
     print(
         f"Kelime sayısı: {word_count}"
     )
+
     print(
         f"Dosya: {script_file}"
     )
+
     print(
         "Gemini başarılı üretim: 1"
     )
+
     print("=" * 60)
 
 
