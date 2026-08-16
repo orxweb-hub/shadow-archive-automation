@@ -35,4 +35,3 @@ MV Joyita videosu hazır.
 
 Videoları planlanan saatlerde yayınlayalım mı?" \
             --data-urlencode 'reply_markup={"inline_keyboard":[[{"text":"🟢 ONAYLA","callback_data":"approve"},{"text":"🔴 REDDET","callback_data":"reject"}],[{"text":"🕐 SAATİ DEĞİŞTİR","callback_data":"change_time"}]]}'
-            
