@@ -1,299 +1,206 @@
 [
   {
-    "scene": 1,
-    "description": "Vast dark blue ocean waves moving slowly, capturing the depth and immense scale of the sea.",
-    "search_queries": [
-      "dark ocean waves",
-      "deep blue sea aerial",
-      "vast ocean horizon"
-    ],
-    "mood": "mysterious",
-    "duration_hint": 20
+    "scene_number": 1,
+    "narration_summary": "Okyanuslar, gezegenimizin en büyük, en derin ve en sessiz mezarlıklarıdır. Yüzeydeki durgun suların altında binlerce yıllık sırlar saklanır.",
+    "visual_description": "Karanlık ve derin okyanus altı çekimi, yüzeyden süzülen hafif ışık hüzmeleri ve sakin deniz tabanı atmosferi.",
+    "search_query": "deep ocean underwater sun rays dark sea water atmospheric"
   },
   {
-    "scene": 2,
-    "description": "Close-up of a vintage 1950s ocean navigation map with nautical lines and depth charts.",
-    "search_queries": [
-      "vintage nautical map",
-      "antique sea chart close up",
-      "historical world map compass"
-    ],
-    "mood": "historical",
-    "duration_hint": 15
+    "scene_number": 2,
+    "narration_summary": "Denizcilik tarihinin en tüyler ürpertici trajedileri, deniz yüzeyinde hiçbir can taşımadan tek başına sürüklenen hayalet gemilerde gizlidir.",
+    "visual_description": "Açık denizde, sisli havalı bir gün batımında tek başına başıboş sürüklenen eski bir gemi silüeti.",
+    "search_query": "ghost ship drifting ocean sunset fog cinematic"
   },
   {
-    "scene": 3,
-    "description": "Isolated aerial view of the Pacific Ocean with small tropical sea currents and empty blue horizon.",
-    "search_queries": [
-      "pacific ocean drone",
-      "isolated ocean aerial",
-      "endless blue sea"
-    ],
-    "mood": "lonely",
-    "duration_hint": 15
+    "scene_number": 3,
+    "narration_summary": "1955 yılında Büyük Okyanus'un ıssız sularında MV Joyita adındaki bir tekne başıboş halde bulundu. Gemi batmamıştı ama içinde tek bir canlı yoktu.",
+    "visual_description": "Tarihi Pasifik Okyanusu haritası üzerinde pusula ve denizcilik aletlerinin yakın çekimi.",
+    "search_query": "vintage nautical map compass maritime history navigation"
   },
   {
-    "scene": 4,
-    "description": "A vintage 1950s style motor vessel or small cargo ship floating alone in calm open water.",
-    "search_queries": [
-      "vintage motor vessel sea",
-      "old wooden ship open ocean",
-      "1950s cargo boat"
-    ],
-    "mood": "eerie",
-    "duration_hint": 25
+    "scene_number": 4,
+    "narration_summary": "Gemide bulunan 25 yolcu ve mürettebat, arkalarında tek bir iz bile bırakmadan ortadan kaybolmuştu.",
+    "visual_description": "Bomboş bir gemi güvertesi, paslı zincirler ve açık deniz ufkuna doğru bakış, rüzgar sesi hissi.",
+    "search_query": "empty ship deck rusting metal open sea atmospheric"
   },
   {
-    "scene": 5,
-    "description": "Nautical navigation compass and brass instruments sitting on a wooden table near a ship window.",
-    "search_queries": [
-      "brass nautical compass",
-      "ship navigation table",
-      "vintage maritime instruments"
-    ],
-    "mood": "investigative",
-    "duration_hint": 15
+    "scene_number": 5,
+    "narration_summary": "Gölge Arşivi'nde, batmayan bir gemi ve okyanusun ortasında yok olan 25 canın hikayesini inceliyoruz.",
+    "visual_description": "Fırtınalı ve karanlık bulutlarla kaplı Pasifik Okyanusu ufku, sinematik belge-film atmosferi.",
+    "search_query": "dark ocean horizon stormy clouds cinematic ocean moody"
   },
   {
-    "scene": 6,
-    "description": "A rescue boat or search ship approaching a stationary, drifting vessel on ocean water.",
-    "search_queries": [
-      "ship approaching boat ocean",
-      "sea rescue vessel",
-      "discovering abandoned boat"
-    ],
-    "mood": "suspenseful",
-    "duration_hint": 20
+    "scene_number": 6,
+    "narration_summary": "Büyük Okyanus'un güney bölgeleri, irili ufaklı adaları ve zorlu ticaret yollarıyla kendine has çetin bir ekosisteme sahiptir.",
+    "visual_description": "Pasifik adalarının ve etrafını saran berrak turkuaz okyanus sularının havadan çekimi.",
+    "search_query": "pacific island aerial turquoise ocean coastline landscape"
   },
   {
-    "scene": 7,
-    "description": "Empty wooden ship deck with ropes and equipment, slowly rolling with the swell, no people visible.",
-    "search_queries": [
-      "empty ship deck ocean",
-      "abandoned boat deck",
-      "unmanned vessel deck"
-    ],
-    "mood": "chilling",
-    "duration_hint": 20
+    "scene_number": 7,
+    "narration_summary": "1950'li yıllarda adalar arası ulaşım ve lojistik, motorlu teknelerin düzenli seferlerine dayanıyordu.",
+    "visual_description": "Dalgaları yararak ilerleyen eski ahşap ve çelik motorlu ticaret teknesi, açık deniz seyri.",
+    "search_query": "vintage motor vessel boat sailing ocean waves daylight"
   },
   {
-    "scene": 8,
-    "description": "Close-up of an abandoned lifebuoy and ropes resting on a calm wooden ship surface.",
-    "search_queries": [
-      "lifebuoy on deck",
-      "abandoned boat ropes",
-      "sea life preserver ship"
-    ],
-    "mood": "melancholic",
-    "duration_hint": 15
+    "scene_number": 8,
+    "narration_summary": "Bu tekneler kargo ve erzak taşırken aynı zamanda doktorları, kamu görevlilerini ve halkı da varış noktalarına ulaştırıyordu.",
+    "visual_description": "Okyanusta seyreden küçük bir kargo gemisinin güvertesinden dalgalara ve ufka doğru bakış.",
+    "search_query": "cargo ship deck view ocean waves blue sky"
   },
   {
-    "scene": 9,
-    "description": "Aerial view of a remote South Pacific tropical island beach and coral reef (Tokelau aesthetic).",
-    "search_queries": [
-      "south pacific island aerial",
-      "remote tropical coastline",
-      "pacific coral lagoon"
-    ],
-    "mood": "exotic",
-    "duration_hint": 15
+    "scene_number": 9,
+    "narration_summary": "1955 yılında MV Joyita'nın Tokelau, Fiji ve Yeni Zelanda arasındaki seferi rutin bir yolculuk olarak başladı.",
+    "visual_description": "Tropikal bir limandan hareket eden küçük motorlu tekne, liman tesisleri ve palmiyeler.",
+    "search_query": "tropical port boat leaving harbor ocean tropical coast"
   },
   {
-    "scene": 10,
-    "description": "A vintage doctor's medical bag, stethoscope, and mid-century prescription notes on a desk.",
-    "search_queries": [
-      "vintage doctor bag stethoscope",
-      "1950s medical equipment",
-      "old doctor desk"
-    ],
-    "mood": "nostalgic",
-    "duration_hint": 15
+    "scene_number": 10,
+    "narration_summary": "Güvertede İngiltere'den gelen bir doktor, kamu görevlileri ve denizcilerden oluşan toplam 25 kişi bulunuyordu.",
+    "visual_description": "Geminin ahşap dümeni, pusulası ve köprüüstü detayları, nostaljik denizcilik dokusu.",
+    "search_query": "vintage ship helm wooden steering wheel compass vessel"
   },
   {
-    "scene": 11,
-    "description": "Hands turning through yellowed newspaper archive pages with black and white headlines.",
-    "search_queries": [
-      "reading vintage newspaper archives",
-      "old newspaper headlines",
-      "investigator reading newspaper"
-    ],
-    "mood": "analytical",
-    "duration_hint": 15
+    "scene_number": 11,
+    "narration_summary": "Yolculuk başladığında Pasifik Okyanusu'nda sakin seyir koşulları hakim görünüyordu.",
+    "visual_description": "Sakin ve masmavi açık okyanusta ilerleyen geminin iz bırakan köpüklü suları.",
+    "search_query": "calm blue ocean water ship wake ocean voyage sunlight"
   },
   {
-    "scene": 12,
-    "description": "A memorial flower wreath floating on dark harbor water, symbolizing loss at sea.",
-    "search_queries": [
-      "memorial wreath ocean water",
-      "flower wreath floating sea",
-      "maritime memorial service"
-    ],
-    "mood": "somber",
-    "duration_hint": 15
+    "scene_number": 12,
+    "narration_summary": "Varış zamanı geldiğinde MV Joyita limana yanaşmadı ve yetkililer arasında ilk endişe sinyalleri çaldı.",
+    "visual_description": "Liman saat panosu, batan güneş eşliğinde boş kalan iskele ve endişeli atmosfer.",
+    "search_query": "old dock wooden pier sunset empty harbor atmospheric"
   },
   {
-    "scene": 13,
-    "description": "Ocean waves gently slapping against the wooden hull of a floating vessel, showing buoyancy.",
-    "search_queries": [
-      "waves hitting boat hull",
-      "ship floating water level",
-      "wooden ship side water"
-    ],
-    "mood": "curious",
-    "duration_hint": 20
+    "scene_number": 13,
+    "narration_summary": "Dönemin kısıtlı telsiz imkanları nedeniyle temas kesilmesi başta normal karşılansa da saatler günlere dönüştü.",
+    "visual_description": "Eski model telsiz radyo ekipmanı, dönen kadranlar ve dalga frekans detayları.",
+    "search_query": "vintage radio equipment dials communications room dark"
   },
   {
-    "scene": 14,
-    "description": "An archivist opening a dusty historical file folder inside a dim basement record room.",
-    "search_queries": [
-      "opening archive folder",
-      "dusty document vault",
-      "historical record file"
-    ],
-    "mood": "mysterious",
-    "duration_hint": 15
+    "scene_number": 14,
+    "narration_summary": "Gemiden hiçbir haber alınamaması durumun sıradan bir gecikme olmadığını gösterdi.",
+    "visual_description": "Geceye doğru kararan uçsuz bucaksız okyanus ufku, alacakaranlıkta kaybolan deniz.",
+    "search_query": "twilight ocean endless horizon dark clouds dark sea"
   },
   {
-    "scene": 15,
-    "description": "Rainy vintage street in 1950s England (Derby aesthetic) with old cars and brick buildings.",
-    "search_queries": [
-      "1950s English city rain",
-      "vintage brick street derby",
-      "old British street rainy"
-    ],
-    "mood": "gloomy",
-    "duration_hint": 15
+    "scene_number": 15,
+    "narration_summary": "Geniş çaplı arama kurtarma operasyonu başlatıldı; Fiji ve Yeni Zelanda birimleri alarm durumuna geçirildi.",
+    "visual_description": "Bulutların arasından süzülerek deniz yüzeyini tarayan deniz arama kurtarma uçağı silüeti.",
+    "search_query": "search airplane flying low clouds sea search mission"
   },
   {
-    "scene": 16,
-    "description": "Silhouette of a lone ship drifting near the ocean horizon during a moody, orange-purple sunset.",
-    "search_queries": [
-      "ship silhouette ocean sunset",
-      "drifting vessel dusk",
-      "lonely boat sunset horizon"
-    ],
-    "mood": "haunting",
-    "duration_hint": 20
+    "scene_number": 16,
+    "narration_summary": "Binlerce kilometrekarelik devasa ve ıssız alanda havadan ve denizden arama çalışmaları yürütüldü.",
+    "visual_description": "Yüksek açıdan çekilmiş, sonsuz gibi görünen koyu mavi ıssız okyanus yüzeyi.",
+    "search_query": "vast ocean aerial shot deep blue sea boundless water"
   },
   {
-    "scene": 17,
-    "description": "Close-up of a vintage 1950s shortwave radio transmitter with glowing vacuum tubes and dials.",
-    "search_queries": [
-      "vintage shortwave radio transmitter",
-      "1950s maritime radio",
-      "old radio dials close up"
-    ],
-    "mood": "tense",
-    "duration_hint": 15
+    "scene_number": 17,
+    "narration_summary": "Arama ekipleri olası bir kaza, ani fırtına veya batma senaryolarını inceledi.",
+    "visual_description": "Sert dalgalarla mücadele ederek arama tarama yapan deniz kurtarma gemisi.",
+    "search_query": "rescue vessel rough seas heavy waves ocean storm"
   },
   {
-    "scene": 18,
-    "description": "An unmanned wooden ship wheel swaying slowly with the movement of the waves.",
-    "search_queries": [
-      "ship wooden steering wheel",
-      "unmanned ship bridge",
-      "abandoned helm boat"
-    ],
-    "mood": "eerie",
-    "duration_hint": 15
+    "scene_number": 18,
+    "narration_summary": "En büyük korku geminin amansız bir fırtınaya yakalanarak aniden batmasıydı.",
+    "visual_description": "Fırtınalı gökyüzü altında kayalıklara çarpan köpüklü dev okyanus dalgaları.",
+    "search_query": "crashing waves ocean storm dark rocky shore dramatic"
   },
   {
-    "scene": 19,
-    "description": "A person sitting quietly on a rocky shore staring out at the vast ocean in contemplation.",
-    "search_queries": [
-      "person sitting sea shore nostalgic",
-      "looking at endless sea horizon",
-      "grieving near ocean coast"
-    ],
-    "mood": "melancholic",
-    "duration_hint": 15
+    "scene_number": 19,
+    "narration_summary": "Klasik kazalarda su yüzeyine çıkan yakıt veya enkaz kalıntılarına Joyita olayında rastlanmadı.",
+    "visual_description": "Su yüzeyinde yavaşça dalgalanan deniz köpükleri, hiçbir enkaz parçası bulunmayan temiz su.",
+    "search_query": "clean ocean water surface floating foam clear ripples"
   },
   {
-    "scene": 20,
-    "description": "Vintage printing press machine printing news sheets or magazines rapidly.",
-    "search_queries": [
-      "vintage printing press machine",
-      "printing newspaper retro",
-      "old press publishing"
-    ],
-    "mood": "dramatic",
-    "duration_hint": 15
+    "scene_number": 20,
+    "narration_summary": "Günler süren yoğun aramalara rağmen tek bir enkaz parçası dahi bulunamadı; umutlar tükeniyordu.",
+    "visual_description": "Sahilde durup okyanus ufkuna dalgınca bakan bir insanın silüeti, hüzünlü atmosfer.",
+    "search_query": "silhouette person looking at sea sunset beach dramatic solitude"
   },
   {
-    "scene": 21,
-    "description": "A courtroom scene close-up showing a judge's wooden gavel and official inquiry paper documents.",
-    "search_queries": [
-      "gavel legal court document",
-      "official inquiry court paper",
-      "judge wooden gavel desk"
-    ],
-    "mood": "serious",
-    "duration_hint": 15
+    "scene_number": 21,
+    "narration_summary": "Haftalar süren belirsizlikten sonra Pasifik sularında tesadüfen yapılan bir karşılaşma her şeyi değiştirdi: Joyita bulundu.",
+    "visual_description": "Uzakta, açık denizde başıboş ve ıssız şekilde yavaşça sürüklenen küçük bir motorlu tekne.",
+    "search_query": "drifting boat lost sea ocean haze alone cinematic"
   },
   {
-    "scene": 22,
-    "description": "An empty small lifeboat floating far away on huge open ocean swells under cloudy skies.",
-    "search_queries": [
-      "empty lifeboat ocean",
-      "small boat lost at sea",
-      "abandoned raft waves"
-    ],
-    "mood": "desolate",
-    "duration_hint": 20
+    "scene_number": 22,
+    "narration_summary": "Gemi batmamıştı; suyun yüzeyinde duruyordu ve gövde bütünlüğü bozulmamıştı.",
+    "visual_description": "Sakin ve sisli deniz yüzeyinde dengede duran, ıssız ve durgun gemi gövdesi.",
+    "search_query": "empty vessel floating calm sea fog mysterious"
   },
   {
-    "scene": 23,
-    "description": "Dramatic dark stormy ocean waves crashing violently during a stormy night.",
-    "search_queries": [
-      "dark ocean storm waves",
-      "stormy sea night heavy waves",
-      "rough ocean water night"
-    ],
-    "mood": "threatening",
-    "duration_hint": 20
+    "scene_number": 23,
+    "narration_summary": "Arama ekibi gemiye çıktığında tüyler ürpertici bir sessizlikle karşılaştı: Güvertede tek bir canlı yoktu.",
+    "visual_description": "Terk edilmiş bir gemi güvertesine çıkan bot, sessiz paslı halatlar ve boş güverte alanı.",
+    "search_query": "abandoned ship deck rusted interior quiet maritime mystery"
   },
   {
-    "scene": 24,
-    "description": "Pacific Island community members standing on a beach looking out toward the ocean water.",
-    "search_queries": [
-      "pacific islanders coastal shore",
-      "people looking sea horizon",
-      "island inhabitants coast"
-    ],
-    "mood": "reflective",
-    "duration_hint": 15
+    "scene_number": 24,
+    "narration_summary": "Yirmi beş yolcu ve mürettebatın tamamı arkalarında hiçbir iz bırakmadan yok olmuştu.",
+    "visual_description": "Geminin karanlık ve boş koridorları, hafifçe sallanan kapılar ve gölgeli kamaralar.",
+    "search_query": "abandoned vessel interior dark corridor cabin shadow empty"
   },
   {
-    "scene": 25,
-    "description": "Modern oceanographic radar and sonar screen scanning dark blue marine depth data.",
-    "search_queries": [
-      "sonar radar screen ocean depth",
-      "marine navigation radar",
-      "underwater scanning display"
-    ],
-    "mood": "technological",
-    "duration_hint": 15
+    "scene_number": 25,
+    "narration_summary": "Geminin suyun üzerinde kalmasını sağlayan ana yapısının tamamen sağlam olduğu tespit edildi.",
+    "visual_description": "Suyun altından gemi gövdesinin görünümü, zarar görmemiş ahşap ve çelik omurga.",
+    "search_query": "underwater view ship hull floating ocean surface blue water"
   },
   {
-    "scene": 26,
-    "description": "Misty thick fog rolling over sea water, partially covering the silhouette of a drifting ship.",
-    "search_queries": [
-      "foggy ocean boat horizon",
-      "ghost ship fog sea",
-      "misty ocean vessel silhouette"
-    ],
-    "mood": "mystical",
-    "duration_hint": 20
+    "scene_number": 26,
+    "narration_summary": "Can filikalarının yerinde olmaması, insanların acil bir durumda gemiyi terk etmiş olabileceğini düşündürdü.",
+    "visual_description": "Gemideki boş filika vinçleri ve aşağı doğru sarkan boş halatlar, yakın çekim.",
+    "search_query": "empty lifeboat davits ropes hanging ship deck deserted"
   },
   {
-    "scene": 27,
-    "description": "Cinematic dark ocean closing shot with sunlight reflecting softly on water, fading to dark.",
-    "search_queries": [
-      "dark ocean reflection sunset",
-      "deep blue sea fading night",
-      "tranquil dark ocean horizon"
-    ],
-    "mood": "haunting",
-    "duration_hint": 25
+    "scene_number": 27,
+    "narration_summary": "Kamaralarda kişisel eşyaların ve doktorun tıbbi malzemelerinin bulunması aceleci bir tahliye izlenimi veriyordu.",
+    "visual_description": "Masanın üzerinde duran eski deri doktor çantası, tıbbi aletler ve dağınık eşyalar, tozlu ışık.",
+    "search_query": "vintage doctor bag old leather case dusty room abandoned items"
+  },
+  {
+    "scene_number": 28,
+    "narration_summary": "Gemide radikal bir çatışma izi veya eksiksiz bir seyir defteri kaydı bulunamadı.",
+    "visual_description": "Ahşap masa üzerinde duran açık, eski seyir defteri ve deniz haritası kalemi, loş ışık.",
+    "search_query": "vintage ship logbook open desk chart room dim light"
+  },
+  {
+    "scene_number": 29,
+    "narration_summary": "Tokelau, Fiji ve Yeni Zelanda halkı bu trajedinin yarattığı toplumsal travmayı uzun yıllar hissetti.",
+    "visual_description": "Tropikal bir adanın kıyısına vuran hüzünlü dalgalar, batan güneşin turuncu yansımaları.",
+    "search_query": "ocean shoreline waves crashing island sunset melancholic"
+  },
+  {
+    "scene_number": 30,
+    "narration_summary": "Olayın ardından Yeni Zelanda makamları tarafından geniş çaplı resmi soruşturmalar ve adli incelemeler başlatıldı.",
+    "visual_description": "Eski mahkeme veya soruşturma odası atmosferi, masada duran dosya ve belgeler.",
+    "search_query": "vintage archive investigation files documents courtroom dark lighting"
+  },
+  {
+    "scene_number": 31,
+    "narration_summary": "Birinci senaryo: Makine dairesinde su birikmesi veya boru sızıntısı nedeniyle yaşanan panik tahliyesi.",
+    "visual_description": "Geminin makine dairesinde borulardan damlayan sular, karanlık ve nemli mekanik atmosfer.",
+    "search_query": "dark ship engine room pipes water dripping industrial flooded concept"
+  },
+  {
+    "scene_number": 32,
+    "narration_summary": "İkinci senaryo: Motor arızası ve telsiz kopukluğu sonrası çaresizce akıntıya kapılma.",
+    "visual_description": "Gece vakti açık denizde güçlü okyanus akıntıları ve çalkantılı koyu renkli sular.",
+    "search_query": "dark ocean water currents moving night sky cinematic sea"
+  },
+  {
+    "scene_number": 33,
+    "narration_summary": "Üçüncü senaryo: Dış müdahale ve korsanlık iddiaları, ancak bunu doğrulayacak net bir kanıt bulunamadı.",
+    "visual_description": "Gece vakti sisler arasından beliren karanlık bir tekne silüeti, gizemli hava.",
+    "search_query": "mysterious vessel night fog sea dark silhouette sea"
+  },
+  {
+    "scene_number": 34,
+    "narration_summary": "Batmayan bir gemi neden terk edilir? Yirmi beş insan nereye kayboldu? Gerçekler okyanusun derinliklerinde kilitli kaldı.",
+    "visual_description": "Ay ışığının karanlık deniz üzerine düştüğü muazzam ve ürpertici açık okyanus gecesi manzarası.",
+    "search_query": "full moon ocean night cinematic dark sea endless mystery"
   }
 ]
