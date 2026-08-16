@@ -155,6 +155,7 @@ jobs:
           cp "$SUBTITLE" production_package/main/main_video_english.srt
           cp research/current_topic.json production_package/research/current_topic.json
 
+          echo "PRODUCTION PACKAGE HAZIR"
           find production_package -type f -exec ls -lh {} \;
 
       - name: Upload Complete Production Package
@@ -169,118 +170,53 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          python - <<'PY'
-          import json
-          import os
-          import urllib.parse
-          import urllib.request
+          TOPIC=$(python -c 'import json; print(json.load(open("research/current_topic.json", encoding="utf-8")).get("topic", "Günlük Konu"))')
+          TITLE=$(python -c 'import json; print(json.load(open("research/current_topic.json", encoding="utf-8")).get("title", "Shadow Archive"))')
 
-          with open(
-              "research/current_topic.json",
-              "r",
-              encoding="utf-8"
-          ) as f:
-              data = json.load(f)
+          MESSAGE=$(cat <<EOF
+          🤖 SHADOW ARCHIVE — TÜM İÇERİKLER HAZIR
 
-          topic = data.get(
-              "topic",
-              "Günlük Konu"
+          🎯 Konu:
+          ${TOPIC}
+
+          📝 Başlık:
+          ${TITLE}
+
+          ━━━━━━━━━━━━━━━━━━
+
+          ✅ Araştırma tamamlandı
+          ✅ Senaryo tamamlandı
+          ✅ Ana seslendirme tamamlandı
+          ✅ Görsel araştırma tamamlandı
+          ✅ Ana video tamamlandı
+          ✅ Ana video İngilizce altyazı tamamlandı
+          ✅ Short #1 tamamlandı
+          ✅ Short #2 tamamlandı
+          ✅ Shorts altyazıları tamamlandı
+          ✅ Shorts branding tamamlandı
+
+          ━━━━━━━━━━━━━━━━━━
+
+          📅 YAYIN PLANI
+
+          📱 09:00 — Short #1
+          🎬 12:00 — Ana Video
+          📱 21:00 — Short #2
+
+          ━━━━━━━━━━━━━━━━━━
+
+          🎬 Tüm içerikler YouTube'a yüklenmeye hazır.
+
+          Yayınlamak için onay ver:
+          EOF
           )
 
-          title = data.get(
-              "title",
-              "Shadow Archive"
-          )
+          KEYBOARD='{"inline_keyboard":[[{"text":"▶️ YAYINLA","callback_data":"publish_approve"},{"text":"❌ YAYINLAMA","callback_data":"publish_reject"}],[{"text":"🕐 SAATİ DEĞİŞTİR","callback_data":"change_time"}]]}'
 
-          text = f"""🤖 SHADOW ARCHIVE — TÜM İÇERİKLER HAZIR
+          curl -sS -X POST \
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "text=${MESSAGE}" \
+            --data-urlencode "reply_markup=${KEYBOARD}"
 
-🎯 Konu:
-{topic}
-
-📝 Başlık:
-{title}
-
-━━━━━━━━━━━━━━━━━━
-
-✅ Araştırma tamamlandı
-✅ Senaryo tamamlandı
-✅ Ana seslendirme tamamlandı
-✅ Görsel araştırma tamamlandı
-✅ Ana video tamamlandı
-✅ Ana video İngilizce altyazı tamamlandı
-✅ Short #1 tamamlandı
-✅ Short #2 tamamlandı
-✅ Shorts altyazıları tamamlandı
-✅ Shorts branding tamamlandı
-
-━━━━━━━━━━━━━━━━━━
-
-📅 YAYIN PLANI
-
-📱 09:00 — Short #1
-🎬 12:00 — Ana Video
-📱 21:00 — Short #2
-
-━━━━━━━━━━━━━━━━━━
-
-🎬 Tüm içerikler YouTube'a yüklenmeye hazır.
-
-Yayınlamak için onay ver:"""
-
-          keyboard = {
-              "inline_keyboard": [
-                  [
-                      {
-                          "text": "▶️ YAYINLA",
-                          "callback_data": "publish_approve"
-                      },
-                      {
-                          "text": "❌ YAYINLAMA",
-                          "callback_data": "publish_reject"
-                      }
-                  ],
-                  [
-                      {
-                          "text": "🕐 SAATİ DEĞİŞTİR",
-                          "callback_data": "change_time"
-                      }
-                  ]
-              ]
-          }
-
-          payload = urllib.parse.urlencode({
-              "chat_id": os.environ["TELEGRAM_CHAT_ID"],
-              "text": text,
-              "reply_markup": json.dumps(
-                  keyboard,
-                  ensure_ascii=False
-              )
-          }).encode("utf-8")
-
-          url = (
-              "https://api.telegram.org/bot"
-              + os.environ["TELEGRAM_BOT_TOKEN"]
-              + "/sendMessage"
-          )
-
-          request = urllib.request.Request(
-              url,
-              data=payload,
-              method="POST"
-          )
-
-          with urllib.request.urlopen(
-              request,
-              timeout=30
-          ) as response:
-              result = json.loads(
-                  response.read().decode("utf-8")
-              )
-
-          if not result.get("ok"):
-              raise RuntimeError(
-                  f"Telegram API hatası: {result}"
-              )
-
-          print("TELEGRAM PUBLISH APPROVAL SENT")
-          PY
+          echo "TELEGRAM PUBLISH APPROVAL SENT"
