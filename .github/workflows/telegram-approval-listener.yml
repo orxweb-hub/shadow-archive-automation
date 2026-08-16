@@ -77,7 +77,7 @@ jobs:
               except Exception as e:
                   print("CALLBACK ERROR:", e)
 
-              if action == "topic_approve":
+              if action in ["topic_approve", "approve"]:
                   print("TOPIC APPROVED")
 
                   text = (
@@ -109,7 +109,7 @@ jobs:
                           "Video üretimi başlatılamadı."
                       )
 
-              elif action == "topic_reject":
+              elif action in ["topic_reject", "reject"]:
                   text = (
                       "🤖 SHADOW ARCHIVE\n\n"
                       "❌ KONU REDDEDİLDİ\n\n"
@@ -166,7 +166,10 @@ jobs:
                   )
 
               else:
-                  text = "⚠️ Bilinmeyen Telegram işlemi."
+                  text = (
+                      "⚠️ SHADOW ARCHIVE\n\n"
+                      "Bilinmeyen Telegram işlemi."
+                  )
 
               if message:
                   chat_id = message["chat"]["id"]
