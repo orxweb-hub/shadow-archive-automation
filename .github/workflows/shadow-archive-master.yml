@@ -79,10 +79,6 @@ jobs:
             -of default=noprint_wrappers=1 \
             "$MAIN_VIDEO"
 
-      # ==========================================
-      # MAIN VIDEO ENGLISH SUBTITLES
-      # ==========================================
-
       - name: Generate Main Video English Subtitles
         run: |
           python research/research/english_subtitle_generator.py
@@ -97,12 +93,6 @@ jobs:
           fi
 
           ls -lh "$SUBTITLE"
-
-          echo "MAIN VIDEO ENGLISH SUBTITLE READY"
-
-      # ==========================================
-      # SHORTS
-      # ==========================================
 
       - name: Select Shorts
         env:
@@ -148,10 +138,6 @@ jobs:
           ls -lh "$SHORT_1"
           ls -lh "$SHORT_2"
 
-      # ==========================================
-      # PRODUCTION PACKAGE
-      # ==========================================
-
       - name: Prepare Production Package
         run: |
           mkdir -p production_package/main
@@ -159,28 +145,17 @@ jobs:
           mkdir -p production_package/research
 
           MAIN_VIDEO=$(find research/video -maxdepth 1 -type f -name "*_v4.mp4" | head -n 1)
-
           SHORT_1=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_1_branded.mp4" | head -n 1)
-
           SHORT_2=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_2_branded.mp4" | head -n 1)
-
           SUBTITLE=$(find research/video/subtitles -maxdepth 1 -type f -name "*_english.srt" | head -n 1)
 
           cp "$MAIN_VIDEO" production_package/main/main_video.mp4
-
           cp "$SHORT_1" production_package/shorts/short_1.mp4
-
           cp "$SHORT_2" production_package/shorts/short_2.mp4
-
           cp "$SUBTITLE" production_package/main/main_video_english.srt
-
           cp research/current_topic.json production_package/research/current_topic.json
 
           find production_package -type f -exec ls -lh {} \;
-
-      # ==========================================
-      # ARTIFACT
-      # ==========================================
 
       - name: Upload Complete Production Package
         uses: actions/upload-artifact@v4
@@ -189,18 +164,16 @@ jobs:
           path: production_package
           retention-days: 7
 
-      # ==========================================
-      # TELEGRAM PUBLISH APPROVAL
-      # ==========================================
-
       - name: Send Publish Approval To Telegram
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-
-          TOPIC=$(python - <<'PY'
+          python - <<'PY'
           import json
+          import os
+          import urllib.parse
+          import urllib.request
 
           with open(
               "research/current_topic.json",
@@ -209,44 +182,23 @@ jobs:
           ) as f:
               data = json.load(f)
 
-          print(
-              data.get(
-                  "topic",
-                  "Günlük Konu"
-              )
-          )
-          PY
+          topic = data.get(
+              "topic",
+              "Günlük Konu"
           )
 
-          TITLE=$(python - <<'PY'
-          import json
-
-          with open(
-              "research/current_topic.json",
-              "r",
-              encoding="utf-8"
-          ) as f:
-              data = json.load(f)
-
-          print(
-              data.get(
-                  "title",
-                  "Shadow Archive"
-              )
-          )
-          PY
+          title = data.get(
+              "title",
+              "Shadow Archive"
           )
 
-          curl -s -X POST \
-            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            -d "chat_id=${TELEGRAM_CHAT_ID}" \
-            --data-urlencode "text=🤖 SHADOW ARCHIVE — TÜM İÇERİKLER HAZIR
+          text = f"""🤖 SHADOW ARCHIVE — TÜM İÇERİKLER HAZIR
 
 🎯 Konu:
-${TOPIC}
+{topic}
 
 📝 Başlık:
-${TITLE}
+{title}
 
 ━━━━━━━━━━━━━━━━━━
 
@@ -273,7 +225,62 @@ ${TITLE}
 
 🎬 Tüm içerikler YouTube'a yüklenmeye hazır.
 
-Yayınlamak için onay ver:" \
-            --data-urlencode 'reply_markup={"inline_keyboard":[[{"text":"▶️ YAYINLA","callback_data":"publish_approve"},{"text":"❌ YAYINLAMA","callback_data":"publish_reject"}],[{"text":"🕐 SAATİ DEĞİŞTİR","callback_data":"change_time"}]]}'
+Yayınlamak için onay ver:"""
 
-          echo "MASTER PRODUCTION TAMAMLANDI"
+          keyboard = {
+              "inline_keyboard": [
+                  [
+                      {
+                          "text": "▶️ YAYINLA",
+                          "callback_data": "publish_approve"
+                      },
+                      {
+                          "text": "❌ YAYINLAMA",
+                          "callback_data": "publish_reject"
+                      }
+                  ],
+                  [
+                      {
+                          "text": "🕐 SAATİ DEĞİŞTİR",
+                          "callback_data": "change_time"
+                      }
+                  ]
+              ]
+          }
+
+          payload = urllib.parse.urlencode({
+              "chat_id": os.environ["TELEGRAM_CHAT_ID"],
+              "text": text,
+              "reply_markup": json.dumps(
+                  keyboard,
+                  ensure_ascii=False
+              )
+          }).encode("utf-8")
+
+          url = (
+              "https://api.telegram.org/bot"
+              + os.environ["TELEGRAM_BOT_TOKEN"]
+              + "/sendMessage"
+          )
+
+          request = urllib.request.Request(
+              url,
+              data=payload,
+              method="POST"
+          )
+
+          with urllib.request.urlopen(
+              request,
+              timeout=30
+          ) as response:
+              result = json.loads(
+                  response.read().decode("utf-8")
+              )
+
+          if not result.get("ok"):
+              raise RuntimeError(
+                  f"Telegram API hatası: {result}"
+              )
+
+          print("TELEGRAM PUBLISH APPROVAL SENT")
+          PY
