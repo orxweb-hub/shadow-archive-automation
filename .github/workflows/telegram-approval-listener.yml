@@ -14,7 +14,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Check Telegram
+  - name: Repository'i indir
+    uses: actions/checkout@v4
+
+  - name: Check Telegram
         env:
           TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           GH_TOKEN: ${{ github.token }}
