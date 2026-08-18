@@ -200,12 +200,15 @@ jobs:
                       text = (
                           "🤖 SHADOW ARCHIVE\n\n"
                           "▶️ YAYIN ONAYLANDI\n\n"
-                          "☁️ YouTube yükleme sistemi başlatıldı."
+                          "☁️ Günlük YouTube yükleme sistemi başlatıldı.\n\n"
+                          "📱 Short #1 → 10:00\n"
+                          "🎬 Ana Video → 13:00\n"
+                          "📱 Short #2 → 21:00"
                       )
                   else:
                       text = (
                           "❌ YOUTUBE WORKFLOW HATASI\n\n"
-                          "YouTube workflow bulunamadı veya başlatılamadı.\n\n"
+                          "YouTube workflow başlatılamadı.\n\n"
                           "GitHub Actions loglarını kontrol et."
                       )
 
@@ -214,14 +217,14 @@ jobs:
                   text = (
                       "🤖 SHADOW ARCHIVE\n\n"
                       "❌ YAYIN REDDEDİLDİ\n\n"
-                      "Video yayınlanmayacak."
+                      "Bugünkü içerikler yayınlanmayacak."
                   )
 
               elif action == "change_time":
 
                   text = (
                       "🕐 SHADOW ARCHIVE\n\n"
-                      "Yeni yayın saati bekleniyor."
+                      "Yeni yayın saati özelliği hazırlanıyor."
                   )
 
               else:
@@ -242,7 +245,12 @@ jobs:
                           {
                               "chat_id": chat_id,
                               "message_id": message_id,
-                              "text": text
+                              "text": text,
+                              "reply_markup": json.dumps(
+                                  {
+                                      "inline_keyboard": []
+                                  }
+                              )
                           }
                       )
 
