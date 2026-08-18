@@ -1,6 +1,8 @@
 name: Shadow Archive - Master Production
 
 on:
+  schedule:
+    - cron: "0 2 * * *"
   workflow_dispatch:
 
 permissions:
@@ -12,8 +14,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
       - name: Repository'i indir
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
 
       - name: Python'u kur
         uses: actions/setup-python@v5
@@ -31,9 +37,12 @@ jobs:
 
       - name: Güncel konuyu kontrol et
         run: |
+          echo "=========================================="
           echo "SHADOW ARCHIVE MASTER PRODUCTION"
+          echo "=========================================="
           echo "CURRENT TOPIC:"
           cat research/current_topic.json
+          echo "=========================================="
 
       - name: Web Research
         env:
@@ -155,7 +164,11 @@ jobs:
           cp "$SUBTITLE" production_package/main/main_video_english.srt
           cp research/current_topic.json production_package/research/current_topic.json
 
+          echo "=========================================="
           echo "PRODUCTION PACKAGE HAZIR"
+          echo "=========================================="
+
+          find production_package -type f -exec ls -lh {} \;
 
       - name: Production Package yükle
         uses: actions/upload-artifact@v4
@@ -164,31 +177,13 @@ jobs:
           path: production_package
           retention-days: 7
 
-      - name: Telegram yayın onayı gönder
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      - name: Production tamamlandı
         run: |
-          TOPIC=$(python -c 'import json; print(json.load(open("research/current_topic.json", encoding="utf-8")).get("topic", "Günlük Konu"))')
-          TITLE=$(python -c 'import json; print(json.load(open("research/current_topic.json", encoding="utf-8")).get("title", "Shadow Archive"))')
-
-          MESSAGE="🤖 SHADOW ARCHIVE — TÜM İÇERİKLER HAZIR
-
-          🎯 Konu:
-          ${TOPIC}
-
-          📝 Başlık:
-          ${TITLE}
-
-          🎬 Ana video + 2 Shorts hazır.
-          ▶️ Yayınlamadan önce onay gerekiyor."
-
-          KEYBOARD='{"inline_keyboard":[[{"text":"▶️ YAYINLA","callback_data":"publish_approve"},{"text":"❌ YAYINLAMA","callback_data":"publish_reject"}],[{"text":"🕐 SAATİ DEĞİŞTİR","callback_data":"change_time"}]]}'
-
-          curl -sS -X POST \
-            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
-            --data-urlencode "text=${MESSAGE}" \
-            --data-urlencode "reply_markup=${KEYBOARD}"
-
-          echo "TELEGRAM YAYIN ONAYI GÖNDERİLDİ"
+          echo "=========================================="
+          echo "SHADOW ARCHIVE — PRODUCTION TAMAMLANDI"
+          echo "=========================================="
+          echo "Yeni günlük içerik paketi hazır."
+          echo ""
+          echo "08:30 Telegram yayın onayı Daily Publish"
+          echo "workflow tarafından gönderilecektir."
+          echo "=========================================="
