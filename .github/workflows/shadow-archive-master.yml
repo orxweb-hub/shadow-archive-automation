@@ -1,284 +1,222 @@
-name: Telegram Approval Listener
+name: Shadow Archive - Master Production
 
 on:
 workflow_dispatch:
-schedule:
-- cron: "*/5 * * * *"
 
 permissions:
+contents: write
 actions: write
-contents: read
 
 jobs:
-listen:
+master:
 runs-on: ubuntu-latest
 
 ```
 steps:
-  - name: Repository'i indir
+  - name: Checkout Repository
     uses: actions/checkout@v4
 
-  - name: Check Telegram
-    env:
-      TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-      GH_TOKEN: ${{ github.token }}
+  - name: Setup Python
+    uses: actions/setup-python@v5
+    with:
+      python-version: "3.12"
+
+  - name: Install Dependencies
     run: |
-      python - <<'PY'
-      import os
-      import json
-      import urllib.request
-      import urllib.parse
-      import subprocess
+      pip install -r requirements.txt
 
-      TOKEN = os.environ["TOKEN"]
-      REPO = os.environ["GITHUB_REPOSITORY"]
+  - name: Install FFmpeg
+    run: |
+      sudo apt-get update
+      sudo apt-get install -y ffmpeg
 
-      def telegram(method, data):
-          url = f"https://api.telegram.org/bot{TOKEN}/{method}"
-          encoded = urllib.parse.urlencode(data).encode()
-          request = urllib.request.Request(
-              url,
-              data=encoded,
-              method="POST"
-          )
-          with urllib.request.urlopen(request, timeout=30) as response:
-              return json.loads(response.read().decode())
+  - name: Check Current Topic
+    run: |
+      test -f research/current_topic.json
+      echo "CURRENT TOPIC:"
+      cat research/current_topic.json
 
-      def gh(args):
-          result = subprocess.run(
-              args,
-              capture_output=True,
-              text=True
-          )
+  - name: Web Research
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    run: |
+      python research/research/web_researcher.py
 
-          print("COMMAND:", " ".join(args))
-          print("RETURN CODE:", result.returncode)
-          print("STDOUT:", result.stdout)
-          print("STDERR:", result.stderr)
+  - name: Generate Script
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    run: |
+      python research/research/script_generator.py
 
-          return result
+  - name: Generate Natural Voice
+    run: |
+      python research/research/tts_generator.py
 
-      updates = telegram("getUpdates", {})
-      results = updates.get("result", [])
+  - name: Visual Research
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+    run: |
+      python research/research/visual_research.py
 
-      if not results:
-          print("NO NEW TELEGRAM UPDATES")
-          raise SystemExit(0)
+  - name: Generate Cinematic Main Video
+    run: |
+      python research/research/cinematic_video_editor.py
 
-      last_update_id = None
+  - name: Check Main Video
+    run: |
+      MAIN_VIDEO=$(find research/video -maxdepth 1 -type f -name "*_v4.mp4" | head -n 1)
 
-      for update in results:
-          last_update_id = update["update_id"]
+      if [ -z "$MAIN_VIDEO" ]; then
+        echo "Main video bulunamadı."
+        exit 1
+      fi
 
-          callback = update.get("callback_query")
-          if not callback:
-              continue
+      ls -lh "$MAIN_VIDEO"
 
-          action = callback.get("data")
-          callback_id = callback.get("id")
-          message = callback.get("message")
+      ffprobe \
+        -v error \
+        -show_entries format=duration,size \
+        -of default=noprint_wrappers=1 \
+        "$MAIN_VIDEO"
 
-          print("==========================================")
-          print("BUTTON CLICK DETECTED")
-          print("ACTION:", action)
-          print("==========================================")
+  - name: Generate Main Video English Subtitles
+    run: |
+      python research/research/english_subtitle_generator.py
 
-          try:
-              telegram(
-                  "answerCallbackQuery",
-                  {"callback_query_id": callback_id}
-              )
-              print("CALLBACK ANSWERED")
-          except Exception as e:
-              print("CALLBACK ERROR:", e)
+  - name: Check Main Video English Subtitles
+    run: |
+      SUBTITLE=$(find research/video/subtitles -maxdepth 1 -type f -name "*_english.srt" | head -n 1)
 
-          if action in ["topic_approve", "approve"]:
+      if [ -z "$SUBTITLE" ]; then
+        echo "Ana video İngilizce altyazısı bulunamadı."
+        exit 1
+      fi
 
-              print("TOPIC APPROVED")
-              print("MASTER PRODUCTION ARANIYOR...")
+      ls -lh "$SUBTITLE"
 
-              workflow_list = gh([
-                  "gh",
-                  "workflow",
-                  "list",
-                  "--repo",
-                  REPO,
-                  "--limit",
-                  "100"
-              ])
+  - name: Select Shorts
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+    run: |
+      python research/research/shorts_selector.py
 
-              master_workflow_id = None
+  - name: Generate Shorts Voice
+    run: |
+      python research/research/shorts_tts.py
 
-              for line in workflow_list.stdout.splitlines():
-                  if "Shadow Archive - Master Production" in line:
-                      parts = line.split()
-                      if parts:
-                          master_workflow_id = parts[0]
-                      break
+  - name: Generate Shorts Subtitle Text
+    run: |
+      python research/research/shorts_subtitles.py
 
-              if not master_workflow_id:
+  - name: Generate Shorts
+    run: |
+      python research/research/shorts_editor.py
 
-                  print("MASTER PRODUCTION WORKFLOW BULUNAMADI")
+  - name: Add Shorts English Subtitles
+    run: |
+      python research/research/shorts_caption_editor.py
 
-                  text = (
-                      "🤖 SHADOW ARCHIVE\n\n"
-                      "❌ Master Production workflow bulunamadı."
-                  )
+  - name: Add Shadow Archive Branding
+    run: |
+      python research/research/shorts_branding.py
 
-              else:
+  - name: Check Shorts
+    run: |
+      SHORT_1=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_1_branded.mp4" | head -n 1)
+      SHORT_2=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_2_branded.mp4" | head -n 1)
 
-                  print("MASTER WORKFLOW ID:", master_workflow_id)
+      if [ -z "$SHORT_1" ]; then
+        echo "Short #1 bulunamadı."
+        exit 1
+      fi
 
-                  result = gh([
-                      "gh",
-                      "workflow",
-                      "run",
-                      master_workflow_id,
-                      "--repo",
-                      REPO
-                  ])
+      if [ -z "$SHORT_2" ]; then
+        echo "Short #2 bulunamadı."
+        exit 1
+      fi
 
-                  if result.returncode == 0:
-                      print("MASTER PRODUCTION TETİKLENDİ")
+      ls -lh "$SHORT_1"
+      ls -lh "$SHORT_2"
 
-                      text = (
-                          "🤖 SHADOW ARCHIVE\n\n"
-                          "✅ KONU ONAYLANDI\n\n"
-                          "🎬 Master Production başlatıldı.\n\n"
-                          "Üretim tamamlandığında yeni yayın onayı gelecek."
-                      )
-                  else:
-                      print("MASTER PRODUCTION TETİKLENEMEDİ")
+  - name: Prepare Production Package
+    run: |
+      mkdir -p production_package/main
+      mkdir -p production_package/shorts
+      mkdir -p production_package/research
 
-                      text = (
-                          "🤖 SHADOW ARCHIVE\n\n"
-                          "❌ Master Production başlatılamadı.\n\n"
-                          f"{result.stderr}"
-                      )
+      MAIN_VIDEO=$(find research/video -maxdepth 1 -type f -name "*_v4.mp4" | head -n 1)
+      SHORT_1=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_1_branded.mp4" | head -n 1)
+      SHORT_2=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_2_branded.mp4" | head -n 1)
+      SUBTITLE=$(find research/video/subtitles -maxdepth 1 -type f -name "*_english.srt" | head -n 1)
 
-              if message:
-                  try:
-                      telegram(
-                          "editMessageText",
-                          {
-                              "chat_id": message["chat"]["id"],
-                              "message_id": message["message_id"],
-                              "text": text
-                          }
-                      )
-                      print("TELEGRAM MESSAGE UPDATED")
-                  except Exception as e:
-                      print("MESSAGE UPDATE ERROR:", e)
+      cp "$MAIN_VIDEO" production_package/main/main_video.mp4
+      cp "$SHORT_1" production_package/shorts/short_1.mp4
+      cp "$SHORT_2" production_package/shorts/short_2.mp4
+      cp "$SUBTITLE" production_package/main/main_video_english.srt
+      cp research/current_topic.json production_package/research/current_topic.json
 
-          elif action in ["topic_reject", "reject"]:
+      echo "PRODUCTION PACKAGE HAZIR"
+      find production_package -type f -exec ls -lh {} \;
 
-              print("TOPIC REJECTED")
+  - name: Upload Complete Production Package
+    uses: actions/upload-artifact@v4
+    with:
+      name: shadow-archive-complete-production
+      path: production_package
+      retention-days: 7
 
-              if message:
-                  try:
-                      telegram(
-                          "editMessageText",
-                          {
-                              "chat_id": message["chat"]["id"],
-                              "message_id": message["message_id"],
-                              "text": (
-                                  "🤖 SHADOW ARCHIVE\n\n"
-                                  "❌ KONU REDDEDİLDİ.\n\n"
-                                  "Yeni konu bekleniyor."
-                              )
-                          }
-                      )
-                  except Exception as e:
-                      print("MESSAGE UPDATE ERROR:", e)
+  - name: Send Publish Approval To Telegram
+    env:
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+    run: |
+      TOPIC=$(python -c 'import json; print(json.load(open("research/current_topic.json", encoding="utf-8")).get("topic", "Günlük Konu"))')
+      TITLE=$(python -c 'import json; print(json.load(open("research/current_topic.json", encoding="utf-8")).get("title", "Shadow Archive"))')
 
-          elif action == "publish_approve":
+      MESSAGE=$(cat <<EOF
+      🤖 SHADOW ARCHIVE — TÜM İÇERİKLER HAZIR
 
-              print("PUBLISH APPROVED")
+      🎯 Konu:
+      ${TOPIC}
 
-              result = gh([
-                  "gh",
-                  "workflow",
-                  "run",
-                  "Shadow Archive - YouTube Private Upload",
-                  "--repo",
-                  REPO
-              ])
+      📝 Başlık:
+      ${TITLE}
 
-              if result.returncode == 0:
-                  text = (
-                      "🤖 SHADOW ARCHIVE\n\n"
-                      "▶️ YAYIN ONAYLANDI\n\n"
-                      "YouTube yükleme sistemi başlatıldı."
-                  )
-              else:
-                  text = (
-                      "🤖 SHADOW ARCHIVE\n\n"
-                      "❌ YouTube yükleme başlatılamadı.\n\n"
-                      f"{result.stderr}"
-                  )
+      ━━━━━━━━━━━━━━━━━━
+      ✅ Araştırma tamamlandı
+      ✅ Senaryo tamamlandı
+      ✅ Ana seslendirme tamamlandı
+      ✅ Görsel araştırma tamamlandı
+      ✅ Ana video tamamlandı
+      ✅ Ana video İngilizce altyazı tamamlandı
+      ✅ Short #1 tamamlandı
+      ✅ Short #2 tamamlandı
+      ✅ Shorts altyazıları tamamlandı
+      ✅ Shorts branding tamamlandı
 
-              if message:
-                  try:
-                      telegram(
-                          "editMessageText",
-                          {
-                              "chat_id": message["chat"]["id"],
-                              "message_id": message["message_id"],
-                              "text": text
-                          }
-                      )
-                  except Exception as e:
-                      print("MESSAGE UPDATE ERROR:", e)
+      ━━━━━━━━━━━━━━━━━━
+      📅 YAYIN PLANI
 
-          elif action == "publish_reject":
+      📱 09:00 — Short #1
+      🎬 12:00 — Ana Video
+      📱 21:00 — Short #2
 
-              print("PUBLISH REJECTED")
+      ━━━━━━━━━━━━━━━━━━
 
-              if message:
-                  try:
-                      telegram(
-                          "editMessageText",
-                          {
-                              "chat_id": message["chat"]["id"],
-                              "message_id": message["message_id"],
-                              "text": (
-                                  "🤖 SHADOW ARCHIVE\n\n"
-                                  "❌ YAYIN İPTAL EDİLDİ."
-                              )
-                          }
-                      )
-                  except Exception as e:
-                      print("MESSAGE UPDATE ERROR:", e)
+      🎬 Tüm içerikler YouTube'a yüklenmeye hazır.
 
-          elif action == "change_time":
+      Yayınlamak için onay ver:
+      EOF
+      )
 
-              print("CHANGE TIME SELECTED")
+      KEYBOARD='{"inline_keyboard":[[{"text":"▶️ YAYINLA","callback_data":"publish_approve"},{"text":"❌ YAYINLAMA","callback_data":"publish_reject"}],[{"text":"🕐 SAATİ DEĞİŞTİR","callback_data":"change_time"}]]}'
 
-              try:
-                  telegram(
-                      "answerCallbackQuery",
-                      {
-                          "callback_query_id": callback_id,
-                          "text": "Saat değiştirme sistemi hazırlanıyor."
-                      }
-                  )
-              except Exception as e:
-                  print("CALLBACK ERROR:", e)
+      curl -sS -X POST \
+        "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+        --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+        --data-urlencode "text=${MESSAGE}" \
+        --data-urlencode "reply_markup=${KEYBOARD}"
 
-          else:
-              print("UNKNOWN ACTION:", action)
-
-      if last_update_id is not None:
-          try:
-              telegram(
-                  "getUpdates",
-                  {"offset": last_update_id + 1}
-              )
-              print("UPDATES CONFIRMED")
-          except Exception as e:
-              print("OFFSET ERROR:", e)
-
-      print("==========================================")
-      print("TELEGRAM CHECK COMPLETED")
-      print("==========================================")
+      echo "TELEGRAM PUBLISH APPROVAL SENT"
 ```
