@@ -13,23 +13,43 @@ jobs:
 
     steps:
 
-      # =========================================================
-      # 1 — CHECKOUT
-      # =========================================================
-
-      - name: Checkout
+      - name: Checkout Main Branch
         uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
 
-      # =========================================================
-      # 2 — FIND LATEST MASTER PRODUCTION
-      # =========================================================
+      - name: Python Kodunu Kontrol Et
+        run: |
+          echo "=========================================="
+          echo "YOUTUBE PUBLISHER KOD KONTROLÜ"
+          echo "=========================================="
+
+          echo "COMMIT:"
+          git rev-parse HEAD
+
+          echo ""
+          echo "DOSYA:"
+          git status --short research/youtube/youtube_private_upload.py
+
+          echo ""
+          echo "YAYIN SAATLERİ:"
+          grep -n -A5 "short_1_time" research/youtube/youtube_private_upload.py
+          grep -n -A5 "main_time" research/youtube/youtube_private_upload.py
+          grep -n -A5 "short_2_time" research/youtube/youtube_private_upload.py
+
+          echo ""
+          echo "BEKLENEN:"
+          echo "Short #1  = 10:00 Türkiye"
+          echo "Ana Video  = 13:00 Türkiye"
+          echo "Short #2  = 21:00 Türkiye"
+          echo "=========================================="
 
       - name: Find Latest Master Production Run
         id: find_run
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-
           RUN_ID=$(gh run list \
             --workflow="Shadow Archive - Master Production" \
             --status=success \
@@ -50,15 +70,10 @@ jobs:
           echo "Run ID: $RUN_ID"
           echo "=========================================="
 
-      # =========================================================
-      # 3 — DOWNLOAD COMPLETE PRODUCTION PACKAGE
-      # =========================================================
-
       - name: Download Production Package
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-
           mkdir -p production_package
 
           gh run download \
@@ -76,13 +91,8 @@ jobs:
 
           echo "=========================================="
 
-      # =========================================================
-      # 4 — VERIFY FILES
-      # =========================================================
-
       - name: Verify Production Files
         run: |
-
           echo "=========================================="
           echo "VERIFYING PRODUCTION FILES"
           echo "=========================================="
@@ -106,38 +116,24 @@ jobs:
           echo "ALL FILES VERIFIED"
           echo "=========================================="
 
-      # =========================================================
-      # 5 — PYTHON
-      # =========================================================
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      # =========================================================
-      # 6 — YOUTUBE DEPENDENCIES
-      # =========================================================
-
       - name: Install YouTube Dependencies
         run: |
-
           pip install \
             google-api-python-client \
             google-auth \
             google-auth-oauthlib \
             google-auth-httplib2
 
-      # =========================================================
-      # 7 — UPLOAD EVERYTHING
-      # =========================================================
-
       - name: Upload Videos To YouTube
         env:
           YOUTUBE_OAUTH_CLIENT_JSON: ${{ secrets.YOUTUBE_OAUTH_CLIENT_JSON }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
         run: |
-
           echo "=========================================="
           echo "SHADOW ARCHIVE — YOUTUBE PUBLISHER"
           echo "=========================================="
