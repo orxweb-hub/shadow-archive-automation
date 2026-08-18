@@ -10,7 +10,10 @@ TOPIC_FILE = Path("research/current_topic.json")
 SCRIPT_DIR = Path("research/scripts")
 OUTPUT_DIR = Path("research/video")
 
-MODEL = "gemini-3.6-flash"
+MODELS = [
+    "gemini-3.6-flash",
+    "gemini-3.5-flash-lite"
+]
 
 
 def create_safe_filename(text):
@@ -176,21 +179,49 @@ EXACT STRUCTURE:
 }}
 """
 
-    print("Gemini Shorts seçimini yapıyor...")
+    data = None
+    last_error = None
 
-    response = client.models.generate_content(
-        model=MODEL,
-        contents=prompt
-    )
+    for model in MODELS:
+        try:
+            print()
+            print(f"Gemini modeli deneniyor: {model}")
+            print("Gemini Shorts seçimini yapıyor...")
 
-    text = response.text.strip()
+            response = client.models.generate_content(
+                model=model,
+                contents=prompt
+            )
 
-    if text.startswith("```"):
-        text = text.replace("```json", "")
-        text = text.replace("```", "")
-        text = text.strip()
+            text = response.text.strip()
 
-    data = json.loads(text)
+            if text.startswith("```"):
+                text = text.replace("```json", "")
+                text = text.replace("```", "")
+                text = text.strip()
+
+            data = json.loads(text)
+
+            print(f"Başarılı model: {model}")
+            break
+
+        except Exception as e:
+            last_error = e
+
+            print()
+            print(f"{model} kullanılamadı.")
+            print(f"Hata: {e}")
+
+            if model != MODELS[-1]:
+                print(
+                    "İlk model başarısız oldu. "
+                    "Diğer Gemini modeline geçiliyor..."
+                )
+
+    if data is None:
+        raise RuntimeError(
+            f"Tüm Gemini modelleri başarısız oldu: {last_error}"
+        )
 
     if "shorts" not in data:
         raise ValueError(
