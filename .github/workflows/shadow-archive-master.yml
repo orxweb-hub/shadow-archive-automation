@@ -1,9 +1,10 @@
-name: Shadow Archive - Master Production
-on: workflow_dispatch
+name: Shadow Archive Test
+
+on:
+  workflow_dispatch:
 
 jobs:
-master:
-runs-on: ubuntu-latest
-steps:
-- name: Test
-run: echo "SHADOW ARCHIVE MASTER PRODUCTION CALISTI"
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "SHADOW ARCHIVE CALISTI"
