@@ -22,15 +22,11 @@ jobs:
       - name: Python Kodunu Kontrol Et
         run: |
           echo "=========================================="
-          echo "YOUTUBE PUBLISHER KOD KONTROLÜ"
+          echo "SHADOW ARCHIVE — YOUTUBE PUBLISHER"
           echo "=========================================="
 
           echo "COMMIT:"
           git rev-parse HEAD
-
-          echo ""
-          echo "DOSYA:"
-          git status --short research/youtube/youtube_private_upload.py
 
           echo ""
           echo "YAYIN SAATLERİ:"
@@ -43,58 +39,82 @@ jobs:
           echo "Short #1  = 10:00 Türkiye"
           echo "Ana Video  = 13:00 Türkiye"
           echo "Short #2  = 21:00 Türkiye"
+
           echo "=========================================="
 
-      - name: Find Latest Master Production Run
+      - name: Bugünün Master Production Run'ını Bul
         id: find_run
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          echo "=========================================="
+          echo "BUGÜNÜN ÜRETİM PAKETİ ARANIYOR"
+          echo "=========================================="
+
+          TODAY=$(TZ=Europe/Istanbul date +%Y-%m-%d)
+
+          echo "Türkiye tarihi:"
+          echo "$TODAY"
+
           RUN_ID=$(gh run list \
             --workflow="Shadow Archive - Master Production" \
             --status=success \
-            --limit=1 \
-            --json databaseId \
-            --jq '.[0].databaseId')
+            --limit=20 \
+            --json databaseId,createdAt \
+            --jq --arg TODAY "$TODAY" '
+              map(
+                select(
+                  (.createdAt | fromdateiso8601 | strftime("%Y-%m-%d")) == $TODAY
+                )
+              )
+              | sort_by(.createdAt)
+              | last
+              | .databaseId
+            ')
 
-          if [ -z "$RUN_ID" ]; then
-            echo "Master Production successful run not found."
+          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+            echo ""
+            echo "❌ BUGÜNÜN BAŞARILI MASTER PRODUCTION RUN'I BULUNAMADI."
+            echo ""
+            echo "Beklenen:"
+            echo "Bugün üretilmiş yeni bir production paketi."
             exit 1
           fi
 
-          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
-
-          echo "=========================================="
-          echo "LATEST MASTER PRODUCTION RUN"
-          echo "=========================================="
+          echo ""
+          echo "✅ BUGÜNÜN PRODUCTION RUN'I BULUNDU"
           echo "Run ID: $RUN_ID"
           echo "=========================================="
 
-      - name: Download Production Package
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Download Today's Production Package
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p production_package
+
+          echo "=========================================="
+          echo "BUGÜNÜN PRODUCTION PACKAGE İNDİRİLİYOR"
+          echo "=========================================="
 
           gh run download \
             "${{ steps.find_run.outputs.run_id }}" \
             --name shadow-archive-complete-production \
             --dir production_package
 
-          echo "=========================================="
-          echo "PRODUCTION PACKAGE"
-          echo "=========================================="
-
+          echo ""
+          echo "İNDİRİLEN DOSYALAR:"
           find production_package \
             -type f \
             -exec ls -lh {} \;
 
           echo "=========================================="
 
-      - name: Verify Production Files
+      - name: Production Package Kontrol
         run: |
           echo "=========================================="
-          echo "VERIFYING PRODUCTION FILES"
+          echo "PRODUCTION PACKAGE KONTROL"
           echo "=========================================="
 
           test -f production_package/main/main_video.mp4
@@ -102,18 +122,18 @@ jobs:
           test -f production_package/shorts/short_2.mp4
           test -f production_package/research/current_topic.json
 
-          echo "✓ Main video found"
-          echo "✓ Short #1 found"
-          echo "✓ Short #2 found"
-          echo "✓ Topic data found"
+          echo "✓ Ana video bulundu"
+          echo "✓ Short #1 bulundu"
+          echo "✓ Short #2 bulundu"
+          echo "✓ Konu bilgisi bulundu"
 
           echo ""
-          echo "CURRENT TOPIC:"
+          echo "BUGÜNÜN KONU BİLGİSİ:"
           cat production_package/research/current_topic.json
 
           echo ""
           echo "=========================================="
-          echo "ALL FILES VERIFIED"
+          echo "PRODUCTION PACKAGE HAZIR"
           echo "=========================================="
 
       - name: Setup Python
@@ -137,6 +157,12 @@ jobs:
           echo "=========================================="
           echo "SHADOW ARCHIVE — YOUTUBE PUBLISHER"
           echo "=========================================="
+
+          echo "Production Run:"
+          echo "${{ steps.find_run.outputs.run_id }}"
+
+          echo ""
+          echo "Yayın sistemi başlatılıyor..."
 
           python research/youtube/youtube_private_upload.py
 
