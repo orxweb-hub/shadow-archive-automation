@@ -17,9 +17,6 @@ jobs:
       - name: Repository'i indir
         uses: actions/checkout@v4
 
-      - name: GitHub CLI kontrol
-        run: gh --version
-
       - name: Check Telegram
         env:
           TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -48,15 +45,61 @@ jobs:
               with urllib.request.urlopen(request, timeout=30) as response:
                   return json.loads(response.read().decode())
 
-          def run_workflow(workflow_file):
-              print("WORKFLOW BAŞLATILIYOR:", workflow_file)
+          def find_workflow(workflow_name):
+              result = subprocess.run(
+                  [
+                      "gh",
+                      "workflow",
+                      "list",
+                      "--repo",
+                      REPO,
+                      "--limit",
+                      "100",
+                      "--json",
+                      "name,path"
+                  ],
+                  capture_output=True,
+                  text=True
+              )
+
+              print("WORKFLOW LIST:")
+              print(result.stdout)
+
+              if result.returncode != 0:
+                  print("WORKFLOW LIST ERROR:")
+                  print(result.stderr)
+                  return None
+
+              try:
+                  workflows = json.loads(result.stdout)
+              except Exception as e:
+                  print("JSON ERROR:", e)
+                  return None
+
+              for workflow in workflows:
+                  if workflow.get("name") == workflow_name:
+                      print("WORKFLOW BULUNDU:")
+                      print(workflow)
+                      return workflow.get("path")
+
+              print("WORKFLOW BULUNAMADI:", workflow_name)
+              return None
+
+          def run_workflow_by_name(workflow_name):
+              workflow_path = find_workflow(workflow_name)
+
+              if not workflow_path:
+                  return False
+
+              print("WORKFLOW BAŞLATILIYOR:")
+              print(workflow_path)
 
               result = subprocess.run(
                   [
                       "gh",
                       "workflow",
                       "run",
-                      workflow_file,
+                      workflow_path,
                       "--repo",
                       REPO
                   ],
@@ -100,8 +143,10 @@ jobs:
               callback_id = callback.get("id")
               message = callback.get("message")
 
+              print("==========================================")
               print("BUTTON CLICK DETECTED")
               print("ACTION:", action)
+              print("==========================================")
 
               try:
                   telegram(
@@ -113,16 +158,12 @@ jobs:
               except Exception as e:
                   print("CALLBACK ERROR:", e)
 
-              # ==========================================
-              # KONU ONAY
-              # ==========================================
-
               if action in ["topic_approve", "approve"]:
 
                   print("TOPIC APPROVED")
 
-                  success = run_workflow(
-                      "shadow-archive-master.yml"
+                  success = run_workflow_by_name(
+                      "Shadow Archive - Master Production"
                   )
 
                   if success:
@@ -134,13 +175,8 @@ jobs:
                   else:
                       text = (
                           "❌ MASTER WORKFLOW HATASI\n\n"
-                          "Video üretimi başlatılamadı.\n\n"
-                          "GitHub Actions kontrol edilmeli."
+                          "Video üretimi başlatılamadı."
                       )
-
-              # ==========================================
-              # KONU RED
-              # ==========================================
 
               elif action in ["topic_reject", "reject"]:
 
@@ -150,35 +186,28 @@ jobs:
                       "Bu konu için video oluşturulmayacak."
                   )
 
-              # ==========================================
-              # YOUTUBE YAYIN ONAYI
-              # ==========================================
-
               elif action == "publish_approve":
 
+                  print("==========================================")
                   print("PUBLISH APPROVED")
+                  print("==========================================")
 
-                  success = run_workflow(
-                      "youtube-private-upload.yml"
+                  success = run_workflow_by_name(
+                      "Shadow Archive - YouTube Private Upload"
                   )
 
                   if success:
                       text = (
                           "🤖 SHADOW ARCHIVE\n\n"
                           "▶️ YAYIN ONAYLANDI\n\n"
-                          "☁️ YouTube yükleme sistemi başlatıldı.\n\n"
-                          "GitHub Actions üzerinden yükleme devam ediyor."
+                          "☁️ YouTube yükleme sistemi başlatıldı."
                       )
                   else:
                       text = (
                           "❌ YOUTUBE WORKFLOW HATASI\n\n"
-                          "YouTube yükleme workflow'u başlatılamadı.\n\n"
-                          "GitHub Actions kontrol edilmeli."
+                          "YouTube workflow bulunamadı veya başlatılamadı.\n\n"
+                          "GitHub Actions loglarını kontrol et."
                       )
-
-              # ==========================================
-              # YAYIN RED
-              # ==========================================
 
               elif action == "publish_reject":
 
@@ -188,19 +217,11 @@ jobs:
                       "Video yayınlanmayacak."
                   )
 
-              # ==========================================
-              # SAAT DEĞİŞTİR
-              # ==========================================
-
               elif action == "change_time":
 
                   text = (
                       "🕐 SHADOW ARCHIVE\n\n"
-                      "Yeni yayın saati bekleniyor.\n\n"
-                      "Örnek:\n"
-                      "12:00\n"
-                      "20:00\n"
-                      "21:00"
+                      "Yeni yayın saati bekleniyor."
                   )
 
               else:
@@ -209,10 +230,6 @@ jobs:
                       "⚠️ SHADOW ARCHIVE\n\n"
                       "Bilinmeyen Telegram işlemi."
                   )
-
-              # ==========================================
-              # TELEGRAM MESAJINI GÜNCELLE
-              # ==========================================
 
               if message:
 
@@ -233,10 +250,6 @@ jobs:
 
                   except Exception as e:
                       print("MESSAGE UPDATE ERROR:", e)
-
-          # ==========================================
-          # UPDATE OFFSET
-          # ==========================================
 
           if last_update_id is not None:
 
