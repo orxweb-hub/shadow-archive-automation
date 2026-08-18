@@ -10,11 +10,9 @@ from googleapiclient.http import MediaFileUpload
 
 
 TOPIC_FILE = Path("production_package/research/current_topic.json")
-
 MAIN_VIDEO = Path("production_package/main/main_video.mp4")
 SHORT_1 = Path("production_package/shorts/short_1.mp4")
 SHORT_2 = Path("production_package/shorts/short_2.mp4")
-
 
 CLIENT_JSON = os.environ["YOUTUBE_OAUTH_CLIENT_JSON"]
 REFRESH_TOKEN = os.environ["YOUTUBE_REFRESH_TOKEN"]
@@ -36,9 +34,10 @@ youtube = build(
     credentials=credentials,
 )
 
+TURKEY = ZoneInfo("Europe/Istanbul")
+
 
 def load_topic():
-
     if not TOPIC_FILE.exists():
         raise FileNotFoundError(
             f"current_topic.json bulunamadı: {TOPIC_FILE}"
@@ -47,33 +46,33 @@ def load_topic():
     with open(TOPIC_FILE, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    topic = data.get("topic", "Shadow Archive")
-    title = data.get("title", topic)
-    description = data.get("description", "")
-    hashtags = data.get("hashtags", [])
-
     return {
-        "topic": topic,
-        "title": title,
-        "description": description,
-        "hashtags": hashtags,
+        "topic": data.get("topic", "Shadow Archive"),
+        "title": data.get("title", data.get("topic", "Shadow Archive")),
+        "description": data.get("description", ""),
+        "hashtags": data.get("hashtags", []),
     }
 
 
-TURKEY = ZoneInfo("Europe/Istanbul")
-
-
-def get_next_publish_day():
-
+def get_publish_day():
     now = datetime.now(TURKEY)
 
-    next_day = (now + timedelta(days=1)).date()
+    # Onay 08:30 civarında geldiğinde içerikler aynı gün yayınlanır.
+    # Eğer işlem 10:00'dan sonra yapılırsa ertesi güne alınır.
+    today_10 = now.replace(
+        hour=10,
+        minute=0,
+        second=0,
+        microsecond=0,
+    )
 
-    return next_day
+    if now < today_10:
+        return now.date()
+
+    return (now + timedelta(days=1)).date()
 
 
 def turkey_to_utc(date_value, hour, minute):
-
     turkey_time = datetime(
         date_value.year,
         date_value.month,
@@ -89,7 +88,6 @@ def turkey_to_utc(date_value, hour, minute):
 
 
 def build_main_description(data):
-
     description = data["description"].strip()
 
     if not description:
@@ -120,7 +118,6 @@ Mystery • Unsolved Cases • Real Events
 
 
 def build_short_description(data, number):
-
     return f"""{data['topic']}
 
 Shadow Archive'dan kısa bir bölüm.
@@ -134,14 +131,7 @@ Shadow Archive kanalını takip edin.
 """
 
 
-def upload_video(
-    video_file,
-    title,
-    description,
-    publish_at,
-    tags,
-):
-
+def upload_video(video_file, title, description, publish_at, tags):
     if not video_file.exists():
         raise FileNotFoundError(
             f"Video bulunamadı: {video_file}"
@@ -187,7 +177,6 @@ def upload_video(
     response = None
 
     while response is None:
-
         status, response = request.next_chunk()
 
         if status:
@@ -217,13 +206,16 @@ def main():
     topic = data["topic"]
     main_title = data["title"]
 
+    publish_day = get_publish_day()
+
     print("Topic:", topic)
     print("Main title:", main_title)
-
-    publish_day = get_next_publish_day()
-
     print("Publish day:", publish_day)
     print("Timezone: Europe/Istanbul")
+
+    # ==========================================
+    # SABİT YAYIN SAATLERİ
+    # ==========================================
 
     short_1_time = turkey_to_utc(
         publish_day,
@@ -244,12 +236,17 @@ def main():
     )
 
     print()
-    print("SCHEDULE")
+    print("==========================================")
+    print("FINAL SCHEDULE")
+    print("==========================================")
+    print("📱 Short #1 :", short_1_time, "UTC")
+    print("🎬 Ana Video :", main_time, "UTC")
+    print("📱 Short #2 :", short_2_time, "UTC")
     print("------------------------------------------")
-    print("Short #1 :", short_1_time, "UTC")
-    print("Main     :", main_time, "UTC")
-    print("Short #2 :", short_2_time, "UTC")
-    print("------------------------------------------")
+    print("🇹🇷 Short #1 : 10:00 Türkiye")
+    print("🇹🇷 Ana Video : 13:00 Türkiye")
+    print("🇹🇷 Short #2 : 21:00 Türkiye")
+    print("==========================================")
 
     base_tags = [
         "Shadow Archive",
@@ -264,7 +261,17 @@ def main():
         "gerçek olaylar",
     ]
 
-    short_1_title = f"{topic} — Gerçeği Ortaya Çıkaran Detay #Shorts"
+    short_1_title = (
+        f"{topic} — Gerçeği Ortaya Çıkaran Detay #Shorts"
+    )
+
+    short_2_title = (
+        f"{topic} — Hâlâ Cevaplanamayan Soru #Shorts"
+    )
+
+    # ==========================================
+    # SHORT #1 — 10:00
+    # ==========================================
 
     upload_video(
         SHORT_1,
@@ -274,6 +281,10 @@ def main():
         base_tags + ["Shorts"],
     )
 
+    # ==========================================
+    # ANA VİDEO — 13:00
+    # ==========================================
+
     upload_video(
         MAIN_VIDEO,
         main_title,
@@ -282,7 +293,9 @@ def main():
         base_tags,
     )
 
-    short_2_title = f"{topic} — Hâlâ Cevaplanamayan Soru #Shorts"
+    # ==========================================
+    # SHORT #2 — 21:00
+    # ==========================================
 
     upload_video(
         SHORT_2,
@@ -296,9 +309,9 @@ def main():
     print("==========================================")
     print("SHADOW ARCHIVE — YAYINLAR PLANLANDI")
     print("==========================================")
-    print("📱 Short #1 : 10:00 Türkiye")
-    print("🎬 Ana Video : 13:00 Türkiye")
-    print("📱 Short #2 : 21:00 Türkiye")
+    print("📱 Short #1  → 10:00 Türkiye")
+    print("🎬 Ana Video  → 13:00 Türkiye")
+    print("📱 Short #2  → 21:00 Türkiye")
     print()
     print("YouTube planlama tamamlandı.")
     print("==========================================")
