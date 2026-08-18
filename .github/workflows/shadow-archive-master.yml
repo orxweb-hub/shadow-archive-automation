@@ -1,114 +1,142 @@
-```yaml
 name: Telegram Approval Listener
 
 on:
-  workflow_dispatch:
-  schedule:
-    - cron: "*/5 * * * *"
+workflow_dispatch:
+schedule:
+- cron: "*/5 * * * *"
 
 permissions:
-  actions: write
-  contents: read
+actions: write
+contents: read
 
 jobs:
-  listen:
-    runs-on: ubuntu-latest
+listen:
+runs-on: ubuntu-latest
 
-    steps:
-      - name: Repository'i indir
-        uses: actions/checkout@v4
+```
+steps:
+  - name: Repository'i indir
+    uses: actions/checkout@v4
 
-      - name: Check Telegram
-        env:
-          TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          python - <<'PY'
-          import os
-          import json
-          import urllib.request
-          import urllib.parse
-          import subprocess
+  - name: Check Telegram
+    env:
+      TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
+    run: |
+      python - <<'PY'
+      import os
+      import json
+      import urllib.request
+      import urllib.parse
+      import subprocess
 
-          TOKEN = os.environ["TOKEN"]
-          REPO = os.environ["GITHUB_REPOSITORY"]
+      TOKEN = os.environ["TOKEN"]
+      REPO = os.environ["GITHUB_REPOSITORY"]
 
-          def telegram(method, data):
-              url = f"https://api.telegram.org/bot{TOKEN}/{method}"
-              encoded = urllib.parse.urlencode(data).encode()
-              request = urllib.request.Request(
-                  url,
-                  data=encoded,
-                  method="POST"
+      def telegram(method, data):
+          url = f"https://api.telegram.org/bot{TOKEN}/{method}"
+          encoded = urllib.parse.urlencode(data).encode()
+          request = urllib.request.Request(
+              url,
+              data=encoded,
+              method="POST"
+          )
+          with urllib.request.urlopen(request, timeout=30) as response:
+              return json.loads(response.read().decode())
+
+      def gh(args):
+          result = subprocess.run(
+              args,
+              capture_output=True,
+              text=True
+          )
+
+          print("COMMAND:", " ".join(args))
+          print("RETURN CODE:", result.returncode)
+          print("STDOUT:", result.stdout)
+          print("STDERR:", result.stderr)
+
+          return result
+
+      updates = telegram("getUpdates", {})
+      results = updates.get("result", [])
+
+      if not results:
+          print("NO NEW TELEGRAM UPDATES")
+          raise SystemExit(0)
+
+      last_update_id = None
+
+      for update in results:
+          last_update_id = update["update_id"]
+
+          callback = update.get("callback_query")
+          if not callback:
+              continue
+
+          action = callback.get("data")
+          callback_id = callback.get("id")
+          message = callback.get("message")
+
+          print("==========================================")
+          print("BUTTON CLICK DETECTED")
+          print("ACTION:", action)
+          print("==========================================")
+
+          try:
+              telegram(
+                  "answerCallbackQuery",
+                  {"callback_query_id": callback_id}
               )
+              print("CALLBACK ANSWERED")
+          except Exception as e:
+              print("CALLBACK ERROR:", e)
 
-              with urllib.request.urlopen(request, timeout=30) as response:
-                  return json.loads(response.read().decode())
+          if action in ["topic_approve", "approve"]:
 
-          updates = telegram("getUpdates", {})
-          results = updates.get("result", [])
+              print("TOPIC APPROVED")
+              print("MASTER PRODUCTION ARANIYOR...")
 
-          if not results:
-              print("NO NEW TELEGRAM UPDATES")
-              raise SystemExit(0)
+              workflow_list = gh([
+                  "gh",
+                  "workflow",
+                  "list",
+                  "--repo",
+                  REPO,
+                  "--limit",
+                  "100"
+              ])
 
-          last_update_id = None
+              master_workflow_id = None
 
-          for update in results:
-              last_update_id = update["update_id"]
+              for line in workflow_list.stdout.splitlines():
+                  if "Shadow Archive - Master Production" in line:
+                      parts = line.split()
+                      if parts:
+                          master_workflow_id = parts[0]
+                      break
 
-              callback = update.get("callback_query")
+              if not master_workflow_id:
 
-              if not callback:
-                  continue
+                  print("MASTER PRODUCTION WORKFLOW BULUNAMADI")
 
-              action = callback.get("data")
-              callback_id = callback.get("id")
-              message = callback.get("message")
-
-              print("==========================================")
-              print("BUTTON CLICK DETECTED")
-              print("ACTION:", action)
-              print("==========================================")
-
-              # Telegram butonuna cevap ver
-              try:
-                  telegram(
-                      "answerCallbackQuery",
-                      {
-                          "callback_query_id": callback_id
-                      }
-                  )
-                  print("CALLBACK ANSWERED")
-              except Exception as e:
-                  print("CALLBACK ERROR:", e)
-
-              # ==========================================
-              # TOPIC APPROVED
-              # ==========================================
-              if action in ["topic_approve", "approve"]:
-
-                  print("TOPIC APPROVED")
-                  print("MASTER PRODUCTION BAŞLATILIYOR...")
-
-                  result = subprocess.run(
-                      [
-                          "gh",
-                          "workflow",
-                          "run",
-                          "Shadow Archive - Master Production",
-                          "--repo",
-                          REPO
-                      ],
-                      capture_output=True,
-                      text=True
+                  text = (
+                      "🤖 SHADOW ARCHIVE\n\n"
+                      "❌ Master Production workflow bulunamadı."
                   )
 
-                  print("GH RETURN CODE:", result.returncode)
-                  print("GH STDOUT:")
-                  print(result.stdout)
-                  print("GH STDERR:")
-                  print(result.stderr)
+              else:
+
+                  print("MASTER WORKFLOW ID:", master_workflow_id)
+
+                  result = gh([
+                      "gh",
+                      "workflow",
+                      "run",
+                      master_workflow_id,
+                      "--repo",
+                      REPO
+                  ])
 
                   if result.returncode == 0:
                       print("MASTER PRODUCTION TETİKLENDİ")
@@ -116,171 +144,141 @@ jobs:
                       text = (
                           "🤖 SHADOW ARCHIVE\n\n"
                           "✅ KONU ONAYLANDI\n\n"
-                          "🎬 Master Production başlatıldı.\n"
-                          "Üretim tamamlandığında tekrar onay mesajı gelecek."
+                          "🎬 Master Production başlatıldı.\n\n"
+                          "Üretim tamamlandığında yeni yayın onayı gelecek."
                       )
-
                   else:
                       print("MASTER PRODUCTION TETİKLENEMEDİ")
 
                       text = (
                           "🤖 SHADOW ARCHIVE\n\n"
-                          "❌ MASTER PRODUCTION BAŞLATILAMADI\n\n"
-                          f"Hata:\n{result.stderr}"
+                          "❌ Master Production başlatılamadı.\n\n"
+                          f"{result.stderr}"
                       )
 
-                  if message:
-                      try:
-                          telegram(
-                              "editMessageText",
-                              {
-                                  "chat_id": message["chat"]["id"],
-                                  "message_id": message["message_id"],
-                                  "text": text
-                              }
-                          )
-                          print("TELEGRAM MESSAGE UPDATED")
-                      except Exception as e:
-                          print("MESSAGE UPDATE ERROR:", e)
+              if message:
+                  try:
+                      telegram(
+                          "editMessageText",
+                          {
+                              "chat_id": message["chat"]["id"],
+                              "message_id": message["message_id"],
+                              "text": text
+                          }
+                      )
+                      print("TELEGRAM MESSAGE UPDATED")
+                  except Exception as e:
+                      print("MESSAGE UPDATE ERROR:", e)
 
-              # ==========================================
-              # TOPIC REJECT
-              # ==========================================
-              elif action in ["topic_reject", "reject"]:
+          elif action in ["topic_reject", "reject"]:
 
-                  print("TOPIC REJECTED")
+              print("TOPIC REJECTED")
 
-                  if message:
-                      try:
-                          telegram(
-                              "editMessageText",
-                              {
-                                  "chat_id": message["chat"]["id"],
-                                  "message_id": message["message_id"],
-                                  "text": (
-                                      "🤖 SHADOW ARCHIVE\n\n"
-                                      "❌ KONU REDDEDİLDİ\n\n"
-                                      "Yeni konu bekleniyor."
-                                  )
-                              }
-                          )
-                      except Exception as e:
-                          print("MESSAGE UPDATE ERROR:", e)
+              if message:
+                  try:
+                      telegram(
+                          "editMessageText",
+                          {
+                              "chat_id": message["chat"]["id"],
+                              "message_id": message["message_id"],
+                              "text": (
+                                  "🤖 SHADOW ARCHIVE\n\n"
+                                  "❌ KONU REDDEDİLDİ.\n\n"
+                                  "Yeni konu bekleniyor."
+                              )
+                          }
+                      )
+                  except Exception as e:
+                      print("MESSAGE UPDATE ERROR:", e)
 
-              # ==========================================
-              # PUBLISH APPROVED
-              # ==========================================
-              elif action == "publish_approve":
+          elif action == "publish_approve":
 
-                  print("PUBLISH APPROVED")
+              print("PUBLISH APPROVED")
 
-                  result = subprocess.run(
-                      [
-                          "gh",
-                          "workflow",
-                          "run",
-                          "Shadow Archive - YouTube Private Upload",
-                          "--repo",
-                          REPO
-                      ],
-                      capture_output=True,
-                      text=True
+              result = gh([
+                  "gh",
+                  "workflow",
+                  "run",
+                  "Shadow Archive - YouTube Private Upload",
+                  "--repo",
+                  REPO
+              ])
+
+              if result.returncode == 0:
+                  text = (
+                      "🤖 SHADOW ARCHIVE\n\n"
+                      "▶️ YAYIN ONAYLANDI\n\n"
+                      "YouTube yükleme sistemi başlatıldı."
+                  )
+              else:
+                  text = (
+                      "🤖 SHADOW ARCHIVE\n\n"
+                      "❌ YouTube yükleme başlatılamadı.\n\n"
+                      f"{result.stderr}"
                   )
 
-                  print("GH RETURN CODE:", result.returncode)
-                  print("GH STDOUT:")
-                  print(result.stdout)
-                  print("GH STDERR:")
-                  print(result.stderr)
-
-                  if result.returncode == 0:
-                      text = (
-                          "🤖 SHADOW ARCHIVE\n\n"
-                          "▶️ YAYIN ONAYLANDI\n\n"
-                          "YouTube yükleme sistemi başlatıldı."
+              if message:
+                  try:
+                      telegram(
+                          "editMessageText",
+                          {
+                              "chat_id": message["chat"]["id"],
+                              "message_id": message["message_id"],
+                              "text": text
+                          }
                       )
-                  else:
-                      text = (
-                          "🤖 SHADOW ARCHIVE\n\n"
-                          "❌ YOUTUBE YÜKLEME BAŞLATILAMADI\n\n"
-                          f"Hata:\n{result.stderr}"
+                  except Exception as e:
+                      print("MESSAGE UPDATE ERROR:", e)
+
+          elif action == "publish_reject":
+
+              print("PUBLISH REJECTED")
+
+              if message:
+                  try:
+                      telegram(
+                          "editMessageText",
+                          {
+                              "chat_id": message["chat"]["id"],
+                              "message_id": message["message_id"],
+                              "text": (
+                                  "🤖 SHADOW ARCHIVE\n\n"
+                                  "❌ YAYIN İPTAL EDİLDİ."
+                              )
+                          }
                       )
+                  except Exception as e:
+                      print("MESSAGE UPDATE ERROR:", e)
 
-                  if message:
-                      try:
-                          telegram(
-                              "editMessageText",
-                              {
-                                  "chat_id": message["chat"]["id"],
-                                  "message_id": message["message_id"],
-                                  "text": text
-                              }
-                          )
-                      except Exception as e:
-                          print("MESSAGE UPDATE ERROR:", e)
+          elif action == "change_time":
 
-              # ==========================================
-              # PUBLISH REJECT
-              # ==========================================
-              elif action == "publish_reject":
+              print("CHANGE TIME SELECTED")
 
-                  print("PUBLISH REJECTED")
-
-                  if message:
-                      try:
-                          telegram(
-                              "editMessageText",
-                              {
-                                  "chat_id": message["chat"]["id"],
-                                  "message_id": message["message_id"],
-                                  "text": (
-                                      "🤖 SHADOW ARCHIVE\n\n"
-                                      "❌ YAYIN İPTAL EDİLDİ."
-                                  )
-                              }
-                          )
-                      except Exception as e:
-                          print("MESSAGE UPDATE ERROR:", e)
-
-              # ==========================================
-              # CHANGE TIME
-              # ==========================================
-              elif action == "change_time":
-
-                  print("CHANGE TIME SELECTED")
-
-                  if message:
-                      try:
-                          telegram(
-                              "answerCallbackQuery",
-                              {
-                                  "callback_query_id": callback_id,
-                                  "text": "Saat değiştirme sistemi hazırlanıyor."
-                              }
-                          )
-                      except Exception as e:
-                          print("CALLBACK ERROR:", e)
-
-              else:
-                  print("UNKNOWN ACTION:", action)
-
-          # ==========================================
-          # UPDATE OFFSET
-          # ==========================================
-          if last_update_id is not None:
               try:
                   telegram(
-                      "getUpdates",
+                      "answerCallbackQuery",
                       {
-                          "offset": last_update_id + 1
+                          "callback_query_id": callback_id,
+                          "text": "Saat değiştirme sistemi hazırlanıyor."
                       }
                   )
-                  print("UPDATES CONFIRMED")
               except Exception as e:
-                  print("OFFSET ERROR:", e)
+                  print("CALLBACK ERROR:", e)
 
-          print("==========================================")
-          print("TELEGRAM CHECK COMPLETED")
-          print("==========================================")
-          PY
+          else:
+              print("UNKNOWN ACTION:", action)
+
+      if last_update_id is not None:
+          try:
+              telegram(
+                  "getUpdates",
+                  {"offset": last_update_id + 1}
+              )
+              print("UPDATES CONFIRMED")
+          except Exception as e:
+              print("OFFSET ERROR:", e)
+
+      print("==========================================")
+      print("TELEGRAM CHECK COMPLETED")
+      print("==========================================")
 ```
