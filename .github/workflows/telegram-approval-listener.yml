@@ -17,6 +17,9 @@ jobs:
       - name: Repository'i indir
         uses: actions/checkout@v4
 
+      - name: GitHub CLI kontrol
+        run: gh --version
+
       - name: Check Telegram
         env:
           TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -30,17 +33,46 @@ jobs:
           import subprocess
 
           TOKEN = os.environ["TOKEN"]
+          REPO = os.environ["GITHUB_REPOSITORY"]
 
           def telegram(method, data):
               url = f"https://api.telegram.org/bot{TOKEN}/{method}"
               encoded = urllib.parse.urlencode(data).encode()
+
               request = urllib.request.Request(
                   url,
                   data=encoded,
                   method="POST"
               )
+
               with urllib.request.urlopen(request, timeout=30) as response:
                   return json.loads(response.read().decode())
+
+          def run_workflow(workflow_file):
+              print("WORKFLOW BAŞLATILIYOR:", workflow_file)
+
+              result = subprocess.run(
+                  [
+                      "gh",
+                      "workflow",
+                      "run",
+                      workflow_file,
+                      "--repo",
+                      REPO
+                  ],
+                  capture_output=True,
+                  text=True
+              )
+
+              print("GH STDOUT:")
+              print(result.stdout)
+
+              print("GH STDERR:")
+              print(result.stderr)
+
+              print("RETURN CODE:", result.returncode)
+
+              return result.returncode == 0
 
           print("==========================================")
           print("SHADOW ARCHIVE TELEGRAM LISTENER")
@@ -56,6 +88,7 @@ jobs:
           last_update_id = None
 
           for update in results:
+
               last_update_id = update["update_id"]
 
               callback = update.get("callback_query")
@@ -80,89 +113,87 @@ jobs:
               except Exception as e:
                   print("CALLBACK ERROR:", e)
 
+              # ==========================================
+              # KONU ONAY
+              # ==========================================
+
               if action in ["topic_approve", "approve"]:
+
                   print("TOPIC APPROVED")
 
-                  text = (
-                      "🤖 SHADOW ARCHIVE\n\n"
-                      "✅ KONU ONAYLANDI\n\n"
-                      "Video üretim sistemi başlatılıyor..."
+                  success = run_workflow(
+                      "shadow-archive-master.yml"
                   )
 
-                  result = subprocess.run(
-                      [
-                          "gh",
-                          "workflow",
-                          "run",
-                          "shadow-archive-master.yml",
-                          "--repo",
-                          os.environ["GITHUB_REPOSITORY"]
-                      ],
-                      capture_output=True,
-                      text=True
-                  )
-
-                  print("GH STDOUT:")
-                  print(result.stdout)
-
-                  print("GH STDERR:")
-                  print(result.stderr)
-
-                  if result.returncode != 0:
+                  if success:
+                      text = (
+                          "🤖 SHADOW ARCHIVE\n\n"
+                          "✅ KONU ONAYLANDI\n\n"
+                          "🎬 Video üretim sistemi başlatıldı."
+                      )
+                  else:
                       text = (
                           "❌ MASTER WORKFLOW HATASI\n\n"
-                          "Video üretimi başlatılamadı."
+                          "Video üretimi başlatılamadı.\n\n"
+                          "GitHub Actions kontrol edilmeli."
                       )
 
+              # ==========================================
+              # KONU RED
+              # ==========================================
+
               elif action in ["topic_reject", "reject"]:
+
                   text = (
                       "🤖 SHADOW ARCHIVE\n\n"
                       "❌ KONU REDDEDİLDİ\n\n"
                       "Bu konu için video oluşturulmayacak."
                   )
 
+              # ==========================================
+              # YOUTUBE YAYIN ONAYI
+              # ==========================================
+
               elif action == "publish_approve":
+
                   print("PUBLISH APPROVED")
 
-                  text = (
-                      "🤖 SHADOW ARCHIVE\n\n"
-                      "▶️ YAYIN ONAYLANDI\n\n"
-                      "YouTube yükleme sistemi başlatılıyor..."
+                  success = run_workflow(
+                      "youtube-private-upload.yml"
                   )
 
-                  result = subprocess.run(
-                      [
-                          "gh",
-                          "workflow",
-                          "run",
-                          "Shadow Archive - YouTube Private Upload",
-                          "--repo",
-                          os.environ["GITHUB_REPOSITORY"]
-                      ],
-                      capture_output=True,
-                      text=True
-                  )
-
-                  print("GH STDOUT:")
-                  print(result.stdout)
-
-                  print("GH STDERR:")
-                  print(result.stderr)
-
-                  if result.returncode != 0:
+                  if success:
+                      text = (
+                          "🤖 SHADOW ARCHIVE\n\n"
+                          "▶️ YAYIN ONAYLANDI\n\n"
+                          "☁️ YouTube yükleme sistemi başlatıldı.\n\n"
+                          "GitHub Actions üzerinden yükleme devam ediyor."
+                      )
+                  else:
                       text = (
                           "❌ YOUTUBE WORKFLOW HATASI\n\n"
+                          "YouTube yükleme workflow'u başlatılamadı.\n\n"
                           "GitHub Actions kontrol edilmeli."
                       )
 
+              # ==========================================
+              # YAYIN RED
+              # ==========================================
+
               elif action == "publish_reject":
+
                   text = (
                       "🤖 SHADOW ARCHIVE\n\n"
                       "❌ YAYIN REDDEDİLDİ\n\n"
                       "Video yayınlanmayacak."
                   )
 
+              # ==========================================
+              # SAAT DEĞİŞTİR
+              # ==========================================
+
               elif action == "change_time":
+
                   text = (
                       "🕐 SHADOW ARCHIVE\n\n"
                       "Yeni yayın saati bekleniyor.\n\n"
@@ -173,12 +204,18 @@ jobs:
                   )
 
               else:
+
                   text = (
                       "⚠️ SHADOW ARCHIVE\n\n"
                       "Bilinmeyen Telegram işlemi."
                   )
 
+              # ==========================================
+              # TELEGRAM MESAJINI GÜNCELLE
+              # ==========================================
+
               if message:
+
                   chat_id = message["chat"]["id"]
                   message_id = message["message_id"]
 
@@ -197,7 +234,12 @@ jobs:
                   except Exception as e:
                       print("MESSAGE UPDATE ERROR:", e)
 
+          # ==========================================
+          # UPDATE OFFSET
+          # ==========================================
+
           if last_update_id is not None:
+
               telegram(
                   "getUpdates",
                   {
