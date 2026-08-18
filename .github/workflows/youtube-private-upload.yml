@@ -61,23 +61,14 @@ jobs:
             --status=success \
             --limit=20 \
             --json databaseId,createdAt \
-            --jq --arg TODAY "$TODAY" '
-              map(
-                select(
-                  (.createdAt | fromdateiso8601 | strftime("%Y-%m-%d")) == $TODAY
-                )
-              )
-              | sort_by(.createdAt)
-              | last
-              | .databaseId
-            ')
+            --jq ".[] | select(.createdAt | startswith(\"${TODAY}\")) | .databaseId" \
+            | tail -n 1)
 
-          if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+          if [ -z "$RUN_ID" ]; then
             echo ""
             echo "❌ BUGÜNÜN BAŞARILI MASTER PRODUCTION RUN'I BULUNAMADI."
             echo ""
-            echo "Beklenen:"
-            echo "Bugün üretilmiş yeni bir production paketi."
+            echo "Türkiye tarihi: $TODAY"
             exit 1
           fi
 
