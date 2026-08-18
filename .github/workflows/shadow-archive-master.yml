@@ -1,202 +1,194 @@
 name: Shadow Archive - Master Production
 
 on:
-workflow_dispatch:
+  workflow_dispatch:
 
 permissions:
-contents: write
-actions: write
+  contents: write
+  actions: write
 
 jobs:
-master:
-runs-on: ubuntu-latest
+  master:
+    runs-on: ubuntu-latest
 
-```
-steps:
+    steps:
+      - name: Repository'i indir
+        uses: actions/checkout@v4
 
-  - name: Repository'i indir
-    uses: actions/checkout@v4
+      - name: Python'u kur
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-  - name: Python'u kur
-    uses: actions/setup-python@v5
-    with:
-      python-version: "3.12"
+      - name: Gereksinimleri kur
+        run: |
+          pip install -r requirements.txt
 
-  - name: Gereksinimleri kur
-    run: |
-      pip install -r requirements.txt
+      - name: FFmpeg kur
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
 
-  - name: FFmpeg kur
-    run: |
-      sudo apt-get update
-      sudo apt-get install -y ffmpeg
+      - name: Güncel konuyu kontrol et
+        run: |
+          echo "SHADOW ARCHIVE MASTER PRODUCTION"
+          echo "CURRENT TOPIC:"
+          cat research/current_topic.json
 
-  - name: Güncel konuyu kontrol et
-    run: |
-      echo "=========================================="
-      echo "SHADOW ARCHIVE MASTER PRODUCTION"
-      echo "=========================================="
-      echo "CURRENT TOPIC:"
-      cat research/current_topic.json
-      echo "=========================================="
+      - name: Web Research
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python research/research/web_researcher.py
 
-  - name: Web Research
-    env:
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-    run: |
-      python research/research/web_researcher.py
+      - name: Script oluştur
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python research/research/script_generator.py
 
-  - name: Script oluştur
-    env:
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-    run: |
-      python research/research/script_generator.py
+      - name: Doğal ses oluştur
+        run: |
+          python research/research/tts_generator.py
 
-  - name: Doğal ses oluştur
-    run: |
-      python research/research/tts_generator.py
+      - name: Görsel araştırması
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+        run: |
+          python research/research/visual_research.py
 
-  - name: Görsel araştırması
-    env:
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
-    run: |
-      python research/research/visual_research.py
+      - name: Ana videoyu oluştur
+        run: |
+          python research/research/cinematic_video_editor.py
 
-  - name: Ana videoyu oluştur
-    run: |
-      python research/research/cinematic_video_editor.py
+      - name: Ana videoyu kontrol et
+        run: |
+          MAIN_VIDEO=$(find research/video -maxdepth 1 -type f -name "*_v4.mp4" | head -n 1)
 
-  - name: Ana videoyu kontrol et
-    run: |
-      MAIN_VIDEO=$(find research/video -maxdepth 1 -type f -name "*_v4.mp4" | head -n 1)
+          if [ -z "$MAIN_VIDEO" ]; then
+            echo "Ana video bulunamadı."
+            exit 1
+          fi
 
-      if [ -z "$MAIN_VIDEO" ]; then
-        echo "Ana video bulunamadı."
-        exit 1
-      fi
+          ls -lh "$MAIN_VIDEO"
 
-      ls -lh "$MAIN_VIDEO"
+          ffprobe \
+            -v error \
+            -show_entries format=duration,size \
+            -of default=noprint_wrappers=1 \
+            "$MAIN_VIDEO"
 
-      ffprobe \
-        -v error \
-        -show_entries format=duration,size \
-        -of default=noprint_wrappers=1 \
-        "$MAIN_VIDEO"
+      - name: İngilizce altyazı oluştur
+        run: |
+          python research/research/english_subtitle_generator.py
 
-  - name: İngilizce altyazı oluştur
-    run: |
-      python research/research/english_subtitle_generator.py
+      - name: İngilizce altyazıyı kontrol et
+        run: |
+          SUBTITLE=$(find research/video/subtitles -maxdepth 1 -type f -name "*_english.srt" | head -n 1)
 
-  - name: İngilizce altyazıyı kontrol et
-    run: |
-      SUBTITLE=$(find research/video/subtitles -maxdepth 1 -type f -name "*_english.srt" | head -n 1)
+          if [ -z "$SUBTITLE" ]; then
+            echo "İngilizce altyazı bulunamadı."
+            exit 1
+          fi
 
-      if [ -z "$SUBTITLE" ]; then
-        echo "İngilizce altyazı bulunamadı."
-        exit 1
-      fi
+          ls -lh "$SUBTITLE"
 
-      ls -lh "$SUBTITLE"
+      - name: Shorts seç
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          python research/research/shorts_selector.py
 
-  - name: Shorts seç
-    env:
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-    run: |
-      python research/research/shorts_selector.py
+      - name: Shorts seslerini oluştur
+        run: |
+          python research/research/shorts_tts.py
 
-  - name: Shorts seslerini oluştur
-    run: |
-      python research/research/shorts_tts.py
+      - name: Shorts altyazı metinlerini oluştur
+        run: |
+          python research/research/shorts_subtitles.py
 
-  - name: Shorts altyazı metinlerini oluştur
-    run: |
-      python research/research/shorts_subtitles.py
+      - name: Shorts videolarını oluştur
+        run: |
+          python research/research/shorts_editor.py
 
-  - name: Shorts videolarını oluştur
-    run: |
-      python research/research/shorts_editor.py
+      - name: Shorts İngilizce altyazı ekle
+        run: |
+          python research/research/shorts_caption_editor.py
 
-  - name: Shorts İngilizce altyazı ekle
-    run: |
-      python research/research/shorts_caption_editor.py
+      - name: Shadow Archive branding ekle
+        run: |
+          python research/research/shorts_branding.py
 
-  - name: Shadow Archive branding ekle
-    run: |
-      python research/research/shorts_branding.py
+      - name: Shorts kontrol et
+        run: |
+          SHORT_1=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_1_branded.mp4" | head -n 1)
+          SHORT_2=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_2_branded.mp4" | head -n 1)
 
-  - name: Shorts kontrol et
-    run: |
-      SHORT_1=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_1_branded.mp4" | head -n 1)
-      SHORT_2=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_2_branded.mp4" | head -n 1)
+          if [ -z "$SHORT_1" ]; then
+            echo "Short #1 bulunamadı."
+            exit 1
+          fi
 
-      if [ -z "$SHORT_1" ]; then
-        echo "Short #1 bulunamadı."
-        exit 1
-      fi
+          if [ -z "$SHORT_2" ]; then
+            echo "Short #2 bulunamadı."
+            exit 1
+          fi
 
-      if [ -z "$SHORT_2" ]; then
-        echo "Short #2 bulunamadı."
-        exit 1
-      fi
+          ls -lh "$SHORT_1"
+          ls -lh "$SHORT_2"
 
-      ls -lh "$SHORT_1"
-      ls -lh "$SHORT_2"
+      - name: Production Package hazırla
+        run: |
+          mkdir -p production_package/main
+          mkdir -p production_package/shorts
+          mkdir -p production_package/research
 
-  - name: Production Package hazırla
-    run: |
-      mkdir -p production_package/main
-      mkdir -p production_package/shorts
-      mkdir -p production_package/research
+          MAIN_VIDEO=$(find research/video -maxdepth 1 -type f -name "*_v4.mp4" | head -n 1)
+          SHORT_1=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_1_branded.mp4" | head -n 1)
+          SHORT_2=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_2_branded.mp4" | head -n 1)
+          SUBTITLE=$(find research/video/subtitles -maxdepth 1 -type f -name "*_english.srt" | head -n 1)
 
-      MAIN_VIDEO=$(find research/video -maxdepth 1 -type f -name "*_v4.mp4" | head -n 1)
-      SHORT_1=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_1_branded.mp4" | head -n 1)
-      SHORT_2=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_2_branded.mp4" | head -n 1)
-      SUBTITLE=$(find research/video/subtitles -maxdepth 1 -type f -name "*_english.srt" | head -n 1)
+          cp "$MAIN_VIDEO" production_package/main/main_video.mp4
+          cp "$SHORT_1" production_package/shorts/short_1.mp4
+          cp "$SHORT_2" production_package/shorts/short_2.mp4
+          cp "$SUBTITLE" production_package/main/main_video_english.srt
+          cp research/current_topic.json production_package/research/current_topic.json
 
-      cp "$MAIN_VIDEO" production_package/main/main_video.mp4
-      cp "$SHORT_1" production_package/shorts/short_1.mp4
-      cp "$SHORT_2" production_package/shorts/short_2.mp4
-      cp "$SUBTITLE" production_package/main/main_video_english.srt
-      cp research/current_topic.json production_package/research/current_topic.json
+          echo "PRODUCTION PACKAGE HAZIR"
 
-      echo "PRODUCTION PACKAGE HAZIR"
-      find production_package -type f -exec ls -lh {} \;
+      - name: Production Package yükle
+        uses: actions/upload-artifact@v4
+        with:
+          name: shadow-archive-complete-production
+          path: production_package
+          retention-days: 7
 
-  - name: Production Package yükle
-    uses: actions/upload-artifact@v4
-    with:
-      name: shadow-archive-complete-production
-      path: production_package
-      retention-days: 7
+      - name: Telegram yayın onayı gönder
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          TOPIC=$(python -c 'import json; print(json.load(open("research/current_topic.json", encoding="utf-8")).get("topic", "Günlük Konu"))')
+          TITLE=$(python -c 'import json; print(json.load(open("research/current_topic.json", encoding="utf-8")).get("title", "Shadow Archive"))')
 
-  - name: Telegram yayın onayı gönder
-    env:
-      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-    run: |
-      TOPIC=$(python -c 'import json; print(json.load(open("research/current_topic.json", encoding="utf-8")).get("topic", "Günlük Konu"))')
-      TITLE=$(python -c 'import json; print(json.load(open("research/current_topic.json", encoding="utf-8")).get("title", "Shadow Archive"))')
+          MESSAGE="🤖 SHADOW ARCHIVE — TÜM İÇERİKLER HAZIR
 
-      MESSAGE="🤖 SHADOW ARCHIVE — TÜM İÇERİKLER HAZIR
+          🎯 Konu:
+          ${TOPIC}
 
-      🎯 Konu:
-      ${TOPIC}
+          📝 Başlık:
+          ${TITLE}
 
-      📝 Başlık:
-      ${TITLE}
+          🎬 Ana video + 2 Shorts hazır.
+          ▶️ Yayınlamadan önce onay gerekiyor."
 
-      ━━━━━━━━━━━━━━━━━━
-      🎬 Ana video + 2 Shorts hazır.
-      ▶️ Yayınlamadan önce onayınız gerekiyor."
+          KEYBOARD='{"inline_keyboard":[[{"text":"▶️ YAYINLA","callback_data":"publish_approve"},{"text":"❌ YAYINLAMA","callback_data":"publish_reject"}],[{"text":"🕐 SAATİ DEĞİŞTİR","callback_data":"change_time"}]]}'
 
-      KEYBOARD='{"inline_keyboard":[[{"text":"▶️ YAYINLA","callback_data":"publish_approve"},{"text":"❌ YAYINLAMA","callback_data":"publish_reject"}],[{"text":"🕐 SAATİ DEĞİŞTİR","callback_data":"change_time"}]]}'
+          curl -sS -X POST \
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "text=${MESSAGE}" \
+            --data-urlencode "reply_markup=${KEYBOARD}"
 
-      curl -sS -X POST \
-        "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-        --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
-        --data-urlencode "text=${MESSAGE}" \
-        --data-urlencode "reply_markup=${KEYBOARD}"
-
-      echo "TELEGRAM YAYIN ONAYI GÖNDERİLDİ"
-```
+          echo "TELEGRAM YAYIN ONAYI GÖNDERİLDİ"
