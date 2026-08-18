@@ -239,7 +239,7 @@ def main():
 
     short_2_time = turkey_to_utc(
         publish_day,
-        22,
+        21,
         0,
     )
 
