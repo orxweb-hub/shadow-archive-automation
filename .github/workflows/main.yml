@@ -3,6 +3,9 @@ name: Shadow Archive - Topic Finder
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   find-topics:
     runs-on: ubuntu-latest
@@ -25,3 +28,24 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python research/research/daily_topic_generator.py
+
+      - name: Güncel konuyu GitHub'a kaydet
+        run: |
+          git config user.name "Shadow Archive Bot"
+          git config user.email "actions@github.com"
+
+          git add research/current_topic.json
+
+          if git diff --cached --quiet; then
+            echo "current_topic.json değişmedi."
+          else
+            git commit -m "Update Shadow Archive current topic"
+            git push
+          fi
+
+      - name: Güncel konuyu kontrol et
+        run: |
+          echo "=========================================="
+          echo "CURRENT TOPIC"
+          echo "=========================================="
+          cat research/current_topic.json
