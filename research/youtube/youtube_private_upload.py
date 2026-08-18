@@ -9,21 +9,12 @@ from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 
 
-# =========================================================
-# PATHS
-# =========================================================
-
 TOPIC_FILE = Path("production_package/research/current_topic.json")
 
 MAIN_VIDEO = Path("production_package/main/main_video.mp4")
-
 SHORT_1 = Path("production_package/shorts/short_1.mp4")
 SHORT_2 = Path("production_package/shorts/short_2.mp4")
 
-
-# =========================================================
-# YOUTUBE AUTH
-# =========================================================
 
 CLIENT_JSON = os.environ["YOUTUBE_OAUTH_CLIENT_JSON"]
 REFRESH_TOKEN = os.environ["YOUTUBE_REFRESH_TOKEN"]
@@ -45,10 +36,6 @@ youtube = build(
     credentials=credentials,
 )
 
-
-# =========================================================
-# LOAD TOPIC
-# =========================================================
 
 def load_topic():
 
@@ -73,10 +60,6 @@ def load_topic():
     }
 
 
-# =========================================================
-# SCHEDULE
-# =========================================================
-
 TURKEY = ZoneInfo("Europe/Istanbul")
 
 
@@ -84,7 +67,6 @@ def get_next_publish_day():
 
     now = datetime.now(TURKEY)
 
-    # Her onaydan sonra bir sonraki günü kullanıyoruz.
     next_day = (now + timedelta(days=1)).date()
 
     return next_day
@@ -105,10 +87,6 @@ def turkey_to_utc(date_value, hour, minute):
 
     return utc_time.strftime("%Y-%m-%dT%H:%M:%SZ")
 
-
-# =========================================================
-# TEXT
-# =========================================================
 
 def build_main_description(data):
 
@@ -155,10 +133,6 @@ Shadow Archive kanalını takip edin.
 #Shorts
 """
 
-
-# =========================================================
-# UPLOAD FUNCTION
-# =========================================================
 
 def upload_video(
     video_file,
@@ -231,10 +205,6 @@ def upload_video(
     return response
 
 
-# =========================================================
-# MAIN
-# =========================================================
-
 def main():
 
     print()
@@ -255,25 +225,21 @@ def main():
     print("Publish day:", publish_day)
     print("Timezone: Europe/Istanbul")
 
-    # -----------------------------------------------------
-    # SCHEDULE
-    # -----------------------------------------------------
-
     short_1_time = turkey_to_utc(
         publish_day,
-        9,
+        10,
         0,
     )
 
     main_time = turkey_to_utc(
         publish_day,
-        12,
+        13,
         0,
     )
 
     short_2_time = turkey_to_utc(
         publish_day,
-        21,
+        22,
         0,
     )
 
@@ -284,10 +250,6 @@ def main():
     print("Main     :", main_time, "UTC")
     print("Short #2 :", short_2_time, "UTC")
     print("------------------------------------------")
-
-    # -----------------------------------------------------
-    # TAGS
-    # -----------------------------------------------------
 
     base_tags = [
         "Shadow Archive",
@@ -302,10 +264,6 @@ def main():
         "gerçek olaylar",
     ]
 
-    # =====================================================
-    # SHORT #1
-    # =====================================================
-
     short_1_title = f"{topic} — Gerçeği Ortaya Çıkaran Detay #Shorts"
 
     upload_video(
@@ -316,10 +274,6 @@ def main():
         base_tags + ["Shorts"],
     )
 
-    # =====================================================
-    # MAIN VIDEO
-    # =====================================================
-
     upload_video(
         MAIN_VIDEO,
         main_title,
@@ -327,10 +281,6 @@ def main():
         main_time,
         base_tags,
     )
-
-    # =====================================================
-    # SHORT #2
-    # =====================================================
 
     short_2_title = f"{topic} — Hâlâ Cevaplanamayan Soru #Shorts"
 
@@ -342,17 +292,13 @@ def main():
         base_tags + ["Shorts"],
     )
 
-    # =====================================================
-    # COMPLETE
-    # =====================================================
-
     print()
     print("==========================================")
     print("SHADOW ARCHIVE — YAYINLAR PLANLANDI")
     print("==========================================")
-    print(f"📱 Short #1 : 09:00 Türkiye")
-    print(f"🎬 Ana Video : 12:00 Türkiye")
-    print(f"📱 Short #2 : 21:00 Türkiye")
+    print("📱 Short #1 : 10:00 Türkiye")
+    print("🎬 Ana Video : 13:00 Türkiye")
+    print("📱 Short #2 : 22:00 Türkiye")
     print()
     print("YouTube planlama tamamlandı.")
     print("==========================================")
