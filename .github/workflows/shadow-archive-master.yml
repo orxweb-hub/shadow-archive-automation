@@ -1,27 +1,11 @@
 name: Shadow Archive - Master Production
+
 "on":
 workflow_dispatch:
-
-permissions:
-contents: write
-actions: write
 
 jobs:
 master:
 runs-on: ubuntu-latest
-
-```
 steps:
-  - name: Checkout Repository
-    uses: actions/checkout@v4
-
-  - name: Test Workflow
-    run: |
-      echo "=========================================="
-      echo "SHADOW ARCHIVE MASTER PRODUCTION"
-      echo "=========================================="
-      echo "WORKFLOW BAŞARIYLA ÇALIŞTI"
-      echo "CURRENT TOPIC:"
-      cat research/current_topic.json
-      echo "=========================================="
-```
+- name: Test
+run: echo "SHADOW ARCHIVE MASTER PRODUCTION CALISTI"
