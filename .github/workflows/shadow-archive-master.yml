@@ -1,7 +1,5 @@
 name: Shadow Archive - Master Production
-
-"on":
-workflow_dispatch:
+on: workflow_dispatch
 
 jobs:
 master:
