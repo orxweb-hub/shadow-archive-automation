@@ -17,20 +17,20 @@ TARGET_WORDS = 3000
 PRIMARY_MODEL = "gemini-3.6-flash"
 FALLBACK_MODEL = "gemini-3.5-flash-lite"
 
-MAX_RETRIES = 5
+MAX_RETRIES = 3
 
 RETRY_DELAYS = [
     30,
     60,
-    120,
-    180,
-    300
+    120
 ]
 
 
 def get_client():
 
-    api_key = os.environ.get("GEMINI_API_KEY")
+    api_key = os.environ.get(
+        "GEMINI_API_KEY"
+    )
 
     if not api_key:
         raise RuntimeError(
@@ -131,6 +131,10 @@ def is_temporary_error(error):
         "500" in error_text
         or
         "internal" in error_text
+        or
+        "timeout" in error_text
+        or
+        "timed out" in error_text
     )
 
 
@@ -194,17 +198,27 @@ def call_model(
 
                 raise error
 
-            if is_temporary_error(error):
+            if attempt == MAX_RETRIES:
 
-                if attempt == MAX_RETRIES:
-                    raise RuntimeError(
-                        f"{model} geçici hata nedeniyle "
-                        "başarısız oldu."
-                    ) from error
+                print(
+                    f"{model} {MAX_RETRIES} denemede "
+                    "başarısız oldu."
+                )
+
+                raise RuntimeError(
+                    f"{model} geçici hata nedeniyle "
+                    f"{MAX_RETRIES} denemede başarısız oldu."
+                ) from error
+
+            if is_temporary_error(error):
 
                 delay = RETRY_DELAYS[
                     attempt - 1
                 ]
+
+                print(
+                    f"{model} geçici olarak kullanılamıyor."
+                )
 
                 print(
                     f"{delay} saniye bekleniyor..."
@@ -214,18 +228,12 @@ def call_model(
 
                 continue
 
-            if attempt == MAX_RETRIES:
-
-                raise RuntimeError(
-                    f"{model} ile üretim başarısız oldu."
-                ) from error
-
             delay = RETRY_DELAYS[
                 attempt - 1
             ]
 
             print(
-                f"{delay} saniye bekleniyor..."
+                f"{delay} saniye sonra tekrar deneniyor..."
             )
 
             time.sleep(delay)
@@ -240,16 +248,24 @@ def generate_with_fallback(
     prompt
 ):
 
+    print()
+    print(
+        "=========================================="
+    )
+
+    print(
+        "1. MODEL DENENİYOR:"
+    )
+
+    print(
+        PRIMARY_MODEL
+    )
+
+    print(
+        "=========================================="
+    )
+
     try:
-
-        print()
-        print(
-            "1. ÖNCELİKLİ MODEL:"
-        )
-
-        print(
-            PRIMARY_MODEL
-        )
 
         return call_model(
             client,
@@ -259,30 +275,60 @@ def generate_with_fallback(
 
     except Exception as primary_error:
 
-        if not is_quota_error(
+        print()
+        print(
+            "⚠️ 3.6 Flash başarısız oldu."
+        )
+
+        if is_quota_error(
             primary_error
         ):
-            raise
+
+            print(
+                "Neden: kota/rate limit"
+            )
+
+        elif is_temporary_error(
+            primary_error
+        ):
+
+            print(
+                "Neden: geçici Gemini sunucu hatası"
+            )
+
+        else:
+
+            print(
+                "Neden: beklenmeyen model hatası"
+            )
 
         print()
         print(
-            "⚠️ 3.6 Flash kota/rate limit."
-        )
-
-        print(
-            "🔄 Otomatik olarak "
-            "3.5 Flash Lite'a geçiliyor..."
+            "🔄 FALLBACK MODEL DEVREYE GİRİYOR:"
         )
 
         print(
             FALLBACK_MODEL
         )
 
-        return call_model(
-            client,
-            prompt,
-            FALLBACK_MODEL
+        print(
+            "=========================================="
         )
+
+        try:
+
+            return call_model(
+                client,
+                prompt,
+                FALLBACK_MODEL
+            )
+
+        except Exception as fallback_error:
+
+            raise RuntimeError(
+                "Hem 3.6 Flash hem de "
+                "3.5 Flash Lite başarısız oldu."
+            ) from fallback_error
 
 
 def generate_initial_script(
@@ -417,8 +463,6 @@ def generate_additional_section(
     if missing_words <= 0:
         return ""
 
-    # Modelden eksikten daha fazla kelime istiyoruz.
-    # Böylece 2700 sınırını rahat geçmesi hedefleniyor.
     requested_words = max(
         missing_words + 350,
         500
@@ -647,8 +691,6 @@ def main():
             f"{additional_words} kelime"
         )
 
-        # Ek bölüm gerçekten içerik ürettiyse
-        # mevcut senaryonun SONUNA ekliyoruz.
         if additional_words > 0:
 
             script = (
@@ -734,12 +776,12 @@ def main():
     )
 
     print(
-        "3.6 Flash → kota varsa → "
+        "3.6 Flash → hata/kota → "
         "3.5 Flash Lite otomatik geçiş aktif."
     )
 
     print(
-        "Eksik kelimeler artık mevcut senaryonun "
+        "Eksik kelimeler mevcut senaryonun "
         "sonuna ek bölüm olarak tamamlanıyor."
     )
 
