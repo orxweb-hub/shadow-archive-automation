@@ -9,6 +9,10 @@ permissions:
   actions: write
   contents: read
 
+concurrency:
+  group: telegram-listener
+  cancel-in-progress: false
+
 jobs:
   listen:
     runs-on: ubuntu-latest
@@ -21,16 +25,15 @@ jobs:
         env:
           TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
         run: |
           python - <<'PY'
           import os
           import json
           import urllib.request
           import urllib.parse
-          import subprocess
 
           TOKEN = os.environ["TOKEN"]
-          REPO = os.environ["GITHUB_REPOSITORY"]
 
           def telegram(method, data=None):
               url = f"https://api.telegram.org/bot{TOKEN}/{method}"
@@ -56,321 +59,80 @@ jobs:
                       response.read().decode()
                   )
 
-          def find_workflow(workflow_name):
-
-              result = subprocess.run(
-                  [
-                      "gh",
-                      "workflow",
-                      "list",
-                      "--repo",
-                      REPO,
-                      "--limit",
-                      "100",
-                      "--json",
-                      "name,path"
-                  ],
-                  capture_output=True,
-                  text=True
-              )
-
-              if result.returncode != 0:
-                  print("WORKFLOW LIST ERROR:")
-                  print(result.stderr)
-                  return None
-
-              workflows = json.loads(
-                  result.stdout
-              )
-
-              for workflow in workflows:
-
-                  if workflow.get("name") == workflow_name:
-
-                      print(
-                          "WORKFLOW BULUNDU:",
-                          workflow
-                      )
-
-                      return workflow.get("path")
-
-              print(
-                  "WORKFLOW BULUNAMADI:",
-                  workflow_name
-              )
-
-              return None
-
-          def run_workflow(workflow_name):
-
-              workflow_path = find_workflow(
-                  workflow_name
-              )
-
-              if not workflow_path:
-                  return False
-
-              print(
-                  "WORKFLOW BAŞLATILIYOR:",
-                  workflow_path
-              )
-
-              result = subprocess.run(
-                  [
-                      "gh",
-                      "workflow",
-                      "run",
-                      workflow_path,
-                      "--repo",
-                      REPO
-                  ],
-                  capture_output=True,
-                  text=True
-              )
-
-              print(
-                  "GH STDOUT:",
-                  result.stdout
-              )
-
-              print(
-                  "GH STDERR:",
-                  result.stderr
-              )
-
-              print(
-                  "RETURN CODE:",
-                  result.returncode
-              )
-
-              return result.returncode == 0
-
           print("==========================================")
-          print("SHADOW ARCHIVE TELEGRAM LISTENER")
+          print("SHADOW ARCHIVE TELEGRAM DIAGNOSTIC")
           print("==========================================")
+
+          # 1. BOT KONTROL
+          print("\n[1] BOT KONTROL")
+          me = telegram("getMe")
+
+          if me.get("ok"):
+              bot = me["result"]
+              print("BOT:", bot.get("username"))
+              print("BOT ID:", bot.get("id"))
+          else:
+              print("BOT API HATASI")
+              print(me)
+
+          # 2. WEBHOOK KONTROL
+          print("\n[2] WEBHOOK KONTROL")
+          webhook = telegram("getWebhookInfo")
+
+          if webhook.get("ok"):
+              info = webhook["result"]
+              webhook_url = info.get("url", "")
+
+              if webhook_url:
+                  print("WEBHOOK AKTIF:", webhook_url)
+              else:
+                  print("WEBHOOK YOK - getUpdates KULLANILABILIR")
+
+              print("PENDING UPDATE:", info.get("pending_update_count"))
+              print("LAST ERROR:", info.get("last_error_message"))
+          else:
+              print("WEBHOOK KONTROL HATASI")
+              print(webhook)
+
+          # 3. TELEGRAM GÜNCELLEMELERİ
+          print("\n[3] TELEGRAM UPDATES")
 
           updates = telegram(
               "getUpdates",
               {
-                  "timeout": 5,
-                  "allowed_updates": json.dumps(
-                      ["callback_query"]
-                  )
+                  "timeout": 5
               }
           )
 
-          results = updates.get(
-              "result",
-              []
-          )
+          if not updates.get("ok"):
+              print("GETUPDATES HATASI:")
+              print(updates)
+              raise SystemExit(1)
 
-          print(
-              "UPDATE SAYISI:",
-              len(results)
-          )
+          results = updates.get("result", [])
 
-          if not results:
-
-              print(
-                  "NO NEW TELEGRAM UPDATES"
-              )
-
-              raise SystemExit(0)
-
-          last_update_id = None
+          print("UPDATE SAYISI:", len(results))
 
           for update in results:
+              print("------------------------------------------")
+              print("UPDATE ID:", update.get("update_id"))
 
-              last_update_id = update[
-                  "update_id"
-              ]
+              if "callback_query" in update:
+                  callback = update["callback_query"]
 
-              callback = update.get(
-                  "callback_query"
-              )
+                  print("BUTTON CLICK DETECTED")
+                  print("ACTION:", callback.get("data"))
+                  print("CALLBACK ID:", callback.get("id"))
 
-              if not callback:
-                  continue
-
-              action = callback.get(
-                  "data"
-              )
-
-              callback_id = callback.get(
-                  "id"
-              )
-
-              message = callback.get(
-                  "message"
-              )
-
-              print("==========================================")
-              print("BUTTON CLICK DETECTED")
-              print("ACTION:", action)
-              print("UPDATE ID:", last_update_id)
-              print("==========================================")
-
-              try:
-
-                  telegram(
-                      "answerCallbackQuery",
-                      {
-                          "callback_query_id":
-                              callback_id
-                      }
-                  )
-
-              except Exception as e:
-
-                  print(
-                      "CALLBACK ERROR:",
-                      e
-                  )
-
-              if action == "publish_approve":
-
-                  print(
-                      "PUBLISH APPROVED"
-                  )
-
-                  success = run_workflow(
-                      "Shadow Archive - YouTube Private Upload"
-                  )
-
-                  if success:
-
-                      text = (
-                          "🤖 SHADOW ARCHIVE\n\n"
-                          "▶️ YAYIN ONAYLANDI\n\n"
-                          "☁️ YouTube yükleme sistemi başlatıldı.\n\n"
-                          "📱 Short #1 → 10:00\n"
-                          "🎬 Ana Video → 13:00\n"
-                          "📱 Short #2 → 21:00"
-                      )
-
-                  else:
-
-                      text = (
-                          "❌ YOUTUBE WORKFLOW HATASI\n\n"
-                          "YouTube workflow başlatılamadı."
-                      )
-
-              elif action == "publish_reject":
-
-                  text = (
-                      "🤖 SHADOW ARCHIVE\n\n"
-                      "❌ YAYIN REDDEDİLDİ"
-                  )
-
-              elif action == "topic_approve":
-
-                  success = run_workflow(
-                      "Shadow Archive - Master Production"
-                  )
-
-                  if success:
-
-                      text = (
-                          "🤖 SHADOW ARCHIVE\n\n"
-                          "✅ KONU ONAYLANDI\n\n"
-                          "🎬 Üretim başlatıldı."
-                      )
-
-                  else:
-
-                      text = (
-                          "❌ MASTER WORKFLOW HATASI"
-                      )
-
-              elif action == "topic_reject":
-
-                  text = (
-                      "🤖 SHADOW ARCHIVE\n\n"
-                      "❌ KONU REDDEDİLDİ"
-                  )
-
-              elif action == "change_time":
-
-                  text = (
-                      "🕐 SHADOW ARCHIVE\n\n"
-                      "Yeni yayın saati özelliği hazırlanıyor."
-                  )
+              elif "message" in update:
+                  message = update["message"]
+                  print("MESSAGE UPDATE")
+                  print("TEXT:", message.get("text"))
 
               else:
+                  print("OTHER UPDATE")
 
-                  text = (
-                      "⚠️ SHADOW ARCHIVE\n\n"
-                      "Bilinmeyen işlem."
-                  )
-
-              if message:
-
-                  chat_id = message[
-                      "chat"
-                  ][
-                      "id"
-                  ]
-
-                  message_id = message[
-                      "message_id"
-                  ]
-
-                  try:
-
-                      telegram(
-                          "editMessageText",
-                          {
-                              "chat_id":
-                                  chat_id,
-                              "message_id":
-                                  message_id,
-                              "text":
-                                  text,
-                              "reply_markup":
-                                  json.dumps(
-                                      {
-                                          "inline_keyboard":
-                                              []
-                                      }
-                                  )
-                          }
-                      )
-
-                      print(
-                          "TELEGRAM MESSAGE UPDATED"
-                      )
-
-                  except Exception as e:
-
-                      print(
-                          "MESSAGE UPDATE ERROR:",
-                          e
-                      )
-
-          if last_update_id is not None:
-
-              try:
-
-                  telegram(
-                      "getUpdates",
-                      {
-                          "offset":
-                              last_update_id + 1
-                      }
-                  )
-
-                  print(
-                      "UPDATES CONFIRMED"
-                  )
-
-              except Exception as e:
-
-                  print(
-                      "OFFSET ERROR:",
-                      e
-                  )
-
-          print("==========================================")
-          print("TELEGRAM CHECK COMPLETED")
+          print("------------------------------------------")
+          print("TELEGRAM DIAGNOSTIC COMPLETED")
           print("==========================================")
           PY
