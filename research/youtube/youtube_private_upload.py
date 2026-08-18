@@ -298,7 +298,7 @@ def main():
     print("==========================================")
     print("📱 Short #1 : 10:00 Türkiye")
     print("🎬 Ana Video : 13:00 Türkiye")
-    print("📱 Short #2 : 22:00 Türkiye")
+    print("📱 Short #2 : 21:00 Türkiye")
     print()
     print("YouTube planlama tamamlandı.")
     print("==========================================")
