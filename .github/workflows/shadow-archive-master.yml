@@ -35,89 +35,176 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      - name: YENI KONU OLUSTUR
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        run: |
-          echo "=========================================="
-          echo "SHADOW ARCHIVE — YENI KONU URETILIYOR"
-          echo "=========================================="
-
-          python research/research/daily_topic_generator.py
-
-          echo ""
-          echo "=========================================="
-          echo "YENI CURRENT TOPIC"
-          echo "=========================================="
-
-          cat research/current_topic.json
-
-          echo ""
-          echo "=========================================="
-
-      - name: Yeni konuyu GitHub'a kaydet
-        run: |
-          echo "=========================================="
-          echo "CURRENT TOPIC GITHUB'A KAYDEDILIYOR"
-          echo "=========================================="
-
-          git config user.name "Shadow Archive Bot"
-          git config user.email "shadow-archive-bot@users.noreply.github.com"
-
-          git add research/current_topic.json
-
-          if git diff --cached --quiet; then
-            echo "Yeni topic değişikliği bulunamadı."
-          else
-            git commit -m "Update daily Shadow Archive topic"
-            git push origin main
-            echo "Yeni konu GitHub'a kaydedildi."
-          fi
-
-          echo "=========================================="
+      # ==========================================================
+      # BUGÜNÜN KONUSU
+      # ==========================================================
+      # Bu workflow yeni konu üretmez.
+      # Topic Test tarafından oluşturulmuş ve GitHub'a kaydedilmiş
+      # current_topic.json doğrudan kullanılır.
+      # ==========================================================
 
       - name: Güncel konuyu kontrol et
         run: |
           echo "=========================================="
-          echo "SHADOW ARCHIVE MASTER PRODUCTION"
+          echo "SHADOW ARCHIVE — BUGÜNÜN KONUSU"
           echo "=========================================="
 
-          echo "BUGUNUN KONUSU:"
+          if [ ! -f research/current_topic.json ]; then
+            echo "❌ current_topic.json bulunamadı."
+            exit 1
+          fi
+
+          echo ""
+          echo "CURRENT TOPIC:"
           cat research/current_topic.json
 
+          echo ""
           echo "=========================================="
+
+      - name: Konu bilgilerini doğrula
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path("research/current_topic.json")
+
+          if not path.exists():
+              raise SystemExit(
+                  "❌ current_topic.json bulunamadı."
+              )
+
+          with open(
+              path,
+              "r",
+              encoding="utf-8"
+          ) as f:
+              data = json.load(f)
+
+          required = [
+              "topic",
+              "category",
+              "summary",
+              "research_points",
+              "title",
+              "description",
+              "hashtags"
+          ]
+
+          for field in required:
+              if field not in data:
+                  raise SystemExit(
+                      f"❌ Eksik alan: {field}"
+                  )
+
+          if not data["topic"].strip():
+              raise SystemExit(
+                  "❌ Konu boş."
+              )
+
+          if not data["title"].strip():
+              raise SystemExit(
+                  "❌ Başlık boş."
+              )
+
+          if not data["description"].strip():
+              raise SystemExit(
+                  "❌ Açıklama boş."
+              )
+
+          print("==========================================")
+          print("KONU DOĞRULAMA")
+          print("==========================================")
+          print("")
+          print("KONU:")
+          print(data["topic"])
+          print("")
+          print("BAŞLIK:")
+          print(data["title"])
+          print("")
+          print("AÇIKLAMA:")
+          print(data["description"])
+          print("")
+          print("✅ Konu mevcut")
+          print("✅ Başlık mevcut")
+          print("✅ Açıklama mevcut")
+          print("✅ Production bu konuyu kullanacak")
+          print("==========================================")
+          PY
+
+      # ==========================================================
+      # WEB RESEARCH
+      # ==========================================================
 
       - name: Web Research
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
+          echo "=========================================="
+          echo "WEB RESEARCH"
+          echo "=========================================="
+
           python research/research/web_researcher.py
+
+      # ==========================================================
+      # SCRIPT
+      # ==========================================================
 
       - name: Script oluştur
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
+          echo "=========================================="
+          echo "SCRIPT OLUŞTURULUYOR"
+          echo "=========================================="
+
           python research/research/script_generator.py
+
+      # ==========================================================
+      # TTS
+      # ==========================================================
 
       - name: Doğal ses oluştur
         run: |
+          echo "=========================================="
+          echo "TTS OLUŞTURULUYOR"
+          echo "=========================================="
+
           python research/research/tts_generator.py
+
+      # ==========================================================
+      # VISUAL RESEARCH
+      # ==========================================================
 
       - name: Görsel araştırması
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
         run: |
+          echo "=========================================="
+          echo "GÖRSEL ARAŞTIRMASI"
+          echo "=========================================="
+
           python research/research/visual_research.py
+
+      # ==========================================================
+      # MAIN VIDEO
+      # ==========================================================
 
       - name: Ana videoyu oluştur
         run: |
+          echo "=========================================="
+          echo "ANA VIDEO OLUŞTURULUYOR"
+          echo "=========================================="
+
           python research/research/cinematic_video_editor.py
 
       - name: Ana videoyu kontrol et
         run: |
+          echo "=========================================="
+          echo "ANA VIDEO KONTROLÜ"
+          echo "=========================================="
+
           MAIN_VIDEO=$(find research/video \
             -maxdepth 1 \
             -type f \
@@ -125,11 +212,19 @@ jobs:
             | head -n 1)
 
           if [ -z "$MAIN_VIDEO" ]; then
-            echo "Ana video bulunamadı."
+            echo "❌ Ana video bulunamadı."
             exit 1
           fi
 
+          echo ""
+          echo "ANA VIDEO:"
+          echo "$MAIN_VIDEO"
+
+          echo ""
           ls -lh "$MAIN_VIDEO"
+
+          echo ""
+          echo "VIDEO BİLGİSİ:"
 
           ffprobe \
             -v error \
@@ -137,8 +232,19 @@ jobs:
             -of default=noprint_wrappers=1 \
             "$MAIN_VIDEO"
 
+          echo ""
+          echo "✅ Ana video bulundu."
+
+      # ==========================================================
+      # SUBTITLE
+      # ==========================================================
+
       - name: İngilizce altyazı oluştur
         run: |
+          echo "=========================================="
+          echo "İNGİLİZCE ALTYAZI"
+          echo "=========================================="
+
           python research/research/english_subtitle_generator.py
 
       - name: İngilizce altyazıyı kontrol et
@@ -150,40 +256,81 @@ jobs:
             | head -n 1)
 
           if [ -z "$SUBTITLE" ]; then
-            echo "İngilizce altyazı bulunamadı."
+            echo "❌ İngilizce altyazı bulunamadı."
             exit 1
           fi
 
+          echo "SUBTITLE:"
+          echo "$SUBTITLE"
+
           ls -lh "$SUBTITLE"
+
+          echo "✅ İngilizce altyazı hazır."
+
+      # ==========================================================
+      # SHORTS
+      # ==========================================================
 
       - name: Shorts seç
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
+          echo "=========================================="
+          echo "SHORTS SEÇİLİYOR"
+          echo "=========================================="
+
           python research/research/shorts_selector.py
 
       - name: Shorts seslerini oluştur
         run: |
+          echo "=========================================="
+          echo "SHORTS SESLERİ"
+          echo "=========================================="
+
           python research/research/shorts_tts.py
 
       - name: Shorts altyazı metinlerini oluştur
         run: |
+          echo "=========================================="
+          echo "SHORTS ALTYAZI METİNLERİ"
+          echo "=========================================="
+
           python research/research/shorts_subtitles.py
 
       - name: Shorts videolarını oluştur
         run: |
+          echo "=========================================="
+          echo "SHORTS VIDEOLARI"
+          echo "=========================================="
+
           python research/research/shorts_editor.py
 
       - name: Shorts İngilizce altyazı ekle
         run: |
+          echo "=========================================="
+          echo "SHORTS İNGİLİZCE ALTYAZI"
+          echo "=========================================="
+
           python research/research/shorts_caption_editor.py
 
       - name: Shadow Archive branding ekle
         run: |
+          echo "=========================================="
+          echo "SHADOW ARCHIVE BRANDING"
+          echo "=========================================="
+
           python research/research/shorts_branding.py
+
+      # ==========================================================
+      # SHORTS CONTROL
+      # ==========================================================
 
       - name: Shorts kontrol et
         run: |
+          echo "=========================================="
+          echo "SHORTS KONTROLÜ"
+          echo "=========================================="
+
           SHORT_1=$(find research/video/shorts_branded \
             -maxdepth 1 \
             -type f \
@@ -197,20 +344,36 @@ jobs:
             | head -n 1)
 
           if [ -z "$SHORT_1" ]; then
-            echo "Short #1 bulunamadı."
+            echo "❌ Short #1 bulunamadı."
             exit 1
           fi
 
           if [ -z "$SHORT_2" ]; then
-            echo "Short #2 bulunamadı."
+            echo "❌ Short #2 bulunamadı."
             exit 1
           fi
 
+          echo ""
+          echo "SHORT #1:"
           ls -lh "$SHORT_1"
+
+          echo ""
+          echo "SHORT #2:"
           ls -lh "$SHORT_2"
+
+          echo ""
+          echo "✅ İki Short da hazır."
+
+      # ==========================================================
+      # PRODUCTION PACKAGE
+      # ==========================================================
 
       - name: Production Package hazırla
         run: |
+          echo "=========================================="
+          echo "PRODUCTION PACKAGE HAZIRLANIYOR"
+          echo "=========================================="
+
           mkdir -p production_package/main
           mkdir -p production_package/shorts
           mkdir -p production_package/research
@@ -240,6 +403,26 @@ jobs:
             -name "*_english.srt" \
             | head -n 1)
 
+          if [ -z "$MAIN_VIDEO" ]; then
+            echo "❌ Ana video bulunamadı."
+            exit 1
+          fi
+
+          if [ -z "$SHORT_1" ]; then
+            echo "❌ Short #1 bulunamadı."
+            exit 1
+          fi
+
+          if [ -z "$SHORT_2" ]; then
+            echo "❌ Short #2 bulunamadı."
+            exit 1
+          fi
+
+          if [ -z "$SUBTITLE" ]; then
+            echo "❌ Altyazı bulunamadı."
+            exit 1
+          fi
+
           cp "$MAIN_VIDEO" \
             production_package/main/main_video.mp4
 
@@ -256,7 +439,9 @@ jobs:
             production_package/research/current_topic.json
 
           PRODUCTION_DATE=$(TZ=Europe/Istanbul date +%Y-%m-%d)
+
           PRODUCTION_TIME=$(TZ=Europe/Istanbul date '+%Y-%m-%d %H:%M:%S')
+
           PRODUCTION_ID="${PRODUCTION_DATE}-${GITHUB_RUN_ID}"
 
           cat > production_package/metadata/production.json <<EOF
@@ -266,10 +451,13 @@ jobs:
             "production_time_turkey": "${PRODUCTION_TIME}",
             "github_run_id": "${GITHUB_RUN_ID}",
             "github_run_number": "${GITHUB_RUN_NUMBER}",
-            "workflow": "Shadow Archive - Master Production"
+            "workflow": "Shadow Archive - Master Production",
+            "topic": "$(python -c 'import json; print(json.load(open("research/current_topic.json", encoding="utf-8"))["topic"].replace("\"", "\\\""))')",
+            "title": "$(python -c 'import json; print(json.load(open("research/current_topic.json", encoding="utf-8"))["title"].replace("\"", "\\\""))')"
           }
           EOF
 
+          echo ""
           echo "=========================================="
           echo "PRODUCTION PACKAGE HAZIR"
           echo "=========================================="
@@ -279,7 +467,7 @@ jobs:
           cat production_package/metadata/production.json
 
           echo ""
-          echo "BUGUNUN KONUSU:"
+          echo "BUGÜNÜN KONUSU:"
           cat production_package/research/current_topic.json
 
           echo ""
@@ -288,12 +476,20 @@ jobs:
             -type f \
             -exec ls -lh {} \;
 
+      # ==========================================================
+      # ARTIFACT
+      # ==========================================================
+
       - name: Production Package yükle
         uses: actions/upload-artifact@v4
         with:
           name: shadow-archive-complete-production
           path: production_package
           retention-days: 7
+
+      # ==========================================================
+      # COMPLETE
+      # ==========================================================
 
       - name: Production tamamlandı
         run: |
@@ -310,7 +506,27 @@ jobs:
           TZ=Europe/Istanbul date '+%Y-%m-%d %H:%M:%S'
 
           echo ""
-          echo "BUGUNUN YENI ICERIK PAKETI HAZIR."
+          echo "BUGÜNÜN İÇERİĞİ:"
+          python - <<'PY'
+          import json
+
+          with open(
+              "production_package/research/current_topic.json",
+              "r",
+              encoding="utf-8"
+          ) as f:
+              data = json.load(f)
+
+          print(
+              "Konu:",
+              data["topic"]
+          )
+
+          print(
+              "Başlık:",
+              data["title"]
+          )
+          PY
 
           echo ""
           echo "09:00 → Short #1"
@@ -320,5 +536,8 @@ jobs:
           echo ""
           echo "Telegram yayın onayı Daily Publish"
           echo "workflow tarafından gönderilecektir."
+
+          echo ""
+          echo "✅ BUGÜNÜN ÜRETİM PAKETİ HAZIR."
 
           echo "=========================================="
