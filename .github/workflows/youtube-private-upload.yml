@@ -2,6 +2,11 @@ name: Shadow Archive - YouTube Private Upload
 
 on:
   workflow_dispatch:
+    inputs:
+      production_id:
+        description: "Yayınlanacak Production ID"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -19,10 +24,47 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Python Kodunu Kontrol Et
+      - name: Production ID kontrol
+        id: production
         run: |
           echo "=========================================="
           echo "SHADOW ARCHIVE — YOUTUBE PUBLISHER"
+          echo "=========================================="
+
+          PRODUCTION_ID="${{ inputs.production_id }}"
+
+          echo "Production ID:"
+          echo "$PRODUCTION_ID"
+
+          if [ -z "$PRODUCTION_ID" ]; then
+            echo ""
+            echo "❌ PRODUCTION ID BOŞ."
+            exit 1
+          fi
+
+          RUN_ID="${PRODUCTION_ID##*-}"
+
+          echo ""
+          echo "GitHub Production Run ID:"
+          echo "$RUN_ID"
+
+          if ! [[ "$RUN_ID" =~ ^[0-9]+$ ]]; then
+            echo ""
+            echo "❌ GEÇERSİZ RUN ID."
+            echo "Production ID: $PRODUCTION_ID"
+            exit 1
+          fi
+
+          echo ""
+          echo "production_id=$PRODUCTION_ID" >> "$GITHUB_OUTPUT"
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+
+          echo "=========================================="
+
+      - name: Python Kodunu Kontrol Et
+        run: |
+          echo "=========================================="
+          echo "YOUTUBE PUBLISHER KONTROL"
           echo "=========================================="
 
           echo "COMMIT:"
@@ -30,67 +72,90 @@ jobs:
 
           echo ""
           echo "YAYIN SAATLERİ:"
-          grep -n -A5 "short_1_time" research/youtube/youtube_private_upload.py
-          grep -n -A5 "main_time" research/youtube/youtube_private_upload.py
-          grep -n -A5 "short_2_time" research/youtube/youtube_private_upload.py
+          grep -n -A5 "short_1_time" research/youtube/youtube_private_upload.py || true
+          grep -n -A5 "main_time" research/youtube/youtube_private_upload.py || true
+          grep -n -A5 "short_2_time" research/youtube/youtube_private_upload.py || true
 
           echo ""
           echo "BEKLENEN:"
-          echo "Short #1  = 10:00 Türkiye"
-          echo "Ana Video  = 13:00 Türkiye"
+          echo "Short #1  = 09:00 Türkiye"
+          echo "Ana Video  = 12:00 Türkiye"
           echo "Short #2  = 21:00 Türkiye"
 
           echo "=========================================="
 
-      - name: Bugünün Master Production Run'ını Bul
-        id: find_run
+      - name: Production Run kontrol
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           echo "=========================================="
-          echo "BUGÜNÜN ÜRETİM PAKETİ ARANIYOR"
+          echo "PRODUCTION RUN KONTROL"
           echo "=========================================="
 
-          TODAY=$(TZ=Europe/Istanbul date +%Y-%m-%d)
+          RUN_ID="${{ steps.production.outputs.run_id }}"
 
-          echo "Türkiye tarihi:"
-          echo "$TODAY"
+          echo "Run ID:"
+          echo "$RUN_ID"
 
-          RUN_ID=$(gh run list \
-            --workflow="Shadow Archive - Master Production" \
-            --status=success \
-            --limit=20 \
-            --json databaseId,createdAt \
-            --jq ".[] | select(.createdAt | startswith(\"${TODAY}\")) | .databaseId" \
-            | tail -n 1)
+          RUN_INFO=$(gh run view \
+            "$RUN_ID" \
+            --repo "${{ github.repository }}" \
+            --json databaseId,status,conclusion,name,createdAt)
 
-          if [ -z "$RUN_ID" ]; then
+          echo ""
+          echo "RUN BİLGİSİ:"
+          echo "$RUN_INFO"
+
+          STATUS=$(echo "$RUN_INFO" | python -c '
+          import json
+          import sys
+          data = json.load(sys.stdin)
+          print(data.get("status", ""))
+          ')
+
+          CONCLUSION=$(echo "$RUN_INFO" | python -c '
+          import json
+          import sys
+          data = json.load(sys.stdin)
+          print(data.get("conclusion", ""))
+          ')
+
+          echo ""
+          echo "STATUS: $STATUS"
+          echo "CONCLUSION: $CONCLUSION"
+
+          if [ "$STATUS" != "completed" ]; then
             echo ""
-            echo "❌ BUGÜNÜN BAŞARILI MASTER PRODUCTION RUN'I BULUNAMADI."
+            echo "❌ PRODUCTION RUN HENÜZ TAMAMLANMAMIŞ."
+            exit 1
+          fi
+
+          if [ "$CONCLUSION" != "success" ]; then
             echo ""
-            echo "Türkiye tarihi: $TODAY"
+            echo "❌ PRODUCTION RUN BAŞARILI DEĞİL."
             exit 1
           fi
 
           echo ""
-          echo "✅ BUGÜNÜN PRODUCTION RUN'I BULUNDU"
-          echo "Run ID: $RUN_ID"
+          echo "✅ DOĞRU PRODUCTION RUN BAŞARILI."
+
           echo "=========================================="
 
-          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
-
-      - name: Download Today's Production Package
+      - name: Production Package indir
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          echo "=========================================="
+          echo "DOĞRU PRODUCTION PACKAGE İNDİRİLİYOR"
+          echo "=========================================="
+
+          RUN_ID="${{ steps.production.outputs.run_id }}"
+
           mkdir -p production_package
 
-          echo "=========================================="
-          echo "BUGÜNÜN PRODUCTION PACKAGE İNDİRİLİYOR"
-          echo "=========================================="
-
           gh run download \
-            "${{ steps.find_run.outputs.run_id }}" \
+            "$RUN_ID" \
+            --repo "${{ github.repository }}" \
             --name shadow-archive-complete-production \
             --dir production_package
 
@@ -112,52 +177,4 @@ jobs:
           test -f production_package/shorts/short_1.mp4
           test -f production_package/shorts/short_2.mp4
           test -f production_package/research/current_topic.json
-
-          echo "✓ Ana video bulundu"
-          echo "✓ Short #1 bulundu"
-          echo "✓ Short #2 bulundu"
-          echo "✓ Konu bilgisi bulundu"
-
-          echo ""
-          echo "BUGÜNÜN KONU BİLGİSİ:"
-          cat production_package/research/current_topic.json
-
-          echo ""
-          echo "=========================================="
-          echo "PRODUCTION PACKAGE HAZIR"
-          echo "=========================================="
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install YouTube Dependencies
-        run: |
-          pip install \
-            google-api-python-client \
-            google-auth \
-            google-auth-oauthlib \
-            google-auth-httplib2
-
-      - name: Upload Videos To YouTube
-        env:
-          YOUTUBE_OAUTH_CLIENT_JSON: ${{ secrets.YOUTUBE_OAUTH_CLIENT_JSON }}
-          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
-        run: |
-          echo "=========================================="
-          echo "SHADOW ARCHIVE — YOUTUBE PUBLISHER"
-          echo "=========================================="
-
-          echo "Production Run:"
-          echo "${{ steps.find_run.outputs.run_id }}"
-
-          echo ""
-          echo "Yayın sistemi başlatılıyor..."
-
-          python research/youtube/youtube_private_upload.py
-
-          echo ""
-          echo "=========================================="
-          echo "YOUTUBE PUBLISHING PROCESS COMPLETE"
-          echo "=========================================="
+          test -f
