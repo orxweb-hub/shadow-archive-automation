@@ -61,8 +61,15 @@ jobs:
                       response.read().decode()
                   )
 
-          def run_workflow(workflow_name):
+          def run_workflow(workflow_name, production_id=None):
+              print("==========================================")
+              print("WORKFLOW BAŞLATILIYOR")
               print("WORKFLOW:", workflow_name)
+
+              if production_id:
+                  print("PRODUCTION ID:", production_id)
+
+              print("==========================================")
 
               result = subprocess.run(
                   [
@@ -85,7 +92,13 @@ jobs:
                   print(result.stderr)
                   return False
 
-              workflows = json.loads(result.stdout)
+              try:
+                  workflows = json.loads(result.stdout)
+              except Exception as e:
+                  print("WORKFLOW JSON ERROR:", e)
+                  print(result.stdout)
+                  return False
+
               workflow_path = None
 
               for workflow in workflows:
@@ -95,19 +108,28 @@ jobs:
 
               if not workflow_path:
                   print("WORKFLOW BULUNAMADI")
+                  print("ARANAN:", workflow_name)
                   return False
 
               print("WORKFLOW PATH:", workflow_path)
 
+              command = [
+                  "gh",
+                  "workflow",
+                  "run",
+                  workflow_path,
+                  "--repo",
+                  REPO
+              ]
+
+              if production_id:
+                  command.extend([
+                      "--field",
+                      f"production_id={production_id}"
+                  ])
+
               result = subprocess.run(
-                  [
-                      "gh",
-                      "workflow",
-                      "run",
-                      workflow_path,
-                      "--repo",
-                      REPO
-                  ],
+                  command,
                   capture_output=True,
                   text=True
               )
@@ -129,7 +151,10 @@ jobs:
               print("BOT API HATASI")
               raise SystemExit(1)
 
-          print("BOT:", me["result"].get("username"))
+          print(
+              "BOT:",
+              me["result"].get("username")
+          )
 
           # WEBHOOK
           webhook = telegram("getWebhookInfo")
@@ -147,7 +172,7 @@ jobs:
                   info.get("pending_update_count")
               )
 
-          # UPDATES
+          # TELEGRAM UPDATES
           updates = telegram(
               "getUpdates",
               {
@@ -165,7 +190,10 @@ jobs:
 
           results = updates.get("result", [])
 
-          print("UPDATE SAYISI:", len(results))
+          print(
+              "UPDATE SAYISI:",
+              len(results)
+          )
 
           if not results:
               print("NO NEW TELEGRAM UPDATES")
@@ -182,13 +210,13 @@ jobs:
               if not callback:
                   continue
 
-              action = callback.get("data")
+              raw_action = callback.get("data", "")
               callback_id = callback.get("id")
               message = callback.get("message")
 
               print("==========================================")
               print("BUTTON CLICK DETECTED")
-              print("ACTION:", action)
+              print("RAW ACTION:", raw_action)
               print("UPDATE ID:", last_update_id)
               print("==========================================")
 
@@ -201,39 +229,92 @@ jobs:
                       }
                   )
               except Exception as e:
-                  print("CALLBACK ERROR:", e)
+                  print(
+                      "CALLBACK ERROR:",
+                      e
+                  )
+
+              # ------------------------------------------
+              # ACTION + PRODUCTION ID AYIR
+              # ------------------------------------------
+
+              action = raw_action
+              production_id = None
+
+              if ":" in raw_action:
+                  action, production_id = raw_action.split(
+                      ":",
+                      1
+                  )
+
+                  production_id = production_id.strip()
+
+              print("ACTION:", action)
+              print(
+                  "PRODUCTION ID:",
+                  production_id
+              )
 
               text = ""
+
+              # ------------------------------------------
+              # YAYINLA
+              # ------------------------------------------
 
               if action == "publish_approve":
 
                   print("PUBLISH APPROVED")
 
-                  success = run_workflow(
-                      "Shadow Archive - YouTube Private Upload"
-                  )
+                  if not production_id:
+                      text = (
+                          "❌ SHADOW ARCHIVE\n\n"
+                          "Production ID bulunamadı.\n\n"
+                          "Bu mesaj eski bir onay mesajı olabilir."
+                      )
 
-                  if success:
-                      text = (
-                          "🤖 SHADOW ARCHIVE\n\n"
-                          "▶️ YAYIN ONAYLANDI\n\n"
-                          "☁️ YouTube yükleme sistemi başlatıldı.\n\n"
-                          "📱 Short #1 → 10:00\n"
-                          "🎬 Ana Video → 13:00\n"
-                          "📱 Short #2 → 21:00"
-                      )
                   else:
-                      text = (
-                          "❌ YOUTUBE WORKFLOW HATASI\n\n"
-                          "YouTube workflow başlatılamadı."
+
+                      success = run_workflow(
+                          "Shadow Archive - YouTube Private Upload",
+                          production_id
                       )
+
+                      if success:
+                          text = (
+                              "🤖 SHADOW ARCHIVE\n\n"
+                              "▶️ YAYIN ONAYLANDI\n\n"
+                              f"🆔 Production ID:\n"
+                              f"{production_id}\n\n"
+                              "☁️ YouTube yükleme sistemi başlatıldı.\n\n"
+                              "📱 Short #1 → 09:00\n"
+                              "🎬 Ana Video → 12:00\n"
+                              "📱 Short #2 → 21:00"
+                          )
+
+                      else:
+                          text = (
+                              "❌ SHADOW ARCHIVE\n\n"
+                              "YouTube workflow başlatılamadı.\n\n"
+                              f"🆔 Production ID:\n"
+                              f"{production_id}"
+                          )
+
+              # ------------------------------------------
+              # YAYINLAMA
+              # ------------------------------------------
 
               elif action == "publish_reject":
 
                   text = (
                       "🤖 SHADOW ARCHIVE\n\n"
-                      "❌ YAYIN REDDEDİLDİ"
+                      "❌ YAYIN REDDEDİLDİ\n\n"
+                      f"🆔 Production ID:\n"
+                      f"{production_id or 'Bilinmiyor'}"
                   )
+
+              # ------------------------------------------
+              # KONU ONAY
+              # ------------------------------------------
 
               elif action == "topic_approve":
 
@@ -247,10 +328,15 @@ jobs:
                           "✅ KONU ONAYLANDI\n\n"
                           "🎬 Üretim başlatıldı."
                       )
+
                   else:
                       text = (
                           "❌ MASTER WORKFLOW HATASI"
                       )
+
+              # ------------------------------------------
+              # KONU RED
+              # ------------------------------------------
 
               elif action == "topic_reject":
 
@@ -259,6 +345,10 @@ jobs:
                       "❌ KONU REDDEDİLDİ"
                   )
 
+              # ------------------------------------------
+              # SAAT DEĞİŞTİR
+              # ------------------------------------------
+
               elif action == "change_time":
 
                   text = (
@@ -266,20 +356,29 @@ jobs:
                       "Yeni yayın saati özelliği hazırlanıyor."
                   )
 
+              # ------------------------------------------
+              # BİLİNMEYEN
+              # ------------------------------------------
+
               else:
 
                   text = (
                       "⚠️ SHADOW ARCHIVE\n\n"
-                      "Bilinmeyen işlem."
+                      "Bilinmeyen işlem.\n\n"
+                      f"İşlem: {raw_action}"
                   )
 
-              # Telegram mesajını butonsuz hale getir
+              # ------------------------------------------
+              # TELEGRAM MESAJINI GÜNCELLE
+              # ------------------------------------------
+
               if message:
 
                   chat_id = message["chat"]["id"]
                   message_id = message["message_id"]
 
                   try:
+
                       telegram(
                           "editMessageText",
                           {
@@ -294,18 +393,25 @@ jobs:
                           }
                       )
 
-                      print("TELEGRAM MESSAGE UPDATED")
+                      print(
+                          "TELEGRAM MESSAGE UPDATED"
+                      )
 
                   except Exception as e:
+
                       print(
                           "MESSAGE UPDATE ERROR:",
                           e
                       )
 
-          # İşlenen update'leri onayla
+          # ------------------------------------------
+          # UPDATE'LERİ ONAYLA
+          # ------------------------------------------
+
           if last_update_id is not None:
 
               try:
+
                   telegram(
                       "getUpdates",
                       {
@@ -314,9 +420,12 @@ jobs:
                       }
                   )
 
-                  print("UPDATES CONFIRMED")
+                  print(
+                      "UPDATES CONFIRMED"
+                  )
 
               except Exception as e:
+
                   print(
                       "OFFSET ERROR:",
                       e
