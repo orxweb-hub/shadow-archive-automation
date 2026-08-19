@@ -152,6 +152,7 @@ jobs:
           mkdir -p production_package/main
           mkdir -p production_package/shorts
           mkdir -p production_package/research
+          mkdir -p production_package/metadata
 
           MAIN_VIDEO=$(find research/video -maxdepth 1 -type f -name "*_v4.mp4" | head -n 1)
           SHORT_1=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_1_branded.mp4" | head -n 1)
@@ -164,10 +165,31 @@ jobs:
           cp "$SUBTITLE" production_package/main/main_video_english.srt
           cp research/current_topic.json production_package/research/current_topic.json
 
+          PRODUCTION_DATE=$(TZ=Europe/Istanbul date +%Y-%m-%d)
+          PRODUCTION_TIME=$(TZ=Europe/Istanbul date '+%Y-%m-%d %H:%M:%S')
+          PRODUCTION_ID="${PRODUCTION_DATE}-${GITHUB_RUN_ID}"
+
+          cat > production_package/metadata/production.json <<EOF
+          {
+            "production_id": "${PRODUCTION_ID}",
+            "production_date": "${PRODUCTION_DATE}",
+            "production_time_turkey": "${PRODUCTION_TIME}",
+            "github_run_id": "${GITHUB_RUN_ID}",
+            "github_run_number": "${GITHUB_RUN_NUMBER}",
+            "workflow": "Shadow Archive - Master Production"
+          }
+          EOF
+
           echo "=========================================="
           echo "PRODUCTION PACKAGE HAZIR"
           echo "=========================================="
 
+          echo ""
+          echo "PRODUCTION ID:"
+          cat production_package/metadata/production.json
+
+          echo ""
+          echo "DOSYALAR:"
           find production_package -type f -exec ls -lh {} \;
 
       - name: Production Package yükle
@@ -182,8 +204,24 @@ jobs:
           echo "=========================================="
           echo "SHADOW ARCHIVE — PRODUCTION TAMAMLANDI"
           echo "=========================================="
+
+          echo ""
+          echo "Production ID:"
+          echo "${GITHUB_RUN_ID}"
+
+          echo ""
+          echo "Türkiye tarihi:"
+          TZ=Europe/Istanbul date '+%Y-%m-%d %H:%M:%S'
+
+          echo ""
           echo "Yeni günlük içerik paketi hazır."
           echo ""
-          echo "08:30 Telegram yayın onayı Daily Publish"
+          echo "09:00 → Short #1"
+          echo "12:00 → Ana Video"
+          echo "21:00 → Short #2"
+
+          echo ""
+          echo "Telegram yayın onayı Daily Publish"
           echo "workflow tarafından gönderilecektir."
+
           echo "=========================================="
