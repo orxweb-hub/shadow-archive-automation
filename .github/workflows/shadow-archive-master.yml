@@ -35,45 +35,58 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      - name: Yeni konu üreticisini bul
+      - name: YENI KONU OLUSTUR
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
           echo "=========================================="
-          echo "SHADOW ARCHIVE — YENI KONU SISTEMI"
+          echo "SHADOW ARCHIVE — YENI KONU URETILIYOR"
           echo "=========================================="
 
-          echo ""
-          echo "Research klasoru:"
-          find research -maxdepth 3 -type f \
-            -name "*.py" \
-            -print | sort
+          python research/research/daily_topic_generator.py
 
           echo ""
-          echo "Konu ile ilgili scriptler aranıyor..."
+          echo "=========================================="
+          echo "YENI CURRENT TOPIC"
+          echo "=========================================="
 
-          find research -type f -name "*.py" \
-            | grep -Ei \
-            "topic|finder|discover|subject|daily|idea" \
-            || true
+          cat research/current_topic.json
 
           echo ""
           echo "=========================================="
 
-      - name: Mevcut konuyu kontrol et
+      - name: Yeni konuyu GitHub'a kaydet
+        run: |
+          echo "=========================================="
+          echo "CURRENT TOPIC GITHUB'A KAYDEDILIYOR"
+          echo "=========================================="
+
+          git config user.name "Shadow Archive Bot"
+          git config user.email "shadow-archive-bot@users.noreply.github.com"
+
+          git add research/current_topic.json
+
+          if git diff --cached --quiet; then
+            echo "Yeni topic değişikliği bulunamadı."
+          else
+            git commit -m "Update daily Shadow Archive topic"
+            git push origin main
+            echo "Yeni konu GitHub'a kaydedildi."
+          fi
+
+          echo "=========================================="
+
+      - name: Güncel konuyu kontrol et
         run: |
           echo "=========================================="
           echo "SHADOW ARCHIVE MASTER PRODUCTION"
           echo "=========================================="
 
-          if [ ! -f research/current_topic.json ]; then
-            echo "❌ current_topic.json bulunamadı."
-            exit 1
-          fi
-
-          echo ""
-          echo "CURRENT TOPIC:"
+          echo "BUGUNUN KONUSU:"
           cat research/current_topic.json
 
-          echo ""
           echo "=========================================="
 
       - name: Web Research
@@ -112,7 +125,7 @@ jobs:
             | head -n 1)
 
           if [ -z "$MAIN_VIDEO" ]; then
-            echo "❌ Ana video bulunamadı."
+            echo "Ana video bulunamadı."
             exit 1
           fi
 
@@ -137,7 +150,7 @@ jobs:
             | head -n 1)
 
           if [ -z "$SUBTITLE" ]; then
-            echo "❌ İngilizce altyazı bulunamadı."
+            echo "İngilizce altyazı bulunamadı."
             exit 1
           fi
 
@@ -184,12 +197,12 @@ jobs:
             | head -n 1)
 
           if [ -z "$SHORT_1" ]; then
-            echo "❌ Short #1 bulunamadı."
+            echo "Short #1 bulunamadı."
             exit 1
           fi
 
           if [ -z "$SHORT_2" ]; then
-            echo "❌ Short #2 bulunamadı."
+            echo "Short #2 bulunamadı."
             exit 1
           fi
 
@@ -297,7 +310,7 @@ jobs:
           TZ=Europe/Istanbul date '+%Y-%m-%d %H:%M:%S'
 
           echo ""
-          echo "BUGUNUN PAKETI HAZIR."
+          echo "BUGUNUN YENI ICERIK PAKETI HAZIR."
 
           echo ""
           echo "09:00 → Short #1"
