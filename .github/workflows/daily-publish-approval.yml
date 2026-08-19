@@ -15,26 +15,25 @@ jobs:
 
     steps:
 
-      - name: Repository'i indir
+      - name: Repository indir
         uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 1
 
-      - name: Bugünün Master Production Run'ını bul
+      - name: Bugunun Production Run bul
         id: find_run
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           echo "=========================================="
           echo "SHADOW ARCHIVE"
-          echo "BUGÜNÜN PRODUCTION PAKETİ ARANIYOR"
+          echo "BUGUNUN PRODUCTION PAKETI ARANIYOR"
           echo "=========================================="
 
           TODAY=$(TZ=Europe/Istanbul date +%Y-%m-%d)
 
-          echo "Türkiye tarihi: $TODAY"
-          echo ""
+          echo "Turkiye tarihi: $TODAY"
 
           gh run list \
             --workflow="Shadow Archive - Master Production" \
@@ -43,7 +42,7 @@ jobs:
             --json databaseId,createdAt \
             > master_runs.json
 
-          python - "$TODAY" master_runs.json <<'PY' > selected_run.txt
+          python - "$TODAY" master_runs.json > selected_run.txt <<'PY'
           import json
           import sys
           from datetime import datetime
@@ -90,12 +89,11 @@ jobs:
           RUN_ID=$(cat selected_run.txt)
 
           if [ -z "$RUN_ID" ]; then
-            echo ""
-            echo "❌ BUGÜNÜN BAŞARILI MASTER PRODUCTION RUN'I BULUNAMADI."
+            echo "BUGUNUN MASTER PRODUCTION RUN'I BULUNAMADI"
             exit 1
           fi
 
-          echo "✅ Master Production Run ID: $RUN_ID"
+          echo "Master Production Run ID: $RUN_ID"
 
           echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
 
@@ -104,7 +102,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           echo "=========================================="
-          echo "PRODUCTION PACKAGE İNDİRİLİYOR"
+          echo "PRODUCTION PACKAGE INDIRILIYOR"
           echo "=========================================="
 
           mkdir -p production_package
@@ -132,13 +130,13 @@ jobs:
           import json
           import os
           import sys
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
 
-          metadata_file = (
-              "production_package/metadata/production.json"
-          )
+          metadata_file = "production_package/metadata/production.json"
 
           if not os.path.exists(metadata_file):
-              print("❌ production.json bulunamadı.")
+              print("production.json bulunamadi")
               sys.exit(1)
 
           with open(
@@ -152,9 +150,9 @@ jobs:
           production_date = data["production_date"]
           package_run_id = str(data["github_run_id"])
 
-          today = os.popen(
-              "TZ=Europe/Istanbul date +%Y-%m-%d"
-          ).read().strip()
+          today = datetime.now(
+              ZoneInfo("Europe/Istanbul")
+          ).date().isoformat()
 
           expected_run_id = "${{ steps.find_run.outputs.run_id }}"
 
@@ -165,11 +163,11 @@ jobs:
           print("Expected Run ID:", expected_run_id)
 
           if production_date != today:
-              print("❌ Paket bugüne ait değil.")
+              print("Paket bugune ait degil")
               sys.exit(1)
 
           if package_run_id != expected_run_id:
-              print("❌ Run ID uyuşmuyor.")
+              print("Run ID uyusmuyor")
               sys.exit(1)
 
           with open(
@@ -178,18 +176,23 @@ jobs:
               encoding="utf-8"
           ) as out:
               out.write(
-                  f"production_id={production_id}\n"
+                  "production_id="
+                  + production_id
+                  + "\n"
               )
+
               out.write(
-                  f"package_run_id={package_run_id}\n"
+                  "package_run_id="
+                  + package_run_id
+                  + "\n"
               )
 
           print("")
-          print("✅ PAKET BUGÜNE AİT")
-          print("✅ RUN ID DOĞRULANDI")
+          print("PAKET BUGUNE AIT")
+          print("RUN ID DOGRULANDI")
           PY
 
-      - name: Video dosyalarını kontrol et
+      - name: Video dosyalarini kontrol et
         run: |
           echo "=========================================="
           echo "VIDEO DOSYALARI KONTROL"
@@ -200,25 +203,23 @@ jobs:
           test -f production_package/shorts/short_2.mp4
           test -f production_package/research/current_topic.json
 
-          echo "✅ Ana video bulundu"
-          echo "✅ Short #1 bulundu"
-          echo "✅ Short #2 bulundu"
-          echo "✅ current_topic.json bulundu"
+          echo "Ana video bulundu"
+          echo "Short 1 bulundu"
+          echo "Short 2 bulundu"
+          echo "current_topic bulundu"
 
       - name: Video bilgilerini oku
         id: topic
         run: |
           echo "=========================================="
-          echo "BUGÜNÜN VIDEO BİLGİLERİ"
+          echo "BUGUNUN VIDEO BILGILERI"
           echo "=========================================="
 
           python - <<'PY'
           import json
           import os
 
-          path = (
-              "production_package/research/current_topic.json"
-          )
+          path = "production_package/research/current_topic.json"
 
           with open(
               path,
@@ -250,8 +251,10 @@ jobs:
           else:
               hashtags_text = str(hashtags)
 
+          output = os.environ["GITHUB_OUTPUT"]
+
           with open(
-              os.environ["GITHUB_OUTPUT"],
+              output,
               "a",
               encoding="utf-8"
           ) as out:
@@ -268,11 +271,11 @@ jobs:
               out.write(hashtags_text + "\n")
               out.write("EOF\n")
 
-          print("BAŞLIK:")
+          print("BASLIK:")
           print(title)
 
           print("")
-          print("AÇIKLAMA:")
+          print("ACIKLAMA:")
           print(description)
 
           print("")
@@ -280,7 +283,7 @@ jobs:
           print(hashtags_text)
           PY
 
-      - name: Telegram Onay Mesajı Gönder
+      - name: Telegram Onay Mesaji Gonder
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -307,41 +310,41 @@ jobs:
           hashtags = os.environ["VIDEO_HASHTAGS"]
           production_id = os.environ["PRODUCTION_ID"]
 
-          message = f"""🤖 SHADOW ARCHIVE — GÜNLÜK YAYIN HAZIR
+          lines = [
+              "🤖 SHADOW ARCHIVE — GÜNLÜK YAYIN HAZIR",
+              "",
+              "🎬 VİDEO BAŞLIĞI:",
+              title,
+              "",
+              "📝 AÇIKLAMA:",
+              description,
+              "",
+              hashtags,
+              "",
+              "🆔 Production ID:",
+              production_id,
+              "",
+              "📱 Short #1 → 09:00",
+              "🎥 Ana Video → 12:00",
+              "📱 Short #2 → 21:00",
+              "",
+              "Üç içerik de YouTube'a planlanacak.",
+              "",
+              "▶️ Yayınlamak için aşağıdaki butona bas."
+          ]
 
-🎬 VİDEO BAŞLIĞI:
-{title}
-
-📝 AÇIKLAMA:
-{description}
-
-{hashtags}
-
-🆔 Production ID:
-{production_id}
-
-📱 Short #1 → 09:00
-🎥 Ana Video → 12:00
-📱 Short #2 → 21:00
-
-Üç içerik de YouTube'a planlanacak.
-
-▶️ Yayınlamak için aşağıdaki butona bas."""
+          message = "\n".join(lines)
 
           keyboard = {
               "inline_keyboard": [
                   [
                       {
                           "text": "▶️ YAYINLA",
-                          "callback_data": (
-                              f"publish_approve:{production_id}"
-                          )
+                          "callback_data": "publish_approve:" + production_id
                       },
                       {
                           "text": "❌ YAYINLAMA",
-                          "callback_data": (
-                              f"publish_reject:{production_id}"
-                          )
+                          "callback_data": "publish_reject:" + production_id
                       }
                   ]
               ]
@@ -354,13 +357,14 @@ jobs:
                   "reply_markup": json.dumps(
                       keyboard,
                       ensure_ascii=False
-                  ),
+                  )
               }
           ).encode("utf-8")
 
           url = (
-              f"https://api.telegram.org/"
-              f"bot{token}/sendMessage"
+              "https://api.telegram.org/bot"
+              + token
+              + "/sendMessage"
           )
 
           request = urllib.request.Request(
@@ -380,10 +384,10 @@ jobs:
           print(result)
 
           if not result.get("ok"):
-              print("❌ TELEGRAM MESAJI GÖNDERİLEMEDİ")
+              print("TELEGRAM MESAJI GONDERILEMEDI")
               raise SystemExit(1)
 
           print("")
-          print("✅ TELEGRAM ONAY MESAJI GÖNDERİLDİ")
+          print("TELEGRAM ONAY MESAJI GONDERILDI")
           print("==========================================")
           PY
