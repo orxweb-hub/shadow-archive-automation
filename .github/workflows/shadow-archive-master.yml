@@ -35,13 +35,45 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y ffmpeg
 
-      - name: Güncel konuyu kontrol et
+      - name: Yeni konu üreticisini bul
+        run: |
+          echo "=========================================="
+          echo "SHADOW ARCHIVE — YENI KONU SISTEMI"
+          echo "=========================================="
+
+          echo ""
+          echo "Research klasoru:"
+          find research -maxdepth 3 -type f \
+            -name "*.py" \
+            -print | sort
+
+          echo ""
+          echo "Konu ile ilgili scriptler aranıyor..."
+
+          find research -type f -name "*.py" \
+            | grep -Ei \
+            "topic|finder|discover|subject|daily|idea" \
+            || true
+
+          echo ""
+          echo "=========================================="
+
+      - name: Mevcut konuyu kontrol et
         run: |
           echo "=========================================="
           echo "SHADOW ARCHIVE MASTER PRODUCTION"
           echo "=========================================="
+
+          if [ ! -f research/current_topic.json ]; then
+            echo "❌ current_topic.json bulunamadı."
+            exit 1
+          fi
+
+          echo ""
           echo "CURRENT TOPIC:"
           cat research/current_topic.json
+
+          echo ""
           echo "=========================================="
 
       - name: Web Research
@@ -73,10 +105,14 @@ jobs:
 
       - name: Ana videoyu kontrol et
         run: |
-          MAIN_VIDEO=$(find research/video -maxdepth 1 -type f -name "*_v4.mp4" | head -n 1)
+          MAIN_VIDEO=$(find research/video \
+            -maxdepth 1 \
+            -type f \
+            -name "*_v4.mp4" \
+            | head -n 1)
 
           if [ -z "$MAIN_VIDEO" ]; then
-            echo "Ana video bulunamadı."
+            echo "❌ Ana video bulunamadı."
             exit 1
           fi
 
@@ -94,10 +130,14 @@ jobs:
 
       - name: İngilizce altyazıyı kontrol et
         run: |
-          SUBTITLE=$(find research/video/subtitles -maxdepth 1 -type f -name "*_english.srt" | head -n 1)
+          SUBTITLE=$(find research/video/subtitles \
+            -maxdepth 1 \
+            -type f \
+            -name "*_english.srt" \
+            | head -n 1)
 
           if [ -z "$SUBTITLE" ]; then
-            echo "İngilizce altyazı bulunamadı."
+            echo "❌ İngilizce altyazı bulunamadı."
             exit 1
           fi
 
@@ -131,16 +171,25 @@ jobs:
 
       - name: Shorts kontrol et
         run: |
-          SHORT_1=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_1_branded.mp4" | head -n 1)
-          SHORT_2=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_2_branded.mp4" | head -n 1)
+          SHORT_1=$(find research/video/shorts_branded \
+            -maxdepth 1 \
+            -type f \
+            -name "*_short_1_branded.mp4" \
+            | head -n 1)
+
+          SHORT_2=$(find research/video/shorts_branded \
+            -maxdepth 1 \
+            -type f \
+            -name "*_short_2_branded.mp4" \
+            | head -n 1)
 
           if [ -z "$SHORT_1" ]; then
-            echo "Short #1 bulunamadı."
+            echo "❌ Short #1 bulunamadı."
             exit 1
           fi
 
           if [ -z "$SHORT_2" ]; then
-            echo "Short #2 bulunamadı."
+            echo "❌ Short #2 bulunamadı."
             exit 1
           fi
 
@@ -154,16 +203,44 @@ jobs:
           mkdir -p production_package/research
           mkdir -p production_package/metadata
 
-          MAIN_VIDEO=$(find research/video -maxdepth 1 -type f -name "*_v4.mp4" | head -n 1)
-          SHORT_1=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_1_branded.mp4" | head -n 1)
-          SHORT_2=$(find research/video/shorts_branded -maxdepth 1 -type f -name "*_short_2_branded.mp4" | head -n 1)
-          SUBTITLE=$(find research/video/subtitles -maxdepth 1 -type f -name "*_english.srt" | head -n 1)
+          MAIN_VIDEO=$(find research/video \
+            -maxdepth 1 \
+            -type f \
+            -name "*_v4.mp4" \
+            | head -n 1)
 
-          cp "$MAIN_VIDEO" production_package/main/main_video.mp4
-          cp "$SHORT_1" production_package/shorts/short_1.mp4
-          cp "$SHORT_2" production_package/shorts/short_2.mp4
-          cp "$SUBTITLE" production_package/main/main_video_english.srt
-          cp research/current_topic.json production_package/research/current_topic.json
+          SHORT_1=$(find research/video/shorts_branded \
+            -maxdepth 1 \
+            -type f \
+            -name "*_short_1_branded.mp4" \
+            | head -n 1)
+
+          SHORT_2=$(find research/video/shorts_branded \
+            -maxdepth 1 \
+            -type f \
+            -name "*_short_2_branded.mp4" \
+            | head -n 1)
+
+          SUBTITLE=$(find research/video/subtitles \
+            -maxdepth 1 \
+            -type f \
+            -name "*_english.srt" \
+            | head -n 1)
+
+          cp "$MAIN_VIDEO" \
+            production_package/main/main_video.mp4
+
+          cp "$SHORT_1" \
+            production_package/shorts/short_1.mp4
+
+          cp "$SHORT_2" \
+            production_package/shorts/short_2.mp4
+
+          cp "$SUBTITLE" \
+            production_package/main/main_video_english.srt
+
+          cp research/current_topic.json \
+            production_package/research/current_topic.json
 
           PRODUCTION_DATE=$(TZ=Europe/Istanbul date +%Y-%m-%d)
           PRODUCTION_TIME=$(TZ=Europe/Istanbul date '+%Y-%m-%d %H:%M:%S')
@@ -189,8 +266,14 @@ jobs:
           cat production_package/metadata/production.json
 
           echo ""
+          echo "BUGUNUN KONUSU:"
+          cat production_package/research/current_topic.json
+
+          echo ""
           echo "DOSYALAR:"
-          find production_package -type f -exec ls -lh {} \;
+          find production_package \
+            -type f \
+            -exec ls -lh {} \;
 
       - name: Production Package yükle
         uses: actions/upload-artifact@v4
@@ -214,7 +297,8 @@ jobs:
           TZ=Europe/Istanbul date '+%Y-%m-%d %H:%M:%S'
 
           echo ""
-          echo "Yeni günlük içerik paketi hazır."
+          echo "BUGUNUN PAKETI HAZIR."
+
           echo ""
           echo "09:00 → Short #1"
           echo "12:00 → Ana Video"
