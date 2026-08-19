@@ -48,25 +48,43 @@ def load_topic():
 
     return {
         "topic": data.get("topic", "Shadow Archive"),
-        "title": data.get("title", data.get("topic", "Shadow Archive")),
+        "title": data.get(
+            "title",
+            data.get("topic", "Shadow Archive")
+        ),
         "description": data.get("description", ""),
         "hashtags": data.get("hashtags", []),
     }
 
 
 def get_publish_day():
+    """
+    Yayın planı:
+
+    09:00 → Short #1
+    12:00 → Ana Video
+    21:00 → Short #2
+
+    Onay 09:00'dan önce gelirse:
+        içerikler aynı gün yayınlanır.
+
+    Onay 09:00 veya sonrasında gelirse:
+        tüm içerikler ertesi güne alınır.
+
+    Böylece hiçbir video geçmiş bir saate
+    planlanmaya çalışılmaz.
+    """
+
     now = datetime.now(TURKEY)
 
-    # Onay 08:30 civarında geldiğinde içerikler aynı gün yayınlanır.
-    # Eğer işlem 10:00'dan sonra yapılırsa ertesi güne alınır.
-    today_10 = now.replace(
-        hour=10,
+    today_09 = now.replace(
+        hour=9,
         minute=0,
         second=0,
         microsecond=0,
     )
 
-    if now < today_10:
+    if now < today_09:
         return now.date()
 
     return (now + timedelta(days=1)).date()
@@ -84,238 +102,16 @@ def turkey_to_utc(date_value, hour, minute):
 
     utc_time = turkey_time.astimezone(timezone.utc)
 
-    return utc_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+    return utc_time.strftime(
+        "%Y-%m-%dT%H:%M:%SZ"
+    )
 
 
-def build_main_description(data):
-    description = data["description"].strip()
+def load_metadata():
+    metadata_file = Path(
+        "production_package/metadata/production.json"
+    )
 
-    if not description:
-        description = (
-            f"{data['topic']} hakkında Shadow Archive "
-            "tarafından hazırlanan araştırma videosu."
-        )
-
-    hashtags = data["hashtags"]
-
-    if isinstance(hashtags, list):
-        hashtag_text = " ".join(
-            str(x) if str(x).startswith("#") else f"#{x}"
-            for x in hashtags
-        )
-    else:
-        hashtag_text = str(hashtags)
-
-    return f"""{description}
-
-Shadow Archive
-Mystery • Unsolved Cases • Real Events
-
-{hashtag_text}
-
-#ShadowArchive
-"""
-
-
-def build_short_description(data, number):
-    return f"""{data['topic']}
-
-Shadow Archive'dan kısa bir bölüm.
-
-Daha fazla gizemli olay ve gerçek hikâye için
-Shadow Archive kanalını takip edin.
-
-#{data['topic'].replace(" ", "")}
-#ShadowArchive
-#Shorts
-"""
-
-
-def upload_video(video_file, title, description, publish_at, tags):
-    if not video_file.exists():
+    if not metadata_file.exists():
         raise FileNotFoundError(
-            f"Video bulunamadı: {video_file}"
-        )
-
-    body = {
-        "snippet": {
-            "title": title,
-            "description": description,
-            "tags": tags,
-            "categoryId": "24",
-        },
-        "status": {
-            "privacyStatus": "private",
-            "publishAt": publish_at,
-            "selfDeclaredMadeForKids": False,
-        },
-    }
-
-    media = MediaFileUpload(
-        str(video_file),
-        chunksize=8 * 1024 * 1024,
-        resumable=True,
-    )
-
-    print()
-    print("==========================================")
-    print("YOUTUBE UPLOAD")
-    print("==========================================")
-    print("Title:", title)
-    print("File:", video_file)
-    print("Scheduled UTC:", publish_at)
-    print("Privacy: PRIVATE")
-    print("Upload starting...")
-    print("==========================================")
-
-    request = youtube.videos().insert(
-        part="snippet,status",
-        body=body,
-        media_body=media,
-    )
-
-    response = None
-
-    while response is None:
-        status, response = request.next_chunk()
-
-        if status:
-            progress = int(status.progress() * 100)
-            print(f"Upload progress: {progress}%")
-
-    print()
-    print("YOUTUBE UPLOAD SUCCESS")
-    print("Video ID:", response["id"])
-    print("Title:", response["snippet"]["title"])
-    print("Scheduled:", response["status"].get("publishAt"))
-    print("Privacy:", response["status"]["privacyStatus"])
-    print("==========================================")
-
-    return response
-
-
-def main():
-
-    print()
-    print("==========================================")
-    print("SHADOW ARCHIVE — DAILY YOUTUBE PUBLISHER")
-    print("==========================================")
-
-    data = load_topic()
-
-    topic = data["topic"]
-    main_title = data["title"]
-
-    publish_day = get_publish_day()
-
-    print("Topic:", topic)
-    print("Main title:", main_title)
-    print("Publish day:", publish_day)
-    print("Timezone: Europe/Istanbul")
-
-    # ==========================================
-    # SABİT YAYIN SAATLERİ
-    # ==========================================
-
-    short_1_time = turkey_to_utc(
-        publish_day,
-        10,
-        0,
-    )
-
-    main_time = turkey_to_utc(
-        publish_day,
-        13,
-        0,
-    )
-
-    short_2_time = turkey_to_utc(
-        publish_day,
-        21,
-        0,
-    )
-
-    print()
-    print("==========================================")
-    print("FINAL SCHEDULE")
-    print("==========================================")
-    print("📱 Short #1 :", short_1_time, "UTC")
-    print("🎬 Ana Video :", main_time, "UTC")
-    print("📱 Short #2 :", short_2_time, "UTC")
-    print("------------------------------------------")
-    print("🇹🇷 Short #1 : 10:00 Türkiye")
-    print("🇹🇷 Ana Video : 13:00 Türkiye")
-    print("🇹🇷 Short #2 : 21:00 Türkiye")
-    print("==========================================")
-
-    base_tags = [
-        "Shadow Archive",
-        "mystery",
-        "unsolved mystery",
-        "unsolved cases",
-        "real mystery",
-        "true mystery",
-        "gizem",
-        "gizemli olaylar",
-        "çözülemeyen olaylar",
-        "gerçek olaylar",
-    ]
-
-    short_1_title = (
-        f"{topic} — Gerçeği Ortaya Çıkaran Detay #Shorts"
-    )
-
-    short_2_title = (
-        f"{topic} — Hâlâ Cevaplanamayan Soru #Shorts"
-    )
-
-    # ==========================================
-    # SHORT #1 — 10:00
-    # ==========================================
-
-    upload_video(
-        SHORT_1,
-        short_1_title,
-        build_short_description(data, 1),
-        short_1_time,
-        base_tags + ["Shorts"],
-    )
-
-    # ==========================================
-    # ANA VİDEO — 13:00
-    # ==========================================
-
-    upload_video(
-        MAIN_VIDEO,
-        main_title,
-        build_main_description(data),
-        main_time,
-        base_tags,
-    )
-
-    # ==========================================
-    # SHORT #2 — 21:00
-    # ==========================================
-
-    upload_video(
-        SHORT_2,
-        short_2_title,
-        build_short_description(data, 2),
-        short_2_time,
-        base_tags + ["Shorts"],
-    )
-
-    print()
-    print("==========================================")
-    print("SHADOW ARCHIVE — YAYINLAR PLANLANDI")
-    print("==========================================")
-    print("📱 Short #1  → 10:00 Türkiye")
-    print("🎬 Ana Video  → 13:00 Türkiye")
-    print("📱 Short #2  → 21:00 Türkiye")
-    print()
-    print("YouTube planlama tamamlandı.")
-    print("==========================================")
-
-
-if __name__ == "__main__":
-    main()
+            f"production
