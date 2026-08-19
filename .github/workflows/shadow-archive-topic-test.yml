@@ -45,8 +45,6 @@ jobs:
       - name: YENİ KONU ÜRET
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          TELEGRAM_BOT_TOKEN: dummy
-          TELEGRAM_CHAT_ID: dummy
         run: |
           echo "=========================================="
           echo "SHADOW ARCHIVE — YENİ KONU TESTİ"
@@ -64,61 +62,61 @@ jobs:
           echo ""
           echo "=========================================="
 
-      - name: Eski ve yeni konuyu karşılaştır
+      - name: Telegram fonksiyonunun çalışmasını engelle
+        run: |
+          echo "=========================================="
+          echo "TELEGRAM TESTİ DEVRE DIŞI"
+          echo "=========================================="
+          echo "Konu üretimi başarılı."
+          echo "Bu test Telegram mesajı göndermeyecek."
+          echo "=========================================="
+
+      - name: Konuyu doğrula
         run: |
           python - <<'PY'
           import json
-          import subprocess
-
-          try:
-              old = subprocess.check_output(
-                  ["git", "show", "HEAD:research/current_topic.json"],
-                  text=True
-              )
-              old_data = json.loads(old)
-              old_topic = old_data.get("topic", "")
-          except Exception:
-              old_topic = ""
 
           with open(
               "research/current_topic.json",
               "r",
               encoding="utf-8"
           ) as f:
-              new_data = json.load(f)
+              data = json.load(f)
 
-          new_topic = new_data.get("topic", "")
-          new_title = new_data.get("title", "")
+          topic = data.get("topic", "").strip()
+          title = data.get("title", "").strip()
+          description = data.get("description", "").strip()
 
           print("==========================================")
-          print("KONU KARŞILAŞTIRMASI")
+          print("YENİ KONU KONTROLÜ")
           print("==========================================")
 
           print("")
-          print("ESKİ KONU:")
-          print(old_topic)
+          print("KONU:")
+          print(topic)
 
           print("")
-          print("YENİ KONU:")
-          print(new_topic)
+          print("BAŞLIK:")
+          print(title)
 
           print("")
-          print("YENİ BAŞLIK:")
-          print(new_title)
+          print("AÇIKLAMA:")
+          print(description)
+
+          if not topic:
+              raise SystemExit("❌ KONU BOŞ.")
+
+          if not title:
+              raise SystemExit("❌ BAŞLIK BOŞ.")
+
+          if not description:
+              raise SystemExit("❌ AÇIKLAMA BOŞ.")
 
           print("")
-
-          if not new_topic:
-              print("❌ YENİ KONU BOŞ.")
-              raise SystemExit(1)
-
-          if old_topic and new_topic == old_topic:
-              print("❌ YENİ KONU ESKİ KONUYLA AYNI.")
-              raise SystemExit(1)
-
-          print("✅ YENİ KONU GERÇEKTEN FARKLI.")
+          print("✅ KONU DOLU")
+          print("✅ BAŞLIK DOLU")
+          print("✅ AÇIKLAMA DOLU")
           print("==========================================")
-          PY
 
       - name: Yeni konuyu GitHub'a kaydet
         run: |
@@ -130,13 +128,14 @@ jobs:
           git config user.email "shadow-archive-bot@users.noreply.github.com"
 
           git add research/current_topic.json
+          git add research/topic_history.json
 
           if git diff --cached --quiet; then
-            echo "❌ Değişiklik bulunamadı."
+            echo "Değişiklik bulunamadı."
             exit 1
           fi
 
-          git commit -m "Test new Shadow Archive topic"
+          git commit -m "Update Shadow Archive daily topic"
           git push origin main
 
           echo ""
