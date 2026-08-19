@@ -37,7 +37,6 @@ jobs:
           echo "$PRODUCTION_ID"
 
           if [ -z "$PRODUCTION_ID" ]; then
-            echo ""
             echo "❌ PRODUCTION ID BOŞ."
             exit 1
           fi
@@ -45,44 +44,39 @@ jobs:
           RUN_ID="${PRODUCTION_ID##*-}"
 
           echo ""
-          echo "GitHub Production Run ID:"
+          echo "Production Run ID:"
           echo "$RUN_ID"
 
           if ! [[ "$RUN_ID" =~ ^[0-9]+$ ]]; then
-            echo ""
             echo "❌ GEÇERSİZ RUN ID."
-            echo "Production ID: $PRODUCTION_ID"
             exit 1
           fi
 
-          echo ""
           echo "production_id=$PRODUCTION_ID" >> "$GITHUB_OUTPUT"
           echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
 
-          echo "=========================================="
+          echo "✅ Production ID geçerli."
 
-      - name: Python Kodunu Kontrol Et
+      - name: Python ve Upload Kodunu Kontrol Et
         run: |
           echo "=========================================="
-          echo "YOUTUBE PUBLISHER KONTROL"
+          echo "YOUTUBE UPLOAD KODU KONTROL"
           echo "=========================================="
 
-          echo "COMMIT:"
-          git rev-parse HEAD
+          test -f research/youtube/youtube_private_upload.py
+
+          echo "Python dosyası:"
+          ls -lh research/youtube/youtube_private_upload.py
 
           echo ""
-          echo "YAYIN SAATLERİ:"
-          grep -n -A5 "short_1_time" research/youtube/youtube_private_upload.py || true
-          grep -n -A5 "main_time" research/youtube/youtube_private_upload.py || true
-          grep -n -A5 "short_2_time" research/youtube/youtube_private_upload.py || true
+          echo "Upload fonksiyonu:"
+          grep -n "youtube.videos().insert" research/youtube/youtube_private_upload.py
 
           echo ""
-          echo "BEKLENEN:"
-          echo "Short #1  = 09:00 Türkiye"
-          echo "Ana Video  = 12:00 Türkiye"
-          echo "Short #2  = 21:00 Türkiye"
+          echo "Python syntax kontrolü:"
+          python -m py_compile research/youtube/youtube_private_upload.py
 
-          echo "=========================================="
+          echo "✅ Upload kodu hazır."
 
       - name: Production Run kontrol
         env:
@@ -94,16 +88,11 @@ jobs:
 
           RUN_ID="${{ steps.production.outputs.run_id }}"
 
-          echo "Run ID:"
-          echo "$RUN_ID"
-
           RUN_INFO=$(gh run view \
             "$RUN_ID" \
             --repo "${{ github.repository }}" \
             --json databaseId,status,conclusion,name,createdAt)
 
-          echo ""
-          echo "RUN BİLGİSİ:"
           echo "$RUN_INFO"
 
           STATUS=$(echo "$RUN_INFO" | python -c '
@@ -125,32 +114,28 @@ jobs:
           echo "CONCLUSION: $CONCLUSION"
 
           if [ "$STATUS" != "completed" ]; then
-            echo ""
             echo "❌ PRODUCTION RUN HENÜZ TAMAMLANMAMIŞ."
             exit 1
           fi
 
           if [ "$CONCLUSION" != "success" ]; then
-            echo ""
             echo "❌ PRODUCTION RUN BAŞARILI DEĞİL."
             exit 1
           fi
 
-          echo ""
-          echo "✅ DOĞRU PRODUCTION RUN BAŞARILI."
-
-          echo "=========================================="
+          echo "✅ PRODUCTION RUN BAŞARILI."
 
       - name: Production Package indir
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           echo "=========================================="
-          echo "DOĞRU PRODUCTION PACKAGE İNDİRİLİYOR"
+          echo "PRODUCTION PACKAGE İNDİRİLİYOR"
           echo "=========================================="
 
           RUN_ID="${{ steps.production.outputs.run_id }}"
 
+          rm -rf production_package
           mkdir -p production_package
 
           gh run download \
@@ -161,9 +146,7 @@ jobs:
 
           echo ""
           echo "İNDİRİLEN DOSYALAR:"
-          find production_package \
-            -type f \
-            -exec ls -lh {} \;
+          find production_package -type f -exec ls -lh {} \;
 
           echo "=========================================="
 
@@ -177,4 +160,79 @@ jobs:
           test -f production_package/shorts/short_1.mp4
           test -f production_package/shorts/short_2.mp4
           test -f production_package/research/current_topic.json
-          test -f
+
+          echo ""
+          echo "ANA VIDEO:"
+          ls -lh production_package/main/main_video.mp4
+
+          echo ""
+          echo "SHORT 1:"
+          ls -lh production_package/shorts/short_1.mp4
+
+          echo ""
+          echo "SHORT 2:"
+          ls -lh production_package/shorts/short_2.mp4
+
+          echo ""
+          echo "CURRENT TOPIC:"
+          cat production_package/research/current_topic.json
+
+          echo ""
+          echo "✅ PRODUCTION PACKAGE TAMAM."
+
+      - name: Python 3.12 Kurulumu
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: YouTube Kütüphanelerini Kur
+        run: |
+          python -m pip install --upgrade pip
+
+          pip install \
+            google-api-python-client \
+            google-auth \
+            google-auth-oauthlib \
+            google-auth-httplib2
+
+          echo "✅ YouTube kütüphaneleri hazır."
+
+      - name: YouTube Private Upload
+        env:
+          YOUTUBE_OAUTH_CLIENT_JSON: ${{ secrets.YOUTUBE_OAUTH_CLIENT_JSON }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: |
+          echo "=========================================="
+          echo "🚀 SHADOW ARCHIVE YOUTUBE UPLOAD"
+          echo "=========================================="
+
+          if [ -z "$YOUTUBE_OAUTH_CLIENT_JSON" ]; then
+            echo "❌ YOUTUBE_OAUTH_CLIENT_JSON SECRET BOŞ."
+            exit 1
+          fi
+
+          if [ -z "$YOUTUBE_REFRESH_TOKEN" ]; then
+            echo "❌ YOUTUBE_REFRESH_TOKEN SECRET BOŞ."
+            exit 1
+          fi
+
+          echo "OAuth secretleri bulundu."
+
+          python research/youtube/youtube_private_upload.py
+
+          echo "=========================================="
+          echo "✅ YOUTUBE UPLOAD SCRIPT TAMAMLANDI"
+          echo "=========================================="
+
+      - name: Upload Sonucu
+        run: |
+          echo "=========================================="
+          echo "🎉 SHADOW ARCHIVE YOUTUBE İŞLEMİ TAMAMLANDI"
+          echo "=========================================="
+          echo "Üç video YouTube'a yüklenmiş olmalı:"
+          echo "1. Short #1"
+          echo "2. Ana Video"
+          echo "3. Short #2"
+          echo ""
+          echo "Video ID'leri bir önceki adımın logunda görünür."
+          echo "=========================================="
