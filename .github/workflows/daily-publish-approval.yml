@@ -21,7 +21,7 @@ jobs:
           ref: main
           fetch-depth: 1
 
-      - name: Bugünün doğru Master Production Run'ını bul
+      - name: Bugünün Master Production Run'ını bul
         id: find_run
         env:
           GH_TOKEN: ${{ github.token }}
@@ -33,8 +33,7 @@ jobs:
 
           TODAY=$(TZ=Europe/Istanbul date +%Y-%m-%d)
 
-          echo "Türkiye tarihi:"
-          echo "$TODAY"
+          echo "Türkiye tarihi: $TODAY"
           echo ""
 
           gh run list \
@@ -44,10 +43,7 @@ jobs:
             --json databaseId,createdAt \
             > master_runs.json
 
-          echo "Master Production run'ları:"
-          cat master_runs.json
-
-          RUN_ID=$(python - "$TODAY" master_runs.json <<'PY'
+          python - "$TODAY" master_runs.json <<'PY' > selected_run.txt
           import json
           import sys
           from datetime import datetime
@@ -60,7 +56,6 @@ jobs:
               runs = json.load(f)
 
           turkey = ZoneInfo("Europe/Istanbul")
-
           matching = []
 
           for run in runs:
@@ -74,14 +69,13 @@ jobs:
                   created_at.replace("Z", "+00:00")
               )
 
-              turkey_date = dt.astimezone(turkey).date().isoformat()
+              turkey_date = dt.astimezone(
+                  turkey
+              ).date().isoformat()
 
               if turkey_date == today:
                   matching.append(
-                      (
-                          dt,
-                          str(database_id)
-                      )
+                      (dt, str(database_id))
                   )
 
           matching.sort(
@@ -92,25 +86,20 @@ jobs:
           if matching:
               print(matching[0][1])
           PY
-          )
+
+          RUN_ID=$(cat selected_run.txt)
 
           if [ -z "$RUN_ID" ]; then
             echo ""
             echo "❌ BUGÜNÜN BAŞARILI MASTER PRODUCTION RUN'I BULUNAMADI."
-            echo ""
-            echo "Türkiye tarihi:"
-            echo "$TODAY"
             exit 1
           fi
 
-          echo ""
-          echo "✅ BUGÜNÜN MASTER PRODUCTION RUN'I BULUNDU"
-          echo "Run ID: $RUN_ID"
-          echo "=========================================="
+          echo "✅ Master Production Run ID: $RUN_ID"
 
           echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
 
-      - name: Bugünün Production Package'ını indir
+      - name: Production Package indir
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -127,107 +116,78 @@ jobs:
             --dir production_package
 
           echo ""
-          echo "İNDİRİLEN DOSYALAR:"
+          echo "DOSYALAR:"
           find production_package \
             -type f \
             -exec ls -lh {} \;
 
-          echo "=========================================="
-
-      - name: Production ID kontrol et
+      - name: Production ID kontrol
         id: production
         run: |
           echo "=========================================="
           echo "PRODUCTION ID KONTROL"
           echo "=========================================="
 
-          METADATA="production_package/metadata/production.json"
-
-          if [ ! -f "$METADATA" ]; then
-            echo "❌ production.json bulunamadı."
-            exit 1
-          fi
-
-          echo "METADATA:"
-          cat "$METADATA"
-
-          PRODUCTION_ID=$(python -c '
+          python - <<'PY'
           import json
+          import os
+          import sys
+
+          metadata_file = (
+              "production_package/metadata/production.json"
+          )
+
+          if not os.path.exists(metadata_file):
+              print("❌ production.json bulunamadı.")
+              sys.exit(1)
+
           with open(
-              "production_package/metadata/production.json",
+              metadata_file,
               "r",
               encoding="utf-8"
           ) as f:
               data = json.load(f)
-          print(data["production_id"])
-          ')
 
-          PRODUCTION_DATE=$(python -c '
-          import json
+          production_id = data["production_id"]
+          production_date = data["production_date"]
+          package_run_id = str(data["github_run_id"])
+
+          today = os.popen(
+              "TZ=Europe/Istanbul date +%Y-%m-%d"
+          ).read().strip()
+
+          expected_run_id = "${{ steps.find_run.outputs.run_id }}"
+
+          print("Production ID:", production_id)
+          print("Production Date:", production_date)
+          print("Package Run ID:", package_run_id)
+          print("Today:", today)
+          print("Expected Run ID:", expected_run_id)
+
+          if production_date != today:
+              print("❌ Paket bugüne ait değil.")
+              sys.exit(1)
+
+          if package_run_id != expected_run_id:
+              print("❌ Run ID uyuşmuyor.")
+              sys.exit(1)
+
           with open(
-              "production_package/metadata/production.json",
-              "r",
+              os.environ["GITHUB_OUTPUT"],
+              "a",
               encoding="utf-8"
-          ) as f:
-              data = json.load(f)
-          print(data["production_date"])
-          ')
+          ) as out:
+              out.write(
+                  f"production_id={production_id}\n"
+              )
+              out.write(
+                  f"package_run_id={package_run_id}\n"
+              )
 
-          PACKAGE_RUN_ID=$(python -c '
-          import json
-          with open(
-              "production_package/metadata/production.json",
-              "r",
-              encoding="utf-8"
-          ) as f:
-              data = json.load(f)
-          print(data["github_run_id"])
-          ')
-
-          TODAY=$(TZ=Europe/Istanbul date +%Y-%m-%d)
-
-          echo ""
-          echo "Production ID:"
-          echo "$PRODUCTION_ID"
-
-          echo ""
-          echo "Production Date:"
-          echo "$PRODUCTION_DATE"
-
-          echo ""
-          echo "Package Run ID:"
-          echo "$PACKAGE_RUN_ID"
-
-          echo ""
-          echo "Today's Date:"
-          echo "$TODAY"
-
-          if [ "$PRODUCTION_DATE" != "$TODAY" ]; then
-            echo ""
-            echo "❌ BU PAKET BUGÜNE AİT DEĞİL."
-            echo "Beklenen: $TODAY"
-            echo "Bulunan: $PRODUCTION_DATE"
-            exit 1
-          fi
-
-          if [ "$PACKAGE_RUN_ID" != "${{ steps.find_run.outputs.run_id }}" ]; then
-            echo ""
-            echo "❌ RUN ID UYUŞMUYOR."
-            echo ""
-            echo "Bulunan Run:"
-            echo "${{ steps.find_run.outputs.run_id }}"
-            echo ""
-            echo "Paket Run:"
-            echo "$PACKAGE_RUN_ID"
-            exit 1
-          fi
-
-          echo ""
-          echo "✅ PAKET BUGÜNE AİT"
-          echo "✅ RUN ID DOĞRULANDI"
-
-          echo "production_id=$PRODUCTION_ID" >> "$GITHUB_OUTPUT"
-          echo "package_run_id=$PACKAGE_RUN_ID" >> "$GITHUB_OUTPUT"
+          print("")
+          print("✅ PAKET BUGÜNE AİT")
+          print("✅ RUN ID DOĞRULANDI")
+          PY
 
       - name: Video dosyalarını kontrol et
         run: |
@@ -245,8 +205,6 @@ jobs:
           echo "✅ Short #2 bulundu"
           echo "✅ current_topic.json bulundu"
 
-          echo "=========================================="
-
       - name: Video bilgilerini oku
         id: topic
         run: |
@@ -258,7 +216,9 @@ jobs:
           import json
           import os
 
-          path = "production_package/research/current_topic.json"
+          path = (
+              "production_package/research/current_topic.json"
+          )
 
           with open(
               path,
@@ -308,7 +268,6 @@ jobs:
               out.write(hashtags_text + "\n")
               out.write("EOF\n")
 
-          print("")
           print("BAŞLIK:")
           print(title)
 
@@ -321,7 +280,7 @@ jobs:
           print(hashtags_text)
           PY
 
-      - name: Telegram'a yayın onayı gönder
+      - name: Telegram Onay Mesajı Gönder
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
@@ -329,24 +288,37 @@ jobs:
           VIDEO_DESCRIPTION: ${{ steps.topic.outputs.description }}
           VIDEO_HASHTAGS: ${{ steps.topic.outputs.hashtags }}
           PRODUCTION_ID: ${{ steps.production.outputs.production_id }}
-          PRODUCTION_RUN_ID: ${{ steps.production.outputs.package_run_id }}
         run: |
           echo "=========================================="
           echo "TELEGRAM YAYIN ONAYI"
           echo "=========================================="
 
-          MESSAGE="🤖 SHADOW ARCHIVE — GÜNLÜK YAYIN HAZIR
+          python - <<'PY'
+          import json
+          import os
+          import urllib.parse
+          import urllib.request
+
+          token = os.environ["TELEGRAM_BOT_TOKEN"]
+          chat_id = os.environ["TELEGRAM_CHAT_ID"]
+
+          title = os.environ["VIDEO_TITLE"]
+          description = os.environ["VIDEO_DESCRIPTION"]
+          hashtags = os.environ["VIDEO_HASHTAGS"]
+          production_id = os.environ["PRODUCTION_ID"]
+
+          message = f"""🤖 SHADOW ARCHIVE — GÜNLÜK YAYIN HAZIR
 
 🎬 VİDEO BAŞLIĞI:
-${VIDEO_TITLE}
+{title}
 
 📝 AÇIKLAMA:
-${VIDEO_DESCRIPTION}
+{description}
 
-${VIDEO_HASHTAGS}
+{hashtags}
 
 🆔 Production ID:
-${PRODUCTION_ID}
+{production_id}
 
 📱 Short #1 → 09:00
 🎥 Ana Video → 12:00
@@ -354,13 +326,7 @@ ${PRODUCTION_ID}
 
 Üç içerik de YouTube'a planlanacak.
 
-▶️ Yayınlamak için aşağıdaki butona bas."
-
-          KEYBOARD=$(python - <<'PY'
-          import json
-          import os
-
-          production_id = os.environ["PRODUCTION_ID"]
+▶️ Yayınlamak için aşağıdaki butona bas."""
 
           keyboard = {
               "inline_keyboard": [
@@ -381,30 +347,43 @@ ${PRODUCTION_ID}
               ]
           }
 
-          print(
-              json.dumps(
-                  keyboard,
-                  ensure_ascii=False
+          payload = urllib.parse.urlencode(
+              {
+                  "chat_id": chat_id,
+                  "text": message,
+                  "reply_markup": json.dumps(
+                      keyboard,
+                      ensure_ascii=False
+                  ),
+              }
+          ).encode("utf-8")
+
+          url = (
+              f"https://api.telegram.org/"
+              f"bot{token}/sendMessage"
+          )
+
+          request = urllib.request.Request(
+              url,
+              data=payload,
+              method="POST"
+          )
+
+          with urllib.request.urlopen(
+              request,
+              timeout=30
+          ) as response:
+              result = json.loads(
+                  response.read().decode("utf-8")
               )
-          )
+
+          print(result)
+
+          if not result.get("ok"):
+              print("❌ TELEGRAM MESAJI GÖNDERİLEMEDİ")
+              raise SystemExit(1)
+
+          print("")
+          print("✅ TELEGRAM ONAY MESAJI GÖNDERİLDİ")
+          print("==========================================")
           PY
-          )
-
-          RESPONSE=$(curl -sS -X POST \
-            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
-            --data-urlencode "text=${MESSAGE}" \
-            --data-urlencode "reply_markup=${KEYBOARD}")
-
-          echo "$RESPONSE"
-
-          if echo "$RESPONSE" | grep -q '"ok":true'; then
-            echo ""
-            echo "✅ TELEGRAM ONAY MESAJI GÖNDERİLDİ"
-          else
-            echo ""
-            echo "❌ TELEGRAM MESAJI GÖNDERİLEMEDİ"
-            exit 1
-          fi
-
-          echo "=========================================="
