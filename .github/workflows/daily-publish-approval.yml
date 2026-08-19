@@ -7,23 +7,159 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   approval:
     runs-on: ubuntu-latest
 
     steps:
+
+      - name: Repository'i indir
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Bugünün Master Production Run'ını bul
+        id: find_run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "=========================================="
+          echo "BUGÜNÜN PRODUCTION RUN'I ARANIYOR"
+          echo "=========================================="
+
+          TODAY=$(TZ=Europe/Istanbul date +%Y-%m-%d)
+
+          echo "Türkiye tarihi: $TODAY"
+
+          RUN_ID=$(gh run list \
+            --workflow="Shadow Archive - Master Production" \
+            --status=success \
+            --limit=20 \
+            --json databaseId,createdAt \
+            --jq ".[] | select(.createdAt | startswith(\"${TODAY}\")) | .databaseId" \
+            | head -n 1)
+
+          if [ -z "$RUN_ID" ]; then
+            echo "❌ BUGÜNÜN BAŞARILI MASTER PRODUCTION RUN'I BULUNAMADI."
+            exit 1
+          fi
+
+          echo "✅ RUN BULUNDU: $RUN_ID"
+
+          echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Bugünün Production Package'ını indir
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "=========================================="
+          echo "PRODUCTION PACKAGE İNDİRİLİYOR"
+          echo "=========================================="
+
+          mkdir -p production_package
+
+          gh run download \
+            "${{ steps.find_run.outputs.run_id }}" \
+            --name shadow-archive-complete-production \
+            --dir production_package
+
+          echo ""
+          echo "İNDİRİLEN DOSYALAR:"
+          find production_package -type f -exec ls -lh {} \;
+
+      - name: Konu bilgilerini oku
+        id: topic
+        run: |
+          echo "=========================================="
+          echo "BUGÜNÜN VİDEO BİLGİLERİ"
+          echo "=========================================="
+
+          test -f production_package/research/current_topic.json
+
+          cat production_package/research/current_topic.json
+
+          python - <<'PY'
+          import json
+          import os
+
+          path = "production_package/research/current_topic.json"
+
+          with open(path, "r", encoding="utf-8") as f:
+              data = json.load(f)
+
+          title = (
+              data.get("title")
+              or data.get("video_title")
+              or data.get("youtube_title")
+              or "Shadow Archive"
+          )
+
+          description = (
+              data.get("description")
+              or data.get("video_description")
+              or data.get("youtube_description")
+              or ""
+          )
+
+          hashtags = data.get("hashtags", [])
+
+          if isinstance(hashtags, list):
+              hashtags_text = " ".join(str(x) for x in hashtags)
+          else:
+              hashtags_text = str(hashtags)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
+              out.write("title<<EOF\n")
+              out.write(title + "\n")
+              out.write("EOF\n")
+
+              out.write("description<<EOF\n")
+              out.write(description + "\n")
+              out.write("EOF\n")
+
+              out.write("hashtags<<EOF\n")
+              out.write(hashtags_text + "\n")
+              out.write("EOF\n")
+
+          print("")
+          print("BAŞLIK:")
+          print(title)
+
+          print("")
+          print("AÇIKLAMA:")
+          print(description)
+
+          print("")
+          print("HASHTAG:")
+          print(hashtags_text)
+          PY
+
       - name: Telegram'a yayın onayı gönder
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          VIDEO_TITLE: ${{ steps.topic.outputs.title }}
+          VIDEO_DESCRIPTION: ${{ steps.topic.outputs.description }}
+          VIDEO_HASHTAGS: ${{ steps.topic.outputs.hashtags }}
         run: |
+          echo "=========================================="
+          echo "TELEGRAM YAYIN ONAYI"
+          echo "=========================================="
+
           MESSAGE="🤖 SHADOW ARCHIVE — GÜNLÜK YAYIN HAZIR
 
-          🎬 Bugünün içerikleri hazır.
+          🎬 VİDEO BAŞLIĞI:
+          ${VIDEO_TITLE}
 
-          📱 Short #1 → 10:00
-          🎥 Ana Video → 13:00
+          📝 AÇIKLAMA:
+          ${VIDEO_DESCRIPTION}
+
+          ${VIDEO_HASHTAGS}
+
+          📱 Short #1 → 09:00
+          🎥 Ana Video → 12:00
           📱 Short #2 → 21:00
 
           Üç içerik de YouTube'a planlanacak.
@@ -32,10 +168,21 @@ jobs:
 
           KEYBOARD='{"inline_keyboard":[[{"text":"▶️ YAYINLA","callback_data":"publish_approve"},{"text":"❌ YAYINLAMA","callback_data":"publish_reject"}]]}'
 
-          curl -sS -X POST \
+          RESPONSE=$(curl -sS -X POST \
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
             --data-urlencode "text=${MESSAGE}" \
-            --data-urlencode "reply_markup=${KEYBOARD}"
+            --data-urlencode "reply_markup=${KEYBOARD}")
 
-          echo "08:30 YAYIN ONAYI TELEGRAM'A GÖNDERİLDİ"
+          echo "$RESPONSE"
+
+          if echo "$RESPONSE" | grep -q '"ok":true'; then
+            echo ""
+            echo "✅ TELEGRAM ONAY MESAJI GÖNDERİLDİ"
+          else
+            echo ""
+            echo "❌ TELEGRAM MESAJI GÖNDERİLEMEDİ"
+            exit 1
+          fi
+
+          echo "=========================================="
