@@ -19,34 +19,37 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
+          fetch-depth: 1
 
-      - name: Bugünün Master Production Run'ını bul
+      - name: Bugünün doğru Master Production Run'ını bul
         id: find_run
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           echo "=========================================="
-          echo "BUGÜNÜN PRODUCTION RUN'I ARANIYOR"
+          echo "SHADOW ARCHIVE"
+          echo "BUGÜNÜN PRODUCTION PAKETİ ARANIYOR"
           echo "=========================================="
 
           TODAY=$(TZ=Europe/Istanbul date +%Y-%m-%d)
 
           echo "Türkiye tarihi: $TODAY"
+          echo ""
 
           RUN_ID=$(gh run list \
             --workflow="Shadow Archive - Master Production" \
             --status=success \
             --limit=20 \
             --json databaseId,createdAt \
-            --jq ".[] | select(.createdAt | startswith(\"${TODAY}\")) | .databaseId" \
+            --jq ".[] | select(.createdAt | fromdateiso8601 >= (\"${TODAY}T00:00:00+03:00\" | fromdateiso8601)) | .databaseId" \
             | head -n 1)
 
           if [ -z "$RUN_ID" ]; then
-            echo "❌ BUGÜNÜN BAŞARILI MASTER PRODUCTION RUN'I BULUNAMADI."
+            echo "❌ Bugünün başarılı Master Production run'ı bulunamadı."
             exit 1
           fi
 
-          echo "✅ RUN BULUNDU: $RUN_ID"
+          echo "✅ Master Production Run ID: $RUN_ID"
 
           echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
 
@@ -69,120 +72,8 @@ jobs:
           echo "İNDİRİLEN DOSYALAR:"
           find production_package -type f -exec ls -lh {} \;
 
-      - name: Konu bilgilerini oku
-        id: topic
+      - name: Production ID kontrol et
+        id: production
         run: |
           echo "=========================================="
-          echo "BUGÜNÜN VİDEO BİLGİLERİ"
-          echo "=========================================="
-
-          test -f production_package/research/current_topic.json
-
-          cat production_package/research/current_topic.json
-
-          python - <<'PY'
-          import json
-          import os
-
-          path = "production_package/research/current_topic.json"
-
-          with open(path, "r", encoding="utf-8") as f:
-              data = json.load(f)
-
-          title = (
-              data.get("title")
-              or data.get("video_title")
-              or data.get("youtube_title")
-              or "Shadow Archive"
-          )
-
-          description = (
-              data.get("description")
-              or data.get("video_description")
-              or data.get("youtube_description")
-              or ""
-          )
-
-          hashtags = data.get("hashtags", [])
-
-          if isinstance(hashtags, list):
-              hashtags_text = " ".join(str(x) for x in hashtags)
-          else:
-              hashtags_text = str(hashtags)
-
-          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as out:
-              out.write("title<<EOF\n")
-              out.write(title + "\n")
-              out.write("EOF\n")
-
-              out.write("description<<EOF\n")
-              out.write(description + "\n")
-              out.write("EOF\n")
-
-              out.write("hashtags<<EOF\n")
-              out.write(hashtags_text + "\n")
-              out.write("EOF\n")
-
-          print("")
-          print("BAŞLIK:")
-          print(title)
-
-          print("")
-          print("AÇIKLAMA:")
-          print(description)
-
-          print("")
-          print("HASHTAG:")
-          print(hashtags_text)
-          PY
-
-      - name: Telegram'a yayın onayı gönder
-        env:
-          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-          VIDEO_TITLE: ${{ steps.topic.outputs.title }}
-          VIDEO_DESCRIPTION: ${{ steps.topic.outputs.description }}
-          VIDEO_HASHTAGS: ${{ steps.topic.outputs.hashtags }}
-        run: |
-          echo "=========================================="
-          echo "TELEGRAM YAYIN ONAYI"
-          echo "=========================================="
-
-          MESSAGE="🤖 SHADOW ARCHIVE — GÜNLÜK YAYIN HAZIR
-
-          🎬 VİDEO BAŞLIĞI:
-          ${VIDEO_TITLE}
-
-          📝 AÇIKLAMA:
-          ${VIDEO_DESCRIPTION}
-
-          ${VIDEO_HASHTAGS}
-
-          📱 Short #1 → 09:00
-          🎥 Ana Video → 12:00
-          📱 Short #2 → 21:00
-
-          Üç içerik de YouTube'a planlanacak.
-
-          ▶️ Yayınlamak için aşağıdaki butona bas."
-
-          KEYBOARD='{"inline_keyboard":[[{"text":"▶️ YAYINLA","callback_data":"publish_approve"},{"text":"❌ YAYINLAMA","callback_data":"publish_reject"}]]}'
-
-          RESPONSE=$(curl -sS -X POST \
-            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
-            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
-            --data-urlencode "text=${MESSAGE}" \
-            --data-urlencode "reply_markup=${KEYBOARD}")
-
-          echo "$RESPONSE"
-
-          if echo "$RESPONSE" | grep -q '"ok":true'; then
-            echo ""
-            echo "✅ TELEGRAM ONAY MESAJI GÖNDERİLDİ"
-          else
-            echo ""
-            echo "❌ TELEGRAM MESAJI GÖNDERİLEMEDİ"
-            exit 1
-          fi
-
-          echo "=========================================="
+          echo "PRODUCTION ID K
