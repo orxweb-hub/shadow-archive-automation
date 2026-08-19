@@ -1,7 +1,5 @@
 import json
 import os
-import urllib.parse
-import urllib.request
 from pathlib import Path
 
 from google import genai
@@ -9,39 +7,10 @@ from google import genai
 
 GEMINI_API_KEY = os.environ["GEMINI_API_KEY"]
 
-TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "")
-
 MODEL = "gemini-3.6-flash"
 
 TOPIC_FILE = Path("research/current_topic.json")
 HISTORY_FILE = Path("research/topic_history.json")
-
-
-def telegram(method, data):
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        print("Telegram devre dışı.")
-        return
-
-    url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/{method}"
-
-    encoded = urllib.parse.urlencode(data).encode()
-
-    request = urllib.request.Request(
-        url,
-        data=encoded,
-        method="POST"
-    )
-
-    with urllib.request.urlopen(request, timeout=30) as response:
-        result = json.loads(response.read().decode())
-
-    if not result.get("ok"):
-        raise RuntimeError(
-            f"Telegram API hatası: {result}"
-        )
-
-    return result
 
 
 def load_previous_topics():
@@ -79,19 +48,21 @@ def load_previous_topics():
 
             if isinstance(history, list):
                 for item in history:
+
                     if isinstance(item, str):
-                        topics.append(item)
+                        topic = item.strip()
+
+                        if topic:
+                            topics.append(topic)
 
                     elif isinstance(item, dict):
                         topic = item.get(
                             "topic",
                             ""
-                        )
+                        ).strip()
 
                         if topic:
-                            topics.append(
-                                topic
-                            )
+                            topics.append(topic)
 
         except Exception as e:
             print(
@@ -100,10 +71,10 @@ def load_previous_topics():
 
     # Tekilleştir
     result = []
-
     seen = set()
 
     for topic in topics:
+
         normalized = topic.lower().strip()
 
         if normalized and normalized not in seen:
@@ -114,13 +85,14 @@ def load_previous_topics():
 
 
 def generate_topic(previous_topics):
+
     client = genai.Client(
         api_key=GEMINI_API_KEY
     )
 
     previous_text = "\n".join(
         f"- {topic}"
-        for topic in previous_topics[-30:]
+        for topic in previous_topics[-50:]
     )
 
     if not previous_text:
@@ -129,7 +101,9 @@ def generate_topic(previous_topics):
     prompt = f"""
 You are the topic director for Shadow Archive.
 
-Shadow Archive is a Turkish YouTube documentary channel focused on:
+Shadow Archive is a Turkish YouTube documentary channel.
+
+The channel covers:
 
 - mysterious real events
 - unsolved cases
@@ -139,56 +113,55 @@ Shadow Archive is a Turkish YouTube documentary channel focused on:
 - abandoned places
 - missing ships
 - missing people
-- historical mysteries
 - aviation mysteries
 - strange accidents
+- historical mysteries
 
-Your job is to generate ONE completely NEW documentary topic.
+Your task is to generate ONE completely NEW documentary topic.
 
-CRITICAL RULE:
+IMPORTANT:
 
-The new topic MUST NOT be the same event, case, person,
-ship, aircraft, disaster, disappearance or mystery as any
-topic in the previous-topic list.
+The new topic MUST be a genuinely different real-world
+event from every topic in the previous-topic list.
 
-Do NOT create another title about the same event using
-different wording.
+Do NOT generate the same event with different wording.
+
+If an aircraft, ship, person, disaster or disappearance
+already appears in the previous topics, that exact event
+is forbidden.
 
 For example:
 
-If "L-8 Ghost Blimp Disappearance" appears in the previous
-topics, you MUST NOT generate:
+If L-8 Ghost Blimp is in the previous topics, you MUST NOT
+generate:
 
 - L-8 Ghost Blimp
 - L-8 Disappearance
-- The Ghost Blimp
-- The Vanishing L-8 Crew
+- Ghost Blimp Mystery
+- Vanishing L-8 Crew
 - 1942 L-8 Mystery
 
-These are all the SAME event and are forbidden.
+All of those refer to the same event.
 
-Choose a genuinely different real event.
+Choose a completely different event.
 
-PREVIOUS TOPICS — ABSOLUTELY FORBIDDEN:
+PREVIOUS TOPICS — FORBIDDEN:
 
 {previous_text}
 
 The new topic must:
 
-- be based on a real historical event
-- have enough reliable information for a 15+ minute documentary
-- have a strong curiosity factor
+- be a real historical event
+- have reliable sources
+- have enough information for a 15+ minute documentary
 - have a clear timeline
-- contain enough people, locations and events to research
-- be researchable using reliable sources
+- have enough people, locations and events to research
+- have strong curiosity potential
 - avoid fabricated claims
 - avoid conspiracy presented as fact
 - avoid misleading clickbait
-- preferably be less overused than extremely famous cases
+- preferably not be an extremely overused case
 - be substantially different from all previous topics
-
-Try to choose a topic from a different case/event than the
-previous video.
 
 Return ONLY valid JSON.
 
@@ -216,7 +189,9 @@ Required format:
   ]
 }}
 
-The title should be highly clickable but factual.
+Rules:
+
+The title must be highly clickable but factual.
 
 The description must be suitable for YouTube.
 
@@ -236,6 +211,7 @@ Return JSON only.
 
     text = response.text.strip()
 
+    # Markdown JSON temizleme
     if text.startswith("```"):
         text = text.replace(
             "```json",
@@ -262,15 +238,53 @@ Return JSON only.
     ]
 
     for field in required_fields:
+
         if field not in data:
             raise RuntimeError(
                 f"Gemini çıktısında eksik alan: {field}"
             )
 
+    # Alanların boş olup olmadığını kontrol et
+    for field in [
+        "topic",
+        "category",
+        "summary",
+        "title",
+        "description"
+    ]:
+
+        if not str(
+            data[field]
+        ).strip():
+
+            raise RuntimeError(
+                f"Gemini çıktısında boş alan: {field}"
+            )
+
+    if not isinstance(
+        data["research_points"],
+        list
+    ):
+        raise RuntimeError(
+            "research_points liste değil."
+        )
+
+    if not isinstance(
+        data["hashtags"],
+        list
+    ):
+        raise RuntimeError(
+            "hashtags liste değil."
+        )
+
     return data
 
 
-def is_duplicate(data, previous_topics):
+def is_duplicate(
+    data,
+    previous_topics
+):
+
     new_topic = data.get(
         "topic",
         ""
@@ -281,17 +295,27 @@ def is_duplicate(data, previous_topics):
         ""
     ).strip().lower()
 
+    if not new_topic:
+        return True
+
     for old_topic in previous_topics:
-        old_normalized = old_topic.strip().lower()
+
+        old_normalized = (
+            old_topic
+            .strip()
+            .lower()
+        )
 
         if not old_normalized:
             continue
 
-        # Direkt eşleşme
+        # Tam eşleşme
         if new_topic == old_normalized:
+            print(
+                "DUPLICATE: Tam konu eşleşmesi."
+            )
             return True
 
-        # Çok belirgin aynı olay kontrolü
         new_words = set(
             new_topic.split()
         )
@@ -300,31 +324,44 @@ def is_duplicate(data, previous_topics):
             old_normalized.split()
         )
 
-        common = new_words.intersection(
-            old_words
+        common_words = (
+            new_words.intersection(
+                old_words
+            )
         )
 
-        if len(common) >= 4:
+        # Çok güçlü kelime çakışması
+        if len(common_words) >= 4:
+
+            print(
+                "DUPLICATE: Güçlü konu benzerliği."
+            )
+
             return True
 
-        # Başlıkta da eski olayın adı geçiyorsa
-        old_title_words = set(
-            old_normalized.split()
+        title_words = set(
+            new_title.split()
         )
 
-        title_common = set(
-            new_title.split()
-        ).intersection(
-            old_title_words
+        title_common = (
+            title_words.intersection(
+                old_words
+            )
         )
 
         if len(title_common) >= 4:
+
+            print(
+                "DUPLICATE: Başlık benzerliği."
+            )
+
             return True
 
     return False
 
 
 def save_current_topic(data):
+
     TOPIC_FILE.parent.mkdir(
         parents=True,
         exist_ok=True
@@ -339,6 +376,7 @@ def save_current_topic(data):
         encoding="utf-8"
     )
 
+    print("")
     print("==========================================")
     print("CURRENT TOPIC SAVED")
     print("==========================================")
@@ -355,6 +393,7 @@ def save_current_topic(data):
 
 
 def save_history(data):
+
     HISTORY_FILE.parent.mkdir(
         parents=True,
         exist_ok=True
@@ -363,18 +402,25 @@ def save_history(data):
     history = []
 
     if HISTORY_FILE.exists():
+
         try:
+
             with open(
                 HISTORY_FILE,
                 "r",
                 encoding="utf-8"
             ) as f:
+
                 history = json.load(f)
 
-            if not isinstance(history, list):
+            if not isinstance(
+                history,
+                list
+            ):
                 history = []
 
         except Exception:
+
             history = []
 
     history.append(
@@ -384,7 +430,7 @@ def save_history(data):
         }
     )
 
-    # Son 100 konuyu tut
+    # Son 100 konuyu sakla
     history = history[-100:]
 
     HISTORY_FILE.write_text(
@@ -396,94 +442,14 @@ def save_history(data):
         encoding="utf-8"
     )
 
+    print("")
     print(
         f"Topic history updated: {len(history)} topics"
     )
 
 
-def send_telegram(data):
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        print(
-            "Telegram gönderimi atlandı."
-        )
-        return
-
-    hashtags = " ".join(
-        data["hashtags"]
-    )
-
-    research_points = "\n".join(
-        f"• {point}"
-        for point in data["research_points"]
-    )
-
-    message = (
-        "🎬 SHADOW ARCHIVE — YENİ VİDEO\n\n"
-
-        f"📌 KONU\n"
-        f"{data['topic']}\n\n"
-
-        f"🏷️ KATEGORİ\n"
-        f"{data['category']}\n\n"
-
-        f"📖 KONU ÖZETİ\n"
-        f"{data['summary']}\n\n"
-
-        f"🔎 ARAŞTIRMA NOKTALARI\n"
-        f"{research_points}\n\n"
-
-        f"📝 BAŞLIK\n"
-        f"{data['title']}\n\n"
-
-        f"📄 AÇIKLAMA\n"
-        f"{data['description']}\n\n"
-
-        f"🏷️ ETİKETLER\n"
-        f"{hashtags}\n\n"
-
-        "━━━━━━━━━━━━━━━━━━\n"
-        "Video üretimine geçilsin mi?"
-    )
-
-    keyboard = {
-        "inline_keyboard": [
-            [
-                {
-                    "text": "✅ ONAYLA",
-                    "callback_data": "topic_approve"
-                },
-                {
-                    "text": "❌ REDDET",
-                    "callback_data": "topic_reject"
-                }
-            ],
-            [
-                {
-                    "text": "🕐 SAATİ DEĞİŞTİR",
-                    "callback_data": "change_time"
-                }
-            ]
-        ]
-    }
-
-    telegram(
-        "sendMessage",
-        {
-            "chat_id": TELEGRAM_CHAT_ID,
-            "text": message,
-            "reply_markup": json.dumps(
-                keyboard,
-                ensure_ascii=False
-            )
-        }
-    )
-
-    print(
-        "Telegram topic message sent."
-    )
-
-
 def main():
+
     print("==========================================")
     print("SHADOW ARCHIVE DAILY TOPIC SYSTEM")
     print("==========================================")
@@ -496,9 +462,12 @@ def main():
     )
 
     if previous_topics:
+
         print("")
         print("SON KONULAR:")
+
         for topic in previous_topics[-10:]:
+
             print(
                 f"- {topic}"
             )
@@ -509,15 +478,35 @@ def main():
 
     data = None
 
-    # Aynı konu gelirse en fazla 5 kez yeniden üret
+    # Aynı konu gelirse maksimum 5 deneme
     for attempt in range(1, 6):
+
         print(
             f"KONU ÜRETİM DENEMESİ: {attempt}/5"
         )
 
-        candidate = generate_topic(
-            previous_topics
-        )
+        try:
+
+            candidate = generate_topic(
+                previous_topics
+            )
+
+        except Exception as e:
+
+            print("")
+            print(
+                f"❌ GEMINI HATASI: {e}"
+            )
+
+            if attempt == 5:
+                raise
+
+            print(
+                "Yeni deneme yapılacak..."
+            )
+            print("")
+
+            continue
 
         print(
             f"ÜRETİLEN KONU: {candidate['topic']}"
@@ -527,13 +516,17 @@ def main():
             candidate,
             previous_topics
         ):
+
             print(
                 "❌ BU KONU DAHA ÖNCE KULLANILMIŞ."
             )
+
             print(
-                "Yeni konu tekrar isteniyor..."
+                "Yeni konu isteniyor..."
             )
+
             print("")
+
             continue
 
         data = candidate
@@ -541,29 +534,49 @@ def main():
         print(
             "✅ YENİ VE FARKLI KONU BULUNDU."
         )
+
         break
 
     if data is None:
+
         raise RuntimeError(
             "5 denemede de yeni ve farklı konu üretilemedi."
         )
 
-    save_current_topic(data)
+    save_current_topic(
+        data
+    )
 
-    save_history(data)
+    save_history(
+        data
+    )
 
-    send_telegram(data)
+    # Telegram burada KESİNLİKLE gönderilmiyor.
+    #
+    # Telegram yayın onayı ayrı workflow tarafından
+    # gönderilecek.
+    print("")
+    print(
+        "ℹ️ TOPIC TELEGRAM MESAJI GÖNDERİLMEDİ."
+    )
 
     print("")
     print("==========================================")
     print("DAILY TOPIC COMPLETED")
     print("==========================================")
+
     print(
         f"KONU: {data['topic']}"
     )
+
     print(
         f"BAŞLIK: {data['title']}"
     )
+
+    print(
+        f"AÇIKLAMA: {data['description']}"
+    )
+
     print("==========================================")
 
 
