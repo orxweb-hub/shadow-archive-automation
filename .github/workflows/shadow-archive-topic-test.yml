@@ -1,0 +1,144 @@
+name: Shadow Archive - Topic Test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test-topic:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Repository'i indir
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Python kurulumu
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Gemini kurulumu
+        run: |
+          pip install google-genai
+
+      - name: Eski konuyu göster
+        run: |
+          echo "=========================================="
+          echo "ESKİ CURRENT TOPIC"
+          echo "=========================================="
+
+          if [ -f research/current_topic.json ]; then
+            cat research/current_topic.json
+          else
+            echo "current_topic.json bulunamadı."
+          fi
+
+          echo ""
+          echo "=========================================="
+
+      - name: YENİ KONU ÜRET
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: dummy
+          TELEGRAM_CHAT_ID: dummy
+        run: |
+          echo "=========================================="
+          echo "SHADOW ARCHIVE — YENİ KONU TESTİ"
+          echo "=========================================="
+
+          python research/research/daily_topic_generator.py
+
+          echo ""
+          echo "=========================================="
+          echo "YENİ CURRENT TOPIC"
+          echo "=========================================="
+
+          cat research/current_topic.json
+
+          echo ""
+          echo "=========================================="
+
+      - name: Eski ve yeni konuyu karşılaştır
+        run: |
+          python - <<'PY'
+          import json
+          import subprocess
+
+          try:
+              old = subprocess.check_output(
+                  ["git", "show", "HEAD:research/current_topic.json"],
+                  text=True
+              )
+              old_data = json.loads(old)
+              old_topic = old_data.get("topic", "")
+          except Exception:
+              old_topic = ""
+
+          with open(
+              "research/current_topic.json",
+              "r",
+              encoding="utf-8"
+          ) as f:
+              new_data = json.load(f)
+
+          new_topic = new_data.get("topic", "")
+          new_title = new_data.get("title", "")
+
+          print("==========================================")
+          print("KONU KARŞILAŞTIRMASI")
+          print("==========================================")
+
+          print("")
+          print("ESKİ KONU:")
+          print(old_topic)
+
+          print("")
+          print("YENİ KONU:")
+          print(new_topic)
+
+          print("")
+          print("YENİ BAŞLIK:")
+          print(new_title)
+
+          print("")
+
+          if not new_topic:
+              print("❌ YENİ KONU BOŞ.")
+              raise SystemExit(1)
+
+          if old_topic and new_topic == old_topic:
+              print("❌ YENİ KONU ESKİ KONUYLA AYNI.")
+              raise SystemExit(1)
+
+          print("✅ YENİ KONU GERÇEKTEN FARKLI.")
+          print("==========================================")
+          PY
+
+      - name: Yeni konuyu GitHub'a kaydet
+        run: |
+          echo "=========================================="
+          echo "YENİ KONU GITHUB'A KAYDEDİLİYOR"
+          echo "=========================================="
+
+          git config user.name "Shadow Archive Bot"
+          git config user.email "shadow-archive-bot@users.noreply.github.com"
+
+          git add research/current_topic.json
+
+          if git diff --cached --quiet; then
+            echo "❌ Değişiklik bulunamadı."
+            exit 1
+          fi
+
+          git commit -m "Test new Shadow Archive topic"
+          git push origin main
+
+          echo ""
+          echo "✅ YENİ KONU GITHUB'A KAYDEDİLDİ."
+          echo "=========================================="
