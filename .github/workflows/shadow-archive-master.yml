@@ -34,11 +34,7 @@ jobs:
           sudo apt-get install -y ffmpeg
 
           echo ""
-          echo "FFMPEG:"
           ffmpeg -version | head -n 1
-
-          echo ""
-          echo "FFPROBE:"
           ffprobe -version | head -n 1
 
           echo ""
@@ -74,7 +70,7 @@ jobs:
 
           echo ""
           echo "=========================================="
-          echo "DEPENDENCIES HAZIR"
+          echo "✅ DEPENDENCIES HAZIR"
           echo "=========================================="
 
 
@@ -84,7 +80,7 @@ jobs:
       - name: Check Required Files
         run: |
           echo "=========================================="
-          echo "GEREKLİ DOSYA KONTROLÜ"
+          echo "GEREKLI DOSYA KONTROLU"
           echo "=========================================="
 
           required_files=(
@@ -157,8 +153,8 @@ jobs:
           with open(path, "r", encoding="utf-8") as f:
               data = json.load(f)
 
-          topic = data.get("topic", "")
-          title = data.get("title", "")
+          topic = data.get("topic", "").strip()
+          title = data.get("title", "").strip()
 
           if not topic:
               raise SystemExit("❌ topic boş.")
@@ -213,15 +209,12 @@ jobs:
       # 10 — TTS
       # ============================================================
       - name: Text To Speech
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           echo "=========================================="
           echo "SHADOW ARCHIVE TTS"
           echo "=========================================="
 
           ffmpeg -version | head -n 1
-          ffprobe -version | head -n 1
 
           python research/research/tts_generator.py
 
@@ -271,7 +264,7 @@ jobs:
 
 
       # ============================================================
-      # 13 — İNGİLİZCE ALTYAZI
+      # 13 — İNGİLİZCE ALTYAZI OLUŞTUR
       # ============================================================
       - name: English Subtitles
         env:
@@ -284,12 +277,182 @@ jobs:
           python research/research/english_subtitle_generator.py
 
           echo ""
-          echo "✅ İNGİLİZCE ALTYAZI TAMAMLANDI"
+          echo "=========================================="
+          echo "OLUŞAN SRT DOSYALARI"
+          echo "=========================================="
+
+          find research/video/subtitles \
+            -type f \
+            -name "*.srt" \
+            -exec ls -lh {} \;
+
+          echo ""
+          echo "✅ İNGİLİZCE ALTYAZI OLUŞTURULDU"
           echo "=========================================="
 
 
       # ============================================================
-      # 14 — SHORTS SELECTOR
+      # 14 — ALTYAZIYI ANA VİDEOYA GÖM
+      # ============================================================
+      - name: Burn Subtitles Into Main Video
+        run: |
+          echo "=========================================="
+          echo "ALTYAZI VIDEONUN ICINE GOMULUYOR"
+          echo "=========================================="
+
+          python - <<'PY'
+          import json
+          import re
+          import subprocess
+          from pathlib import Path
+
+          topic_file = Path(
+              "research/current_topic.json"
+          )
+
+          with open(
+              topic_file,
+              "r",
+              encoding="utf-8"
+          ) as f:
+              data = json.load(f)
+
+          topic = data.get("topic", "").strip()
+
+          safe_name = topic.lower()
+
+          safe_name = re.sub(
+              r"[^a-z0-9]+",
+              "_",
+              safe_name
+          )
+
+          safe_name = safe_name.strip("_")
+
+          if not safe_name:
+              safe_name = "daily_topic"
+
+          safe_name = safe_name[:80]
+
+          video = Path(
+              f"research/video/{safe_name}_v4.mp4"
+          )
+
+          subtitle = Path(
+              f"research/video/subtitles/{safe_name}_english.srt"
+          )
+
+          temp_video = Path(
+              f"research/video/{safe_name}_subtitle_temp.mp4"
+          )
+
+          print("")
+          print("TOPIC:")
+          print(topic)
+
+          print("")
+          print("VIDEO:")
+          print(video)
+
+          print("")
+          print("SUBTITLE:")
+          print(subtitle)
+
+          if not video.exists():
+              raise SystemExit(
+                  f"❌ Ana video bulunamadı: {video}"
+              )
+
+          if not subtitle.exists():
+              print("")
+              print("SUBTITLE KLASÖRÜ:")
+              subtitle.parent.mkdir(
+                  parents=True,
+                  exist_ok=True
+              )
+
+              for file in subtitle.parent.glob("*"):
+                  print("-", file)
+
+              raise SystemExit(
+                  f"❌ SRT bulunamadı: {subtitle}"
+              )
+
+          if subtitle.stat().st_size < 20:
+              raise SystemExit(
+                  "❌ SRT dosyası boş veya bozuk."
+              )
+
+          print("")
+          print("✅ VIDEO BULUNDU")
+          print("✅ SRT BULUNDU")
+
+          command = [
+              "ffmpeg",
+              "-y",
+              "-i",
+              str(video),
+              "-vf",
+              f"subtitles={subtitle}",
+              "-c:a",
+              "copy",
+              "-c:v",
+              "libx264",
+              "-preset",
+              "veryfast",
+              "-crf",
+              "20",
+              "-pix_fmt",
+              "yuv420p",
+              str(temp_video)
+          ]
+
+          print("")
+          print("FFMPEG ALTYAZI ISLEMI:")
+          print(" ".join(command))
+
+          result = subprocess.run(
+              command,
+              stdout=subprocess.PIPE,
+              stderr=subprocess.STDOUT,
+              text=True
+          )
+
+          print(result.stdout)
+
+          if result.returncode != 0:
+              raise SystemExit(
+                  "❌ Altyazı videoya gömülemedi."
+              )
+
+          if not temp_video.exists():
+              raise SystemExit(
+                  "❌ Altyazılı video oluşturulamadı."
+              )
+
+          if temp_video.stat().st_size < 100000:
+              raise SystemExit(
+                  "❌ Oluşan video dosyası çok küçük."
+              )
+
+          temp_video.replace(video)
+
+          print("")
+          print("==========================================")
+          print("✅ ALTYAZI VIDEONUN ICINE GOMULDU")
+          print("==========================================")
+          print("")
+          print("FINAL VIDEO:")
+          print(video)
+          print("")
+          print(
+              f"SIZE: {video.stat().st_size / 1024 / 1024:.2f} MB"
+          )
+          PY
+
+
+      # ============================================================
+      # 15 — SHORTS SELECTOR
       # ============================================================
       - name: Shorts Selector
         env:
@@ -307,7 +470,7 @@ jobs:
 
 
       # ============================================================
-      # 15 — SHORTS TTS
+      # 16 — SHORTS TTS
       # ============================================================
       - name: Shorts TTS
         env:
@@ -325,7 +488,7 @@ jobs:
 
 
       # ============================================================
-      # 16 — SHORTS SUBTITLES
+      # 17 — SHORTS SUBTITLES
       # ============================================================
       - name: Shorts Subtitles
         run: |
@@ -341,7 +504,7 @@ jobs:
 
 
       # ============================================================
-      # 17 — SHORTS VIDEO
+      # 18 — SHORTS VIDEO
       # ============================================================
       - name: Shorts Video Editor
         run: |
@@ -352,12 +515,12 @@ jobs:
           python research/research/shorts_editor.py
 
           echo ""
-          echo "✅ SHORTS VİDEOLARI TAMAMLANDI"
+          echo "✅ SHORTS VIDEOLARI TAMAMLANDI"
           echo "=========================================="
 
 
       # ============================================================
-      # 18 — SHORTS CAPTIONS
+      # 19 — SHORTS CAPTIONS
       # ============================================================
       - name: Shorts Caption Editor
         run: |
@@ -373,7 +536,7 @@ jobs:
 
 
       # ============================================================
-      # 19 — SHORTS BRANDING
+      # 20 — SHORTS BRANDING
       # ============================================================
       - name: Shorts Branding
         run: |
@@ -389,12 +552,12 @@ jobs:
 
 
       # ============================================================
-      # 20 — GERÇEK ÜRETİM DOSYALARINI BUL
+      # 21 — ANA VIDEO VE SHORTS DOSYALARINI BUL
       # ============================================================
       - name: Production File Validation
         run: |
           echo "=========================================="
-          echo "PRODUCTION DOSYA KONTROLÜ"
+          echo "PRODUCTION DOSYA KONTROLU"
           echo "=========================================="
 
           python - <<'PY'
@@ -402,22 +565,39 @@ jobs:
           import re
           from pathlib import Path
 
-          topic_file = Path("research/current_topic.json")
-
-          if not topic_file.exists():
-              raise SystemExit("❌ current_topic.json bulunamadı.")
-
-          data = json.loads(
-              topic_file.read_text(encoding="utf-8")
+          topic_file = Path(
+              "research/current_topic.json"
           )
 
-          topic = data.get("topic", "").strip()
+          if not topic_file.exists():
+              raise SystemExit(
+                  "❌ current_topic.json bulunamadı."
+              )
+
+          data = json.loads(
+              topic_file.read_text(
+                  encoding="utf-8"
+              )
+          )
+
+          topic = data.get(
+              "topic",
+              ""
+          ).strip()
 
           if not topic:
-              raise SystemExit("❌ topic boş.")
+              raise SystemExit(
+                  "❌ topic boş."
+              )
 
           safe_name = topic.lower()
-          safe_name = re.sub(r"[^a-z0-9]+", "_", safe_name)
+
+          safe_name = re.sub(
+              r"[^a-z0-9]+",
+              "_",
+              safe_name
+          )
+
           safe_name = safe_name.strip("_")
 
           if not safe_name:
@@ -437,6 +617,10 @@ jobs:
               f"research/video/shorts/{safe_name}_short_2.mp4"
           )
 
+          subtitle = Path(
+              f"research/video/subtitles/{safe_name}_english.srt"
+          )
+
           print("")
           print("TOPIC:")
           print(topic)
@@ -446,8 +630,12 @@ jobs:
           print(safe_name)
 
           print("")
-          print("ANA VIDEO:")
+          print("MAIN VIDEO:")
           print(main_video)
+
+          print("")
+          print("SUBTITLE:")
+          print(subtitle)
 
           print("")
           print("SHORT 1:")
@@ -459,9 +647,16 @@ jobs:
 
           missing = []
 
-          for file in [main_video, short_1, short_2]:
+          for file in [
+              main_video,
+              short_1,
+              short_2,
+              subtitle
+          ]:
               if not file.exists():
-                  missing.append(str(file))
+                  missing.append(
+                      str(file)
+                  )
 
           if missing:
               print("")
@@ -471,27 +666,43 @@ jobs:
                   print("-", file)
 
               print("")
-              print("MEVCUT MP4 DOSYALARI:")
+              print("MEVCUT DOSYALAR:")
 
-              for file in Path(".").rglob("*.mp4"):
-                  if ".git" not in file.parts:
+              for file in Path(
+                  "research"
+              ).rglob("*"):
+                  if file.is_file():
                       print("-", file)
 
               raise SystemExit(
                   "❌ Production dosyaları eksik."
               )
 
-          for file in [main_video, short_1, short_2]:
-              size_mb = file.stat().st_size / 1024 / 1024
+          for file in [
+              main_video,
+              short_1,
+              short_2
+          ]:
+
+              size_mb = (
+                  file.stat().st_size
+                  / 1024
+                  / 1024
+              )
 
               if size_mb < 0.1:
                   raise SystemExit(
-                      f"❌ Dosya çok küçük veya bozuk: {file}"
+                      f"❌ Dosya çok küçük: {file}"
                   )
 
               print(
                   f"✅ {file} — {size_mb:.2f} MB"
               )
+
+          print("")
+          print(
+              f"✅ SRT — {subtitle.stat().st_size} bytes"
+          )
 
           print("")
           print("==========================================")
@@ -501,7 +712,7 @@ jobs:
 
 
       # ============================================================
-      # 21 — PRODUCTION PACKAGE
+      # 22 — PRODUCTION PACKAGE
       # ============================================================
       - name: Production Package Hazırla
         run: |
@@ -536,11 +747,13 @@ jobs:
           topic = data["topic"]
 
           safe_name = topic.lower()
+
           safe_name = re.sub(
               r"[^a-z0-9]+",
               "_",
               safe_name
           )
+
           safe_name = safe_name.strip("_")
 
           if not safe_name:
@@ -560,10 +773,15 @@ jobs:
               f"research/video/shorts/{safe_name}_short_2.mp4"
           )
 
+          subtitle = Path(
+              f"research/video/subtitles/{safe_name}_english.srt"
+          )
+
           required = [
               main_video,
               short_1,
               short_2,
+              subtitle,
               topic_file
           ]
 
@@ -591,6 +809,11 @@ jobs:
           shutil.copy2(
               topic_file,
               "production_package/research/current_topic.json"
+          )
+
+          shutil.copy2(
+              subtitle,
+              "production_package/research/main_english.srt"
           )
 
           history_file = Path(
@@ -654,11 +877,14 @@ jobs:
 
           echo ""
           echo "PACKAGE DOSYALARI:"
-          find production_package -type f -exec ls -lh {} \;
+
+          find production_package \
+            -type f \
+            -exec ls -lh {} \;
 
 
       # ============================================================
-      # 22 — PACKAGE VALIDATION
+      # 23 — PACKAGE VALIDATION
       # ============================================================
       - name: Production Package Validation
         run: |
@@ -666,16 +892,29 @@ jobs:
           echo "PACKAGE VALIDATION"
           echo "=========================================="
 
-          test -f production_package/main/main_video.mp4
-          test -f production_package/shorts/short_1.mp4
-          test -f production_package/shorts/short_2.mp4
-          test -f production_package/research/current_topic.json
-          test -f production_package/production.json
+          test -f \
+            production_package/main/main_video.mp4
+
+          test -f \
+            production_package/shorts/short_1.mp4
+
+          test -f \
+            production_package/shorts/short_2.mp4
+
+          test -f \
+            production_package/research/current_topic.json
+
+          test -f \
+            production_package/research/main_english.srt
+
+          test -f \
+            production_package/production.json
 
           echo "✅ ANA VIDEO"
           echo "✅ SHORT 1"
           echo "✅ SHORT 2"
           echo "✅ CURRENT TOPIC"
+          echo "✅ MAIN ENGLISH SRT"
           echo "✅ PRODUCTION JSON"
 
           python - <<'PY'
@@ -717,16 +956,25 @@ jobs:
 
           print("")
           print("DESCRIPTION HAZIR")
-          print("HASHTAGS:")
-          print(data.get("hashtags", []))
 
           print("")
+          print("HASHTAGS:")
+          print(
+              data.get(
+                  "hashtags",
+                  []
+              )
+          )
+
+          print("")
+          print("==========================================")
           print("✅ PRODUCTION JSON GEÇERLİ")
+          print("==========================================")
           PY
 
 
       # ============================================================
-      # 23 — FINAL VIDEO CHECK
+      # 24 — FINAL FFPROBE CHECK
       # ============================================================
       - name: Final FFprobe Check
         run: |
@@ -736,6 +984,7 @@ jobs:
 
           echo ""
           echo "ANA VIDEO:"
+
           ffprobe \
             -v error \
             -show_entries format=duration,size \
@@ -744,6 +993,7 @@ jobs:
 
           echo ""
           echo "SHORT 1:"
+
           ffprobe \
             -v error \
             -show_entries format=duration,size \
@@ -752,6 +1002,7 @@ jobs:
 
           echo ""
           echo "SHORT 2:"
+
           ffprobe \
             -v error \
             -show_entries format=duration,size \
@@ -759,12 +1010,21 @@ jobs:
             production_package/shorts/short_2.mp4
 
           echo ""
+          echo "=========================================="
+          echo "SRT:"
+          echo "=========================================="
+
+          wc -l \
+            production_package/research/main_english.srt
+
+          echo ""
+          echo "=========================================="
           echo "✅ TÜM VİDEOLAR OKUNABİLİYOR"
           echo "=========================================="
 
 
       # ============================================================
-      # 24 — ARTIFACT
+      # 25 — ARTIFACT
       # ============================================================
       - name: Upload Complete Production
         uses: actions/upload-artifact@v4
@@ -776,7 +1036,7 @@ jobs:
 
 
       # ============================================================
-      # 25 — TOPIC HISTORY
+      # 26 — TOPIC HISTORY
       # ============================================================
       - name: Save Topic History
         run: |
@@ -804,7 +1064,7 @@ jobs:
 
 
       # ============================================================
-      # 26 — TAMAMLANDI
+      # 27 — TAMAMLANDI
       # ============================================================
       - name: Production Complete
         run: |
@@ -821,6 +1081,7 @@ jobs:
           echo "✅ Görseller"
           echo "✅ Ana video"
           echo "✅ İngilizce altyazı"
+          echo "✅ ALTYAZI VIDEONUN ICINE GOMULDU"
           echo "✅ Short 1"
           echo "✅ Short 2"
           echo "✅ Production package"
