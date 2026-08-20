@@ -15,7 +15,6 @@ jobs:
       # ============================================================
       # 1 — CHECKOUT
       # ============================================================
-
       - name: Repository Checkout
         uses: actions/checkout@v4
         with:
@@ -23,9 +22,33 @@ jobs:
 
 
       # ============================================================
-      # 2 — PYTHON
+      # 2 — FFMPEG
       # ============================================================
+      - name: Install FFmpeg
+        run: |
+          echo "=========================================="
+          echo "FFMPEG KURULUYOR"
+          echo "=========================================="
 
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+          echo ""
+          echo "FFMPEG:"
+          ffmpeg -version | head -n 1
+
+          echo ""
+          echo "FFPROBE:"
+          ffprobe -version | head -n 1
+
+          echo ""
+          echo "✅ FFMPEG HAZIR"
+          echo "=========================================="
+
+
+      # ============================================================
+      # 3 — PYTHON
+      # ============================================================
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -33,9 +56,8 @@ jobs:
 
 
       # ============================================================
-      # 3 — DEPENDENCIES
+      # 4 — DEPENDENCIES
       # ============================================================
-
       - name: Install Dependencies
         run: |
           echo "=========================================="
@@ -50,15 +72,54 @@ jobs:
 
           pip install google-genai
 
+          echo ""
           echo "=========================================="
           echo "DEPENDENCIES HAZIR"
           echo "=========================================="
 
 
       # ============================================================
-      # 4 — YENİ KONU
+      # 5 — DOSYA KONTROLÜ
       # ============================================================
+      - name: Check Required Files
+        run: |
+          echo "=========================================="
+          echo "GEREKLİ DOSYA KONTROLÜ"
+          echo "=========================================="
 
+          required_files=(
+            "research/research/daily_topic_generator.py"
+            "research/research/web_researcher.py"
+            "research/research/script_generator.py"
+            "research/research/tts_generator.py"
+            "research/research/visual_research.py"
+            "research/research/cinematic_video_editor.py"
+            "research/research/english_subtitle_generator.py"
+            "research/research/shorts_selector.py"
+            "research/research/shorts_tts.py"
+            "research/research/shorts_subtitles.py"
+            "research/research/shorts_editor.py"
+            "research/research/shorts_caption_editor.py"
+            "research/research/shorts_branding.py"
+          )
+
+          for file in "${required_files[@]}"; do
+            if [ ! -f "$file" ]; then
+              echo "❌ EKSİK: $file"
+              exit 1
+            fi
+
+            echo "✅ $file"
+          done
+
+          echo ""
+          echo "✅ TÜM GEREKLİ DOSYALAR MEVCUT"
+          echo "=========================================="
+
+
+      # ============================================================
+      # 6 — YENİ KONU
+      # ============================================================
       - name: Generate NEW Topic
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -75,9 +136,8 @@ jobs:
 
 
       # ============================================================
-      # 5 — KONU KONTROLÜ
+      # 7 — KONU KONTROLÜ
       # ============================================================
-
       - name: Topic Validation
         run: |
           echo "=========================================="
@@ -92,11 +152,9 @@ jobs:
           python - <<'PY'
           import json
 
-          with open(
-              "research/current_topic.json",
-              "r",
-              encoding="utf-8"
-          ) as f:
+          path = "research/current_topic.json"
+
+          with open(path, "r", encoding="utf-8") as f:
               data = json.load(f)
 
           topic = data.get("topic", "")
@@ -112,11 +170,12 @@ jobs:
           print("✅ TITLE:", title)
           PY
 
+          echo "=========================================="
+
 
       # ============================================================
-      # 6 — WEB RESEARCH
+      # 8 — WEB RESEARCH
       # ============================================================
-
       - name: Web Research
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -125,20 +184,16 @@ jobs:
           echo "SHADOW ARCHIVE WEB RESEARCH"
           echo "=========================================="
 
-          if [ ! -f "research/research/web_researcher.py" ]; then
-            echo "❌ web_researcher.py bulunamadı."
-            exit 1
-          fi
-
-          echo "✅ web_researcher.py bulundu."
-
           python research/research/web_researcher.py
 
+          echo ""
+          echo "✅ WEB RESEARCH TAMAMLANDI"
+          echo "=========================================="
+
 
       # ============================================================
-      # 7 — SCRIPT
+      # 9 — SCRIPT
       # ============================================================
-
       - name: Script Generator
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -149,11 +204,14 @@ jobs:
 
           python research/research/script_generator.py
 
+          echo ""
+          echo "✅ SENARYO TAMAMLANDI"
+          echo "=========================================="
+
 
       # ============================================================
-      # 8 — TTS
+      # 10 — TTS
       # ============================================================
-
       - name: Text To Speech
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -162,13 +220,19 @@ jobs:
           echo "SHADOW ARCHIVE TTS"
           echo "=========================================="
 
+          ffmpeg -version | head -n 1
+          ffprobe -version | head -n 1
+
           python research/research/tts_generator.py
 
+          echo ""
+          echo "✅ TTS TAMAMLANDI"
+          echo "=========================================="
+
 
       # ============================================================
-      # 9 — VISUAL RESEARCH
+      # 11 — VISUAL RESEARCH
       # ============================================================
-
       - name: Visual Research
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -183,15 +247,16 @@ jobs:
             exit 1
           fi
 
-          echo "✅ PEXELS_API_KEY bulundu."
-
           python research/research/visual_research.py
 
+          echo ""
+          echo "✅ GÖRSEL RESEARCH TAMAMLANDI"
+          echo "=========================================="
+
 
       # ============================================================
-      # 10 — ANA VIDEO
+      # 12 — ANA VIDEO
       # ============================================================
-
       - name: Main Video Editor
         run: |
           echo "=========================================="
@@ -200,11 +265,14 @@ jobs:
 
           python research/research/cinematic_video_editor.py
 
+          echo ""
+          echo "✅ ANA VIDEO TAMAMLANDI"
+          echo "=========================================="
+
 
       # ============================================================
-      # 11 — DİNAMİK İNGİLİZCE ALTYAZI
+      # 13 — İNGİLİZCE ALTYAZI
       # ============================================================
-
       - name: English Subtitles
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -215,11 +283,14 @@ jobs:
 
           python research/research/english_subtitle_generator.py
 
+          echo ""
+          echo "✅ İNGİLİZCE ALTYAZI TAMAMLANDI"
+          echo "=========================================="
+
 
       # ============================================================
-      # 12 — SHORTS SELECTOR
+      # 14 — SHORTS SELECTOR
       # ============================================================
-
       - name: Shorts Selector
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -230,11 +301,14 @@ jobs:
 
           python research/research/shorts_selector.py
 
+          echo ""
+          echo "✅ SHORTS SEÇİMİ TAMAMLANDI"
+          echo "=========================================="
+
 
       # ============================================================
-      # 13 — SHORTS TTS
+      # 15 — SHORTS TTS
       # ============================================================
-
       - name: Shorts TTS
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -245,11 +319,14 @@ jobs:
 
           python research/research/shorts_tts.py
 
+          echo ""
+          echo "✅ SHORTS TTS TAMAMLANDI"
+          echo "=========================================="
+
 
       # ============================================================
-      # 14 — SHORTS SUBTITLES
+      # 16 — SHORTS SUBTITLES
       # ============================================================
-
       - name: Shorts Subtitles
         run: |
           echo "=========================================="
@@ -258,11 +335,14 @@ jobs:
 
           python research/research/shorts_subtitles.py
 
+          echo ""
+          echo "✅ SHORTS ALTYAZILARI TAMAMLANDI"
+          echo "=========================================="
+
 
       # ============================================================
-      # 15 — SHORTS VIDEO
+      # 17 — SHORTS VIDEO
       # ============================================================
-
       - name: Shorts Video Editor
         run: |
           echo "=========================================="
@@ -271,11 +351,14 @@ jobs:
 
           python research/research/shorts_editor.py
 
+          echo ""
+          echo "✅ SHORTS VİDEOLARI TAMAMLANDI"
+          echo "=========================================="
+
 
       # ============================================================
-      # 16 — SHORTS CAPTIONS
+      # 18 — SHORTS CAPTIONS
       # ============================================================
-
       - name: Shorts Caption Editor
         run: |
           echo "=========================================="
@@ -284,11 +367,14 @@ jobs:
 
           python research/research/shorts_caption_editor.py
 
+          echo ""
+          echo "✅ SHORTS CAPTION TAMAMLANDI"
+          echo "=========================================="
+
 
       # ============================================================
-      # 17 — SHORTS BRANDING
+      # 19 — SHORTS BRANDING
       # ============================================================
-
       - name: Shorts Branding
         run: |
           echo "=========================================="
@@ -297,12 +383,15 @@ jobs:
 
           python research/research/shorts_branding.py
 
+          echo ""
+          echo "✅ SHORTS BRANDING TAMAMLANDI"
+          echo "=========================================="
+
 
       # ============================================================
-      # 18 — GERÇEK ÜRETİM DOSYALARINI BUL
+      # 20 — GERÇEK ÜRETİM DOSYALARINI BUL
       # ============================================================
-
-      - name: PRODUCTION DOSYA KONTROLÜ
+      - name: Production File Validation
         run: |
           echo "=========================================="
           echo "PRODUCTION DOSYA KONTROLÜ"
@@ -313,31 +402,22 @@ jobs:
           import re
           from pathlib import Path
 
-          topic_file = Path(
-              "research/current_topic.json"
-          )
+          topic_file = Path("research/current_topic.json")
 
           if not topic_file.exists():
-              raise SystemExit(
-                  "❌ current_topic.json bulunamadı."
-              )
+              raise SystemExit("❌ current_topic.json bulunamadı.")
 
           data = json.loads(
-              topic_file.read_text(
-                  encoding="utf-8"
-              )
+              topic_file.read_text(encoding="utf-8")
           )
 
-          topic = data["topic"]
+          topic = data.get("topic", "").strip()
+
+          if not topic:
+              raise SystemExit("❌ topic boş.")
 
           safe_name = topic.lower()
-
-          safe_name = re.sub(
-              r"[^a-z0-9]+",
-              "_",
-              safe_name
-          )
-
+          safe_name = re.sub(r"[^a-z0-9]+", "_", safe_name)
           safe_name = safe_name.strip("_")
 
           if not safe_name:
@@ -357,6 +437,7 @@ jobs:
               f"research/video/shorts/{safe_name}_short_2.mp4"
           )
 
+          print("")
           print("TOPIC:")
           print(topic)
 
@@ -378,72 +459,50 @@ jobs:
 
           missing = []
 
-          if not main_video.exists():
-              missing.append(
-                  str(main_video)
-              )
-
-          if not short_1.exists():
-              missing.append(
-                  str(short_1)
-              )
-
-          if not short_2.exists():
-              missing.append(
-                  str(short_2)
-              )
+          for file in [main_video, short_1, short_2]:
+              if not file.exists():
+                  missing.append(str(file))
 
           if missing:
-
               print("")
               print("❌ EKSİK DOSYALAR:")
 
               for file in missing:
-                  print(
-                      f"- {file}"
-                  )
+                  print("-", file)
 
               print("")
               print("MEVCUT MP4 DOSYALARI:")
 
               for file in Path(".").rglob("*.mp4"):
-
                   if ".git" not in file.parts:
-                      print(
-                          f"- {file}"
-                      )
+                      print("-", file)
 
               raise SystemExit(
-                  "Production dosyaları eksik."
+                  "❌ Production dosyaları eksik."
+              )
+
+          for file in [main_video, short_1, short_2]:
+              size_mb = file.stat().st_size / 1024 / 1024
+
+              if size_mb < 0.1:
+                  raise SystemExit(
+                      f"❌ Dosya çok küçük veya bozuk: {file}"
+                  )
+
+              print(
+                  f"✅ {file} — {size_mb:.2f} MB"
               )
 
           print("")
           print("==========================================")
           print("✅ TÜM ÜRETİM DOSYALARI BULUNDU")
           print("==========================================")
-
-          print("")
-          print("ANA VIDEO BOYUTU:")
-          print(
-              f"{main_video.stat().st_size / 1024 / 1024:.2f} MB"
-          )
-
-          print("SHORT 1 BOYUTU:")
-          print(
-              f"{short_1.stat().st_size / 1024 / 1024:.2f} MB"
-          )
-
-          print("SHORT 2 BOYUTU:")
-          print(
-              f"{short_2.stat().st_size / 1024 / 1024:.2f} MB"
-          )
           PY
 
 
       # ============================================================
-      # 19 — PRODUCTION PACKAGE
+      # 21 — PRODUCTION PACKAGE
       # ============================================================
-
       - name: Production Package Hazırla
         run: |
           echo "=========================================="
@@ -458,10 +517,11 @@ jobs:
 
           python - <<'PY'
           import json
-          import os
           import re
           import shutil
           from pathlib import Path
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
 
           topic_file = Path(
               "research/current_topic.json"
@@ -476,13 +536,11 @@ jobs:
           topic = data["topic"]
 
           safe_name = topic.lower()
-
           safe_name = re.sub(
               r"[^a-z0-9]+",
               "_",
               safe_name
           )
-
           safe_name = safe_name.strip("_")
 
           if not safe_name:
@@ -502,6 +560,19 @@ jobs:
               f"research/video/shorts/{safe_name}_short_2.mp4"
           )
 
+          required = [
+              main_video,
+              short_1,
+              short_2,
+              topic_file
+          ]
+
+          for file in required:
+              if not file.exists():
+                  raise SystemExit(
+                      f"❌ Eksik dosya: {file}"
+                  )
+
           shutil.copy2(
               main_video,
               "production_package/main/main_video.mp4"
@@ -518,7 +589,7 @@ jobs:
           )
 
           shutil.copy2(
-              "research/current_topic.json",
+              topic_file,
               "production_package/research/current_topic.json"
           )
 
@@ -527,24 +598,16 @@ jobs:
           )
 
           if history_file.exists():
-
               shutil.copy2(
                   history_file,
                   "production_package/research/topic_history.json"
               )
 
-          production_date = os.environ.get(
-              "PRODUCTION_DATE"
-          )
+          production_date = datetime.now(
+              ZoneInfo("Europe/Istanbul")
+          ).strftime("%Y-%m-%d")
 
-          if not production_date:
-              raise SystemExit(
-                  "PRODUCTION_DATE bulunamadı."
-              )
-
-          run_id = os.environ[
-              "GITHUB_RUN_ID"
-          ]
+          run_id = "${{ github.run_id }}"
 
           production_id = (
               f"{production_date}-{run_id}"
@@ -583,49 +646,37 @@ jobs:
                   indent=2
               )
           )
+
+          print("")
+          print("PRODUCTION ID:")
+          print(production_id)
           PY
 
           echo ""
           echo "PACKAGE DOSYALARI:"
-
-          find production_package \
-            -type f \
-            -exec ls -lh {} \;
+          find production_package -type f -exec ls -lh {} \;
 
 
       # ============================================================
-      # 20 — PACKAGE VALIDATION
+      # 22 — PACKAGE VALIDATION
       # ============================================================
-
       - name: Production Package Validation
         run: |
           echo "=========================================="
           echo "PACKAGE VALIDATION"
           echo "=========================================="
 
-          test -f \
-            production_package/main/main_video.mp4
-
-          test -f \
-            production_package/shorts/short_1.mp4
-
-          test -f \
-            production_package/shorts/short_2.mp4
-
-          test -f \
-            production_package/research/current_topic.json
-
-          test -f \
-            production_package/production.json
+          test -f production_package/main/main_video.mp4
+          test -f production_package/shorts/short_1.mp4
+          test -f production_package/shorts/short_2.mp4
+          test -f production_package/research/current_topic.json
+          test -f production_package/production.json
 
           echo "✅ ANA VIDEO"
           echo "✅ SHORT 1"
           echo "✅ SHORT 2"
           echo "✅ CURRENT TOPIC"
           echo "✅ PRODUCTION JSON"
-
-          echo ""
-          echo "PRODUCTION BİLGİLERİ:"
 
           python - <<'PY'
           import json
@@ -635,30 +686,86 @@ jobs:
               "r",
               encoding="utf-8"
           ) as f:
-
               data = json.load(f)
 
-          print(
-              "PRODUCTION ID:",
-              data["production_id"]
-          )
+          required = [
+              "production_id",
+              "production_date",
+              "run_id",
+              "topic",
+              "title",
+              "description"
+          ]
 
-          print(
-              "TOPIC:",
-              data["topic"]
-          )
+          for key in required:
+              if not data.get(key):
+                  raise SystemExit(
+                      f"❌ production.json eksik alan: {key}"
+                  )
 
-          print(
-              "TITLE:",
-              data["title"]
-          )
+          print("")
+          print("PRODUCTION ID:")
+          print(data["production_id"])
+
+          print("")
+          print("TOPIC:")
+          print(data["topic"])
+
+          print("")
+          print("TITLE:")
+          print(data["title"])
+
+          print("")
+          print("DESCRIPTION HAZIR")
+          print("HASHTAGS:")
+          print(data.get("hashtags", []))
+
+          print("")
+          print("✅ PRODUCTION JSON GEÇERLİ")
           PY
 
 
       # ============================================================
-      # 21 — ARTIFACT
+      # 23 — FINAL VIDEO CHECK
       # ============================================================
+      - name: Final FFprobe Check
+        run: |
+          echo "=========================================="
+          echo "FINAL VIDEO CHECK"
+          echo "=========================================="
 
+          echo ""
+          echo "ANA VIDEO:"
+          ffprobe \
+            -v error \
+            -show_entries format=duration,size \
+            -of default=noprint_wrappers=1 \
+            production_package/main/main_video.mp4
+
+          echo ""
+          echo "SHORT 1:"
+          ffprobe \
+            -v error \
+            -show_entries format=duration,size \
+            -of default=noprint_wrappers=1 \
+            production_package/shorts/short_1.mp4
+
+          echo ""
+          echo "SHORT 2:"
+          ffprobe \
+            -v error \
+            -show_entries format=duration,size \
+            -of default=noprint_wrappers=1 \
+            production_package/shorts/short_2.mp4
+
+          echo ""
+          echo "✅ TÜM VİDEOLAR OKUNABİLİYOR"
+          echo "=========================================="
+
+
+      # ============================================================
+      # 24 — ARTIFACT
+      # ============================================================
       - name: Upload Complete Production
         uses: actions/upload-artifact@v4
         with:
@@ -669,9 +776,8 @@ jobs:
 
 
       # ============================================================
-      # 22 — TOPIC HISTORY
+      # 25 — TOPIC HISTORY
       # ============================================================
-
       - name: Save Topic History
         run: |
           echo "=========================================="
@@ -684,30 +790,22 @@ jobs:
           git config user.email \
             "shadow-archive-bot@users.noreply.github.com"
 
-          git add \
-            research/current_topic.json
-
-          git add \
-            research/topic_history.json
+          git add research/current_topic.json
+          git add research/topic_history.json
 
           if git diff --cached --quiet; then
-
             echo "Değişiklik yok."
-
           else
-
             git commit \
               -m "Shadow Archive new production topic"
 
             git push
-
           fi
 
 
       # ============================================================
-      # 23 — TAMAMLANDI
+      # 26 — TAMAMLANDI
       # ============================================================
-
       - name: Production Complete
         run: |
           echo ""
@@ -715,6 +813,7 @@ jobs:
           echo "SHADOW ARCHIVE PRODUCTION TAMAMLANDI"
           echo "=========================================="
 
+          echo "✅ FFmpeg"
           echo "✅ Yeni konu"
           echo "✅ Web research"
           echo "✅ Senaryo"
@@ -725,7 +824,9 @@ jobs:
           echo "✅ Short 1"
           echo "✅ Short 2"
           echo "✅ Production package"
+          echo "✅ Video validation"
           echo "✅ Artifact"
+          echo "✅ Topic history"
 
           echo ""
           echo "🎬 ÜRETİM PAKETİ HAZIR."
