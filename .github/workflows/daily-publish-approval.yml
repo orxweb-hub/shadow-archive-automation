@@ -15,12 +15,19 @@ jobs:
 
     steps:
 
+      # ============================================================
+      # 1 — REPOSITORY
+      # ============================================================
       - name: Repository indir
         uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 1
 
+
+      # ============================================================
+      # 2 — BUGÜNÜN MASTER PRODUCTION RUN'INI BUL
+      # ============================================================
       - name: Bugunun Production Run bul
         id: find_run
         env:
@@ -51,10 +58,15 @@ jobs:
           today = sys.argv[1]
           filename = sys.argv[2]
 
-          with open(filename, "r", encoding="utf-8") as f:
+          with open(
+              filename,
+              "r",
+              encoding="utf-8"
+          ) as f:
               runs = json.load(f)
 
           turkey = ZoneInfo("Europe/Istanbul")
+
           matching = []
 
           for run in runs:
@@ -68,9 +80,11 @@ jobs:
                   created_at.replace("Z", "+00:00")
               )
 
-              turkey_date = dt.astimezone(
-                  turkey
-              ).date().isoformat()
+              turkey_date = (
+                  dt.astimezone(turkey)
+                  .date()
+                  .isoformat()
+              )
 
               if turkey_date == today:
                   matching.append(
@@ -89,14 +103,21 @@ jobs:
           RUN_ID=$(cat selected_run.txt)
 
           if [ -z "$RUN_ID" ]; then
-            echo "BUGUNUN MASTER PRODUCTION RUN'I BULUNAMADI"
+            echo ""
+            echo "❌ BUGUNUN MASTER PRODUCTION RUN'I BULUNAMADI"
+            echo "=========================================="
             exit 1
           fi
 
-          echo "Master Production Run ID: $RUN_ID"
+          echo ""
+          echo "✅ Master Production Run ID: $RUN_ID"
 
           echo "run_id=$RUN_ID" >> "$GITHUB_OUTPUT"
 
+
+      # ============================================================
+      # 3 — PRODUCTION PACKAGE İNDİR
+      # ============================================================
       - name: Production Package indir
         env:
           GH_TOKEN: ${{ github.token }}
@@ -104,6 +125,8 @@ jobs:
           echo "=========================================="
           echo "PRODUCTION PACKAGE INDIRILIYOR"
           echo "=========================================="
+
+          rm -rf production_package
 
           mkdir -p production_package
 
@@ -114,11 +137,35 @@ jobs:
             --dir production_package
 
           echo ""
-          echo "DOSYALAR:"
+          echo "=========================================="
+          echo "INDIRILEN DOSYALAR"
+          echo "=========================================="
+
           find production_package \
             -type f \
             -exec ls -lh {} \;
 
+          echo ""
+          echo "=========================================="
+          echo "PACKAGE KONTROLU"
+          echo "=========================================="
+
+          if [ ! -f "production_package/production.json" ]; then
+            echo "❌ production_package/production.json bulunamadi"
+
+            echo ""
+            echo "MEVCUT DOSYALAR:"
+            find production_package -type f
+
+            exit 1
+          fi
+
+          echo "✅ production.json bulundu"
+
+
+      # ============================================================
+      # 4 — PRODUCTION ID KONTROL
+      # ============================================================
       - name: Production ID kontrol
         id: production
         run: |
@@ -133,10 +180,14 @@ jobs:
           from datetime import datetime
           from zoneinfo import ZoneInfo
 
-          metadata_file = "production_package/metadata/production.json"
+          metadata_file = (
+              "production_package/production.json"
+          )
 
           if not os.path.exists(metadata_file):
-              print("production.json bulunamadi")
+              print(
+                  "❌ production_package/production.json bulunamadi"
+              )
               sys.exit(1)
 
           with open(
@@ -146,28 +197,66 @@ jobs:
           ) as f:
               data = json.load(f)
 
-          production_id = data["production_id"]
-          production_date = data["production_date"]
-          package_run_id = str(data["github_run_id"])
+          production_id = data.get(
+              "production_id"
+          )
+
+          production_date = data.get(
+              "production_date"
+          )
+
+          package_run_id = str(
+              data.get("run_id", "")
+          )
 
           today = datetime.now(
               ZoneInfo("Europe/Istanbul")
           ).date().isoformat()
 
-          expected_run_id = "${{ steps.find_run.outputs.run_id }}"
+          expected_run_id = (
+              "${{ steps.find_run.outputs.run_id }}"
+          )
 
-          print("Production ID:", production_id)
-          print("Production Date:", production_date)
-          print("Package Run ID:", package_run_id)
-          print("Today:", today)
-          print("Expected Run ID:", expected_run_id)
+          print("")
+          print("Production ID:")
+          print(production_id)
+
+          print("")
+          print("Production Date:")
+          print(production_date)
+
+          print("")
+          print("Package Run ID:")
+          print(package_run_id)
+
+          print("")
+          print("Today:")
+          print(today)
+
+          print("")
+          print("Expected Run ID:")
+          print(expected_run_id)
+
+          if not production_id:
+              print("❌ Production ID yok")
+              sys.exit(1)
+
+          if not production_date:
+              print("❌ Production Date yok")
+              sys.exit(1)
+
+          if not package_run_id:
+              print("❌ Package Run ID yok")
+              sys.exit(1)
 
           if production_date != today:
-              print("Paket bugune ait degil")
+              print("")
+              print("❌ Paket bugune ait degil")
               sys.exit(1)
 
           if package_run_id != expected_run_id:
-              print("Run ID uyusmuyor")
+              print("")
+              print("❌ Run ID uyusmuyor")
               sys.exit(1)
 
           with open(
@@ -175,6 +264,7 @@ jobs:
               "a",
               encoding="utf-8"
           ) as out:
+
               out.write(
                   "production_id="
                   + production_id
@@ -188,26 +278,57 @@ jobs:
               )
 
           print("")
-          print("PAKET BUGUNE AIT")
-          print("RUN ID DOGRULANDI")
+          print("==========================================")
+          print("✅ PAKET BUGUNE AIT")
+          print("✅ RUN ID DOGRULANDI")
+          print("==========================================")
           PY
 
+
+      # ============================================================
+      # 5 — VIDEO DOSYALARINI KONTROL
+      # ============================================================
       - name: Video dosyalarini kontrol et
         run: |
           echo "=========================================="
           echo "VIDEO DOSYALARI KONTROL"
           echo "=========================================="
 
-          test -f production_package/main/main_video.mp4
-          test -f production_package/shorts/short_1.mp4
-          test -f production_package/shorts/short_2.mp4
-          test -f production_package/research/current_topic.json
+          test -f \
+            production_package/main/main_video.mp4
 
-          echo "Ana video bulundu"
-          echo "Short 1 bulundu"
-          echo "Short 2 bulundu"
-          echo "current_topic bulundu"
+          test -f \
+            production_package/shorts/short_1.mp4
 
+          test -f \
+            production_package/shorts/short_2.mp4
+
+          test -f \
+            production_package/research/current_topic.json
+
+          echo "✅ Ana video bulundu"
+          echo "✅ Short 1 bulundu"
+          echo "✅ Short 2 bulundu"
+          echo "✅ current_topic bulundu"
+
+          echo ""
+          echo "=========================================="
+          echo "VIDEO BOYUTLARI"
+          echo "=========================================="
+
+          ls -lh \
+            production_package/main/main_video.mp4
+
+          ls -lh \
+            production_package/shorts/short_1.mp4
+
+          ls -lh \
+            production_package/shorts/short_2.mp4
+
+
+      # ============================================================
+      # 6 — VIDEO BİLGİLERİNİ OKU
+      # ============================================================
       - name: Video bilgilerini oku
         id: topic
         run: |
@@ -219,7 +340,9 @@ jobs:
           import json
           import os
 
-          path = "production_package/research/current_topic.json"
+          path = (
+              "production_package/research/current_topic.json"
+          )
 
           with open(
               path,
@@ -242,16 +365,24 @@ jobs:
               or ""
           )
 
-          hashtags = data.get("hashtags", [])
+          hashtags = data.get(
+              "hashtags",
+              []
+          )
 
           if isinstance(hashtags, list):
               hashtags_text = " ".join(
-                  str(x) for x in hashtags
+                  str(x)
+                  for x in hashtags
               )
           else:
-              hashtags_text = str(hashtags)
+              hashtags_text = str(
+                  hashtags
+              )
 
-          output = os.environ["GITHUB_OUTPUT"]
+          output = os.environ[
+              "GITHUB_OUTPUT"
+          ]
 
           with open(
               output,
@@ -259,17 +390,41 @@ jobs:
               encoding="utf-8"
           ) as out:
 
-              out.write("title<<EOF\n")
-              out.write(title + "\n")
-              out.write("EOF\n")
+              out.write(
+                  "title<<EOF\n"
+              )
 
-              out.write("description<<EOF\n")
-              out.write(description + "\n")
-              out.write("EOF\n")
+              out.write(
+                  title + "\n"
+              )
 
-              out.write("hashtags<<EOF\n")
-              out.write(hashtags_text + "\n")
-              out.write("EOF\n")
+              out.write(
+                  "EOF\n"
+              )
+
+              out.write(
+                  "description<<EOF\n"
+              )
+
+              out.write(
+                  description + "\n"
+              )
+
+              out.write(
+                  "EOF\n"
+              )
+
+              out.write(
+                  "hashtags<<EOF\n"
+              )
+
+              out.write(
+                  hashtags_text + "\n"
+              )
+
+              out.write(
+                  "EOF\n"
+              )
 
           print("BASLIK:")
           print(title)
@@ -281,8 +436,17 @@ jobs:
           print("")
           print("HASHTAGLER:")
           print(hashtags_text)
+
+          print("")
+          print("==========================================")
+          print("✅ VIDEO BILGILERI HAZIR")
+          print("==========================================")
           PY
 
+
+      # ============================================================
+      # 7 — TELEGRAM ONAY MESAJI
+      # ============================================================
       - name: Telegram Onay Mesaji Gonder
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -302,13 +466,29 @@ jobs:
           import urllib.parse
           import urllib.request
 
-          token = os.environ["TELEGRAM_BOT_TOKEN"]
-          chat_id = os.environ["TELEGRAM_CHAT_ID"]
+          token = os.environ[
+              "TELEGRAM_BOT_TOKEN"
+          ]
 
-          title = os.environ["VIDEO_TITLE"]
-          description = os.environ["VIDEO_DESCRIPTION"]
-          hashtags = os.environ["VIDEO_HASHTAGS"]
-          production_id = os.environ["PRODUCTION_ID"]
+          chat_id = os.environ[
+              "TELEGRAM_CHAT_ID"
+          ]
+
+          title = os.environ[
+              "VIDEO_TITLE"
+          ]
+
+          description = os.environ[
+              "VIDEO_DESCRIPTION"
+          ]
+
+          hashtags = os.environ[
+              "VIDEO_HASHTAGS"
+          ]
+
+          production_id = os.environ[
+              "PRODUCTION_ID"
+          ]
 
           lines = [
               "🤖 SHADOW ARCHIVE — GÜNLÜK YAYIN HAZIR",
@@ -340,11 +520,15 @@ jobs:
                   [
                       {
                           "text": "▶️ YAYINLA",
-                          "callback_data": "publish_approve:" + production_id
+                          "callback_data":
+                              "publish_approve:"
+                              + production_id
                       },
                       {
                           "text": "❌ YAYINLAMA",
-                          "callback_data": "publish_reject:" + production_id
+                          "callback_data":
+                              "publish_reject:"
+                              + production_id
                       }
                   ]
               ]
@@ -377,17 +561,23 @@ jobs:
               request,
               timeout=30
           ) as response:
+
               result = json.loads(
-                  response.read().decode("utf-8")
+                  response.read().decode(
+                      "utf-8"
+                  )
               )
 
           print(result)
 
           if not result.get("ok"):
-              print("TELEGRAM MESAJI GONDERILEMEDI")
+              print(
+                  "❌ TELEGRAM MESAJI GONDERILEMEDI"
+              )
               raise SystemExit(1)
 
           print("")
-          print("TELEGRAM ONAY MESAJI GONDERILDI")
+          print("==========================================")
+          print("✅ TELEGRAM ONAY MESAJI GONDERILDI")
           print("==========================================")
           PY
