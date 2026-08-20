@@ -13,7 +13,7 @@ jobs:
     steps:
 
       # ============================================================
-      # 1 — REPOSITORY
+      # 1 — CHECKOUT
       # ============================================================
 
       - name: Repository Checkout
@@ -38,6 +38,10 @@ jobs:
 
       - name: Install Dependencies
         run: |
+          echo "=========================================="
+          echo "DEPENDENCIES"
+          echo "=========================================="
+
           python -m pip install --upgrade pip
 
           if [ -f requirements.txt ]; then
@@ -45,6 +49,10 @@ jobs:
           fi
 
           pip install google-genai
+
+          echo "=========================================="
+          echo "DEPENDENCIES HAZIR"
+          echo "=========================================="
 
 
       # ============================================================
@@ -60,6 +68,10 @@ jobs:
           echo "=========================================="
 
           python research/research/daily_topic_generator.py
+
+          echo ""
+          echo "CURRENT TOPIC:"
+          cat research/current_topic.json
 
 
       # ============================================================
@@ -77,10 +89,28 @@ jobs:
             exit 1
           fi
 
-          cat research/current_topic.json
+          python - <<'PY'
+          import json
 
-          echo ""
-          echo "✅ Yeni konu dosyası hazır."
+          with open(
+              "research/current_topic.json",
+              "r",
+              encoding="utf-8"
+          ) as f:
+              data = json.load(f)
+
+          topic = data.get("topic", "")
+          title = data.get("title", "")
+
+          if not topic:
+              raise SystemExit("❌ topic boş.")
+
+          if not title:
+              raise SystemExit("❌ title boş.")
+
+          print("✅ TOPIC:", topic)
+          print("✅ TITLE:", title)
+          PY
 
 
       # ============================================================
@@ -95,7 +125,14 @@ jobs:
           echo "SHADOW ARCHIVE WEB RESEARCH"
           echo "=========================================="
 
-          python research/research/web_research.py
+          if [ ! -f "research/research/web_researcher.py" ]; then
+            echo "❌ web_researcher.py bulunamadı."
+            exit 1
+          fi
+
+          echo "✅ web_researcher.py bulundu."
+
+          python research/research/web_researcher.py
 
 
       # ============================================================
@@ -152,7 +189,7 @@ jobs:
 
 
       # ============================================================
-      # 10 — MAIN VIDEO
+      # 10 — ANA VIDEO
       # ============================================================
 
       - name: Main Video Editor
@@ -161,20 +198,22 @@ jobs:
           echo "SHADOW ARCHIVE MAIN VIDEO"
           echo "=========================================="
 
-          python research/video/cinematic_video_editor.py
+          python research/research/cinematic_video_editor.py
 
 
       # ============================================================
-      # 11 — MAIN SUBTITLES
+      # 11 — DİNAMİK İNGİLİZCE ALTYAZI
       # ============================================================
 
-      - name: Main Video Subtitles
+      - name: English Subtitles
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           echo "=========================================="
-          echo "MAIN VIDEO SUBTITLES"
+          echo "ENGLISH SUBTITLES"
           echo "=========================================="
 
-          python research/video/subtitles.py
+          python research/research/english_subtitle_generator.py
 
 
       # ============================================================
@@ -189,7 +228,7 @@ jobs:
           echo "SHORTS SELECTOR"
           echo "=========================================="
 
-          python research/shorts/shorts_selector.py
+          python research/research/shorts_selector.py
 
 
       # ============================================================
@@ -204,7 +243,7 @@ jobs:
           echo "SHORTS TTS"
           echo "=========================================="
 
-          python research/shorts/shorts_tts.py
+          python research/research/shorts_tts.py
 
 
       # ============================================================
@@ -217,7 +256,7 @@ jobs:
           echo "SHORTS SUBTITLES"
           echo "=========================================="
 
-          python research/shorts/shorts_subtitles.py
+          python research/research/shorts_subtitles.py
 
 
       # ============================================================
@@ -230,7 +269,7 @@ jobs:
           echo "SHORTS VIDEO EDITOR"
           echo "=========================================="
 
-          python research/shorts/shorts_editor.py
+          python research/research/shorts_editor.py
 
 
       # ============================================================
@@ -243,11 +282,11 @@ jobs:
           echo "SHORTS CAPTION EDITOR"
           echo "=========================================="
 
-          python research/shorts/shorts_caption_editor.py
+          python research/research/shorts_caption_editor.py
 
 
       # ============================================================
-      # 17 — BRANDING
+      # 17 — SHORTS BRANDING
       # ============================================================
 
       - name: Shorts Branding
@@ -256,11 +295,11 @@ jobs:
           echo "SHORTS BRANDING"
           echo "=========================================="
 
-          python research/shorts/shorts_branding.py
+          python research/research/shorts_branding.py
 
 
       # ============================================================
-      # 18 — GERÇEK DOSYA ARAMA
+      # 18 — GERÇEK ÜRETİM DOSYALARINI BUL
       # ============================================================
 
       - name: PRODUCTION DOSYA KONTROLÜ
@@ -269,87 +308,136 @@ jobs:
           echo "PRODUCTION DOSYA KONTROLÜ"
           echo "=========================================="
 
-          echo ""
-          echo "📂 REPOSITORY DOSYALARI:"
-          find . -type f \
-            \( -name "*.mp4" -o -name "*.mov" -o -name "*.mkv" \) \
-            -not -path "./.git/*" \
-            | sort
+          python - <<'PY'
+          import json
+          import re
+          from pathlib import Path
 
-          echo ""
-          echo "=========================================="
-          echo "ANA VIDEO ARANIYOR"
-          echo "=========================================="
+          topic_file = Path(
+              "research/current_topic.json"
+          )
 
-          MAIN_VIDEO=$(find . -type f \
-            -name "main_video.mp4" \
-            -not -path "./.git/*" \
-            | head -n 1)
+          if not topic_file.exists():
+              raise SystemExit(
+                  "❌ current_topic.json bulunamadı."
+              )
 
-          if [ -z "$MAIN_VIDEO" ]; then
-            echo "❌ main_video.mp4 bulunamadı."
-            echo ""
-            echo "Bulunan tüm MP4 dosyaları:"
-            find . -type f \
-              -name "*.mp4" \
-              -not -path "./.git/*" \
-              | sort
-            exit 1
-          fi
+          data = json.loads(
+              topic_file.read_text(
+                  encoding="utf-8"
+              )
+          )
 
-          echo "✅ ANA VIDEO:"
-          echo "$MAIN_VIDEO"
+          topic = data["topic"]
 
+          safe_name = topic.lower()
 
-          echo ""
-          echo "=========================================="
-          echo "SHORT 1 ARANIYOR"
-          echo "=========================================="
+          safe_name = re.sub(
+              r"[^a-z0-9]+",
+              "_",
+              safe_name
+          )
 
-          SHORT1=$(find . -type f \
-            -name "short_1.mp4" \
-            -not -path "./.git/*" \
-            | head -n 1)
+          safe_name = safe_name.strip("_")
 
-          if [ -z "$SHORT1" ]; then
-            echo "❌ short_1.mp4 bulunamadı."
-            exit 1
-          fi
+          if not safe_name:
+              safe_name = "daily_topic"
 
-          echo "✅ SHORT 1:"
-          echo "$SHORT1"
+          safe_name = safe_name[:80]
 
+          main_video = Path(
+              f"research/video/{safe_name}_v4.mp4"
+          )
 
-          echo ""
-          echo "=========================================="
-          echo "SHORT 2 ARANIYOR"
-          echo "=========================================="
+          short_1 = Path(
+              f"research/video/shorts/{safe_name}_short_1.mp4"
+          )
 
-          SHORT2=$(find . -type f \
-            -name "short_2.mp4" \
-            -not -path "./.git/*" \
-            | head -n 1)
+          short_2 = Path(
+              f"research/video/shorts/{safe_name}_short_2.mp4"
+          )
 
-          if [ -z "$SHORT2" ]; then
-            echo "❌ short_2.mp4 bulunamadı."
-            exit 1
-          fi
+          print("TOPIC:")
+          print(topic)
 
-          echo "✅ SHORT 2:"
-          echo "$SHORT2"
+          print("")
+          print("SAFE NAME:")
+          print(safe_name)
 
+          print("")
+          print("ANA VIDEO:")
+          print(main_video)
 
-          echo ""
-          echo "=========================================="
-          echo "DOSYA BOYUTLARI"
-          echo "=========================================="
+          print("")
+          print("SHORT 1:")
+          print(short_1)
 
-          ls -lh "$MAIN_VIDEO"
-          ls -lh "$SHORT1"
-          ls -lh "$SHORT2"
+          print("")
+          print("SHORT 2:")
+          print(short_2)
 
-          echo ""
-          echo "✅ TÜM PRODUCTION DOSYALARI BULUNDU."
+          missing = []
+
+          if not main_video.exists():
+              missing.append(
+                  str(main_video)
+              )
+
+          if not short_1.exists():
+              missing.append(
+                  str(short_1)
+              )
+
+          if not short_2.exists():
+              missing.append(
+                  str(short_2)
+              )
+
+          if missing:
+
+              print("")
+              print("❌ EKSİK DOSYALAR:")
+
+              for file in missing:
+                  print(
+                      f"- {file}"
+                  )
+
+              print("")
+              print("MEVCUT MP4 DOSYALARI:")
+
+              for file in Path(".").rglob("*.mp4"):
+
+                  if ".git" not in file.parts:
+                      print(
+                          f"- {file}"
+                      )
+
+              raise SystemExit(
+                  "Production dosyaları eksik."
+              )
+
+          print("")
+          print("==========================================")
+          print("✅ TÜM ÜRETİM DOSYALARI BULUNDU")
+          print("==========================================")
+
+          print("")
+          print("ANA VIDEO BOYUTU:")
+          print(
+              f"{main_video.stat().st_size / 1024 / 1024:.2f} MB"
+          )
+
+          print("SHORT 1 BOYUTU:")
+          print(
+              f"{short_1.stat().st_size / 1024 / 1024:.2f} MB"
+          )
+
+          print("SHORT 2 BOYUTU:")
+          print(
+              f"{short_2.stat().st_size / 1024 / 1024:.2f} MB"
+          )
+          PY
 
 
       # ============================================================
@@ -368,58 +456,95 @@ jobs:
           mkdir -p production_package/shorts
           mkdir -p production_package/research
 
-          MAIN_VIDEO=$(find . -type f \
-            -name "main_video.mp4" \
-            -not -path "./.git/*" \
-            | head -n 1)
-
-          SHORT1=$(find . -type f \
-            -name "short_1.mp4" \
-            -not -path "./.git/*" \
-            | head -n 1)
-
-          SHORT2=$(find . -type f \
-            -name "short_2.mp4" \
-            -not -path "./.git/*" \
-            | head -n 1)
-
-          cp "$MAIN_VIDEO" \
-            production_package/main/main_video.mp4
-
-          cp "$SHORT1" \
-            production_package/shorts/short_1.mp4
-
-          cp "$SHORT2" \
-            production_package/shorts/short_2.mp4
-
-          cp research/current_topic.json \
-            production_package/research/current_topic.json
-
-          if [ -f research/topic_history.json ]; then
-            cp research/topic_history.json \
-              production_package/research/topic_history.json
-          fi
-
-          PRODUCTION_DATE=$(TZ=Europe/Istanbul date +%Y-%m-%d)
-          export PRODUCTION_DATE
-
           python - <<'PY'
           import json
           import os
+          import re
+          import shutil
           from pathlib import Path
 
-          production_date = os.environ["PRODUCTION_DATE"]
-          run_id = os.environ["GITHUB_RUN_ID"]
-
           topic_file = Path(
-              "production_package/research/current_topic.json"
+              "research/current_topic.json"
           )
 
-          topic = json.loads(
+          data = json.loads(
               topic_file.read_text(
                   encoding="utf-8"
               )
           )
+
+          topic = data["topic"]
+
+          safe_name = topic.lower()
+
+          safe_name = re.sub(
+              r"[^a-z0-9]+",
+              "_",
+              safe_name
+          )
+
+          safe_name = safe_name.strip("_")
+
+          if not safe_name:
+              safe_name = "daily_topic"
+
+          safe_name = safe_name[:80]
+
+          main_video = Path(
+              f"research/video/{safe_name}_v4.mp4"
+          )
+
+          short_1 = Path(
+              f"research/video/shorts/{safe_name}_short_1.mp4"
+          )
+
+          short_2 = Path(
+              f"research/video/shorts/{safe_name}_short_2.mp4"
+          )
+
+          shutil.copy2(
+              main_video,
+              "production_package/main/main_video.mp4"
+          )
+
+          shutil.copy2(
+              short_1,
+              "production_package/shorts/short_1.mp4"
+          )
+
+          shutil.copy2(
+              short_2,
+              "production_package/shorts/short_2.mp4"
+          )
+
+          shutil.copy2(
+              "research/current_topic.json",
+              "production_package/research/current_topic.json"
+          )
+
+          history_file = Path(
+              "research/topic_history.json"
+          )
+
+          if history_file.exists():
+
+              shutil.copy2(
+                  history_file,
+                  "production_package/research/topic_history.json"
+              )
+
+          production_date = os.environ.get(
+              "PRODUCTION_DATE"
+          )
+
+          if not production_date:
+              raise SystemExit(
+                  "PRODUCTION_DATE bulunamadı."
+              )
+
+          run_id = os.environ[
+              "GITHUB_RUN_ID"
+          ]
 
           production_id = (
               f"{production_date}-{run_id}"
@@ -429,10 +554,10 @@ jobs:
               "production_id": production_id,
               "production_date": production_date,
               "run_id": run_id,
-              "topic": topic.get("topic", ""),
-              "title": topic.get("title", ""),
-              "description": topic.get("description", ""),
-              "hashtags": topic.get("hashtags", [])
+              "topic": data.get("topic", ""),
+              "title": data.get("title", ""),
+              "description": data.get("description", ""),
+              "hashtags": data.get("hashtags", [])
           }
 
           Path(
@@ -446,6 +571,11 @@ jobs:
               encoding="utf-8"
           )
 
+          print("")
+          print("==========================================")
+          print("PACKAGE HAZIR")
+          print("==========================================")
+
           print(
               json.dumps(
                   metadata,
@@ -456,11 +586,11 @@ jobs:
           PY
 
           echo ""
-          echo "=========================================="
-          echo "PACKAGE İÇERİĞİ"
-          echo "=========================================="
+          echo "PACKAGE DOSYALARI:"
 
-          find production_package -type f -exec ls -lh {} \;
+          find production_package \
+            -type f \
+            -exec ls -lh {} \;
 
 
       # ============================================================
@@ -473,20 +603,29 @@ jobs:
           echo "PACKAGE VALIDATION"
           echo "=========================================="
 
-          test -f production_package/main/main_video.mp4
-          test -f production_package/shorts/short_1.mp4
-          test -f production_package/shorts/short_2.mp4
-          test -f production_package/research/current_topic.json
-          test -f production_package/production.json
+          test -f \
+            production_package/main/main_video.mp4
 
-          echo "✅ Ana video hazır."
-          echo "✅ Short 1 hazır."
-          echo "✅ Short 2 hazır."
-          echo "✅ Konu hazır."
-          echo "✅ Production metadata hazır."
+          test -f \
+            production_package/shorts/short_1.mp4
+
+          test -f \
+            production_package/shorts/short_2.mp4
+
+          test -f \
+            production_package/research/current_topic.json
+
+          test -f \
+            production_package/production.json
+
+          echo "✅ ANA VIDEO"
+          echo "✅ SHORT 1"
+          echo "✅ SHORT 2"
+          echo "✅ CURRENT TOPIC"
+          echo "✅ PRODUCTION JSON"
 
           echo ""
-          echo "PRODUCTION ID:"
+          echo "PRODUCTION BİLGİLERİ:"
 
           python - <<'PY'
           import json
@@ -496,9 +635,11 @@ jobs:
               "r",
               encoding="utf-8"
           ) as f:
+
               data = json.load(f)
 
           print(
+              "PRODUCTION ID:",
               data["production_id"]
           )
 
@@ -528,45 +669,64 @@ jobs:
 
 
       # ============================================================
-      # 22 — TOPIC HISTORY COMMIT
+      # 22 — TOPIC HISTORY
       # ============================================================
 
       - name: Save Topic History
         run: |
-          git config user.name "Shadow Archive Bot"
-          git config user.email "shadow-archive-bot@users.noreply.github.com"
+          echo "=========================================="
+          echo "TOPIC HISTORY KAYDEDİLİYOR"
+          echo "=========================================="
 
-          git add research/current_topic.json
-          git add research/topic_history.json
+          git config user.name \
+            "Shadow Archive Bot"
 
-          git diff --cached --quiet || \
-            git commit -m "Shadow Archive new production topic"
+          git config user.email \
+            "shadow-archive-bot@users.noreply.github.com"
 
-          git push
+          git add \
+            research/current_topic.json
+
+          git add \
+            research/topic_history.json
+
+          if git diff --cached --quiet; then
+
+            echo "Değişiklik yok."
+
+          else
+
+            git commit \
+              -m "Shadow Archive new production topic"
+
+            git push
+
+          fi
 
 
       # ============================================================
-      # 23 — FINAL
+      # 23 — TAMAMLANDI
       # ============================================================
 
       - name: Production Complete
         run: |
+          echo ""
           echo "=========================================="
           echo "SHADOW ARCHIVE PRODUCTION TAMAMLANDI"
           echo "=========================================="
 
-          echo "✅ Yeni konu üretildi"
-          echo "✅ Araştırma tamamlandı"
-          echo "✅ Senaryo tamamlandı"
-          echo "✅ TTS tamamlandı"
-          echo "✅ Görseller tamamlandı"
-          echo "✅ Ana video hazır"
-          echo "✅ Short 1 hazır"
-          echo "✅ Short 2 hazır"
-          echo "✅ Production package hazır"
-          echo "✅ Artifact oluşturuldu"
+          echo "✅ Yeni konu"
+          echo "✅ Web research"
+          echo "✅ Senaryo"
+          echo "✅ TTS"
+          echo "✅ Görseller"
+          echo "✅ Ana video"
+          echo "✅ İngilizce altyazı"
+          echo "✅ Short 1"
+          echo "✅ Short 2"
+          echo "✅ Production package"
+          echo "✅ Artifact"
 
           echo ""
-          echo "Telegram onay workflow'u production package'ı kullanabilir."
-
+          echo "🎬 ÜRETİM PAKETİ HAZIR."
           echo "=========================================="
