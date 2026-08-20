@@ -13,49 +13,124 @@ TOPIC_FILE = Path("research/current_topic.json")
 HISTORY_FILE = Path("research/topic_history.json")
 
 
+# ============================================================
+# SHADOW ARCHIVE — KONU KURALLARI
+# ============================================================
+
+FORBIDDEN_CATEGORIES = [
+    "ship",
+    "ships",
+    "boat",
+    "boats",
+    "vessel",
+    "vessels",
+    "aircraft",
+    "airplane",
+    "airplane disappearance",
+    "aircraft disappearance",
+    "plane",
+    "planes",
+    "aviation",
+    "airship",
+    "zeppelin",
+    "blimp",
+    "dirigible",
+    "submarine",
+    "uçak",
+    "uçak kaybolması",
+    "gemi",
+    "gemi kaybolması",
+    "zeplin",
+    "hava gemisi",
+    "denizaltı",
+]
+
+FORBIDDEN_KEYWORDS = [
+    "mv joyita",
+    "joyita",
+    "boeing 727",
+    "luanda",
+    "n844aa",
+]
+
+
+def normalize(text):
+    return (
+        str(text)
+        .lower()
+        .strip()
+        .replace("’", "'")
+        .replace("ı", "i")
+        .replace("ğ", "g")
+        .replace("ü", "u")
+        .replace("ş", "s")
+        .replace("ö", "o")
+        .replace("ç", "c")
+    )
+
+
 def load_previous_topics():
     topics = []
 
+    # --------------------------------------------------------
     # Mevcut konu
+    # --------------------------------------------------------
+
     if TOPIC_FILE.exists():
+
         try:
+
             with open(
                 TOPIC_FILE,
                 "r",
                 encoding="utf-8"
             ) as f:
+
                 data = json.load(f)
 
-            topic = data.get("topic", "").strip()
+            topic = data.get(
+                "topic",
+                ""
+            ).strip()
 
             if topic:
                 topics.append(topic)
 
         except Exception as e:
+
             print(
                 f"Mevcut konu okunamadı: {e}"
             )
 
+    # --------------------------------------------------------
     # Konu geçmişi
+    # --------------------------------------------------------
+
     if HISTORY_FILE.exists():
+
         try:
+
             with open(
                 HISTORY_FILE,
                 "r",
                 encoding="utf-8"
             ) as f:
+
                 history = json.load(f)
 
             if isinstance(history, list):
+
                 for item in history:
 
                     if isinstance(item, str):
+
                         topic = item.strip()
 
                         if topic:
                             topics.append(topic)
 
                     elif isinstance(item, dict):
+
                         topic = item.get(
                             "topic",
                             ""
@@ -65,20 +140,26 @@ def load_previous_topics():
                             topics.append(topic)
 
         except Exception as e:
+
             print(
                 f"Konu geçmişi okunamadı: {e}"
             )
 
+    # --------------------------------------------------------
     # Tekilleştir
+    # --------------------------------------------------------
+
     result = []
     seen = set()
 
     for topic in topics:
 
-        normalized = topic.lower().strip()
+        normalized = normalize(topic)
 
         if normalized and normalized not in seen:
+
             seen.add(normalized)
+
             result.append(topic)
 
     return result
@@ -92,76 +173,134 @@ def generate_topic(previous_topics):
 
     previous_text = "\n".join(
         f"- {topic}"
-        for topic in previous_topics[-50:]
+        for topic in previous_topics[-100:]
     )
 
     if not previous_text:
-        previous_text = "- Henüz konu geçmişi yok."
+
+        previous_text = (
+            "- Henüz konu geçmişi yok."
+        )
 
     prompt = f"""
-You are the topic director for Shadow Archive.
+You are the senior topic director for Shadow Archive,
+a professional Turkish YouTube documentary channel.
 
-Shadow Archive is a Turkish YouTube documentary channel.
+Generate ONE completely NEW real-world documentary topic.
 
-The channel covers:
+============================================================
+ABSOLUTE BAN
+============================================================
 
-- mysterious real events
-- unsolved cases
-- disappearances
-- unexplained historical events
-- strange disasters
-- abandoned places
-- missing ships
-- missing people
-- aviation mysteries
-- strange accidents
-- historical mysteries
+DO NOT generate any topic involving:
 
-Your task is to generate ONE completely NEW documentary topic.
+- ships
+- boats
+- vessels
+- submarines
+- aircraft
+- airplanes
+- planes
+- aviation
+- airships
+- zeppelins
+- blimps
+- dirigibles
 
-IMPORTANT:
+This means:
 
-The new topic MUST be a genuinely different real-world
-event from every topic in the previous-topic list.
+NO missing ships.
+NO mysterious ships.
+NO ship disasters.
+NO missing aircraft.
+NO airplane disappearances.
+NO aviation mysteries.
+NO zeppelin mysteries.
+NO blimp mysteries.
 
-Do NOT generate the same event with different wording.
+Also NEVER generate:
 
-If an aircraft, ship, person, disaster or disappearance
-already appears in the previous topics, that exact event
-is forbidden.
+- MV Joyita
+- Joyita
+- Boeing 727 disappearance
+- Luanda Boeing 727
+- N844AA
+
+============================================================
+IMPORTANT
+============================================================
+
+The topic must be substantially different from every topic
+in the previous-topic list.
+
+Do NOT create a new wording for an old event.
 
 For example:
 
-If L-8 Ghost Blimp is in the previous topics, you MUST NOT
-generate:
+If an old topic is about a particular person,
+you cannot create another title about the same person.
 
-- L-8 Ghost Blimp
-- L-8 Disappearance
-- Ghost Blimp Mystery
-- Vanishing L-8 Crew
-- 1942 L-8 Mystery
+If an old topic is about a particular disaster,
+you cannot create another version of the same disaster.
 
-All of those refer to the same event.
+============================================================
+PREFERRED TOPIC TYPES
+============================================================
 
-Choose a completely different event.
+Choose from areas such as:
 
-PREVIOUS TOPICS — FORBIDDEN:
+- mysterious people
+- unexplained disappearances of people
+- strange historical events
+- abandoned buildings
+- mysterious locations
+- unexplained archaeological discoveries
+- strange inventions
+- mysterious photographs
+- unexplained signals
+- strange experiments
+- unusual scientific incidents
+- secret historical operations
+- unexplained deaths
+- mysterious letters
+- strange recordings
+- historical crimes
+- unsolved investigations
+- bizarre accidents that do NOT involve aircraft, ships,
+  boats, vessels, submarines, zeppelins or blimps
+- abandoned towns
+- underground structures
+- mysterious objects
+- unusual discoveries
+- historical mysteries
 
-{previous_text}
+============================================================
+QUALITY REQUIREMENTS
+============================================================
 
-The new topic must:
+The event MUST:
 
-- be a real historical event
+- be real
+- be researchable
 - have reliable sources
 - have enough information for a 15+ minute documentary
 - have a clear timeline
-- have enough people, locations and events to research
-- have strong curiosity potential
-- avoid fabricated claims
-- avoid conspiracy presented as fact
-- avoid misleading clickbait
-- preferably not be an extremely overused case
-- be substantially different from all previous topics
+- have several research points
+- have strong visual potential
+- have genuine mystery or curiosity
+- not depend on fabricated claims
+- not present conspiracy theories as established facts
+- preferably be obscure rather than extremely overused
+
+============================================================
+PREVIOUS TOPICS — FORBIDDEN
+============================================================
+
+{previous_text}
+
+============================================================
+OUTPUT
+============================================================
 
 Return ONLY valid JSON.
 
@@ -191,11 +330,11 @@ Required format:
 
 Rules:
 
-The title must be highly clickable but factual.
+The title must be clickable but factual.
 
 The description must be suitable for YouTube.
 
-The hashtags must be directly related to the topic.
+Hashtags must be directly related to the topic.
 
 Do not use spam hashtags.
 
@@ -211,8 +350,8 @@ Return JSON only.
 
     text = response.text.strip()
 
-    # Markdown JSON temizleme
     if text.startswith("```"):
+
         text = text.replace(
             "```json",
             ""
@@ -240,11 +379,11 @@ Return JSON only.
     for field in required_fields:
 
         if field not in data:
+
             raise RuntimeError(
                 f"Gemini çıktısında eksik alan: {field}"
             )
 
-    # Alanların boş olup olmadığını kontrol et
     for field in [
         "topic",
         "category",
@@ -265,6 +404,7 @@ Return JSON only.
         data["research_points"],
         list
     ):
+
         raise RuntimeError(
             "research_points liste değil."
         )
@@ -273,6 +413,7 @@ Return JSON only.
         data["hashtags"],
         list
     ):
+
         raise RuntimeError(
             "hashtags liste değil."
         )
@@ -280,30 +421,86 @@ Return JSON only.
     return data
 
 
+def is_forbidden(data):
+
+    topic = normalize(
+        data.get("topic", "")
+    )
+
+    title = normalize(
+        data.get("title", "")
+    )
+
+    category = normalize(
+        data.get("category", "")
+    )
+
+    summary = normalize(
+        data.get("summary", "")
+    )
+
+    combined = (
+        f"{topic} {title} "
+        f"{category} {summary}"
+    )
+
+    # --------------------------------------------------------
+    # Yasaklı özel olaylar
+    # --------------------------------------------------------
+
+    for keyword in FORBIDDEN_KEYWORDS:
+
+        if normalize(keyword) in combined:
+
+            print(
+                f"❌ YASAKLI KONU: {keyword}"
+            )
+
+            return True
+
+    # --------------------------------------------------------
+    # Yasaklı ulaşım türleri
+    # --------------------------------------------------------
+
+    for keyword in FORBIDDEN_CATEGORIES:
+
+        if normalize(keyword) in combined:
+
+            print(
+                f"❌ YASAKLI KATEGORİ: {keyword}"
+            )
+
+            return True
+
+    return False
+
+
 def is_duplicate(
     data,
     previous_topics
 ):
 
-    new_topic = data.get(
-        "topic",
-        ""
-    ).strip().lower()
+    new_topic = normalize(
+        data.get(
+            "topic",
+            ""
+        )
+    )
 
-    new_title = data.get(
-        "title",
-        ""
-    ).strip().lower()
+    new_title = normalize(
+        data.get(
+            "title",
+            ""
+        )
+    )
 
     if not new_topic:
         return True
 
     for old_topic in previous_topics:
 
-        old_normalized = (
+        old_normalized = normalize(
             old_topic
-            .strip()
-            .lower()
         )
 
         if not old_normalized:
@@ -311,11 +508,23 @@ def is_duplicate(
 
         # Tam eşleşme
         if new_topic == old_normalized:
+
             print(
-                "DUPLICATE: Tam konu eşleşmesi."
+                "❌ DUPLICATE: Tam konu eşleşmesi."
             )
+
             return True
 
+        # Başlığın eski konuyla aynı olması
+        if new_title == old_normalized:
+
+            print(
+                "❌ DUPLICATE: Başlık eski konuyla aynı."
+            )
+
+            return True
+
+        # Çok güçlü kelime çakışması
         new_words = set(
             new_topic.split()
         )
@@ -330,29 +539,10 @@ def is_duplicate(
             )
         )
 
-        # Çok güçlü kelime çakışması
         if len(common_words) >= 4:
 
             print(
-                "DUPLICATE: Güçlü konu benzerliği."
-            )
-
-            return True
-
-        title_words = set(
-            new_title.split()
-        )
-
-        title_common = (
-            title_words.intersection(
-                old_words
-            )
-        )
-
-        if len(title_common) >= 4:
-
-            print(
-                "DUPLICATE: Başlık benzerliği."
+                "❌ DUPLICATE: Güçlü konu benzerliği."
             )
 
             return True
@@ -377,19 +567,31 @@ def save_current_topic(data):
     )
 
     print("")
-    print("==========================================")
-    print("CURRENT TOPIC SAVED")
-    print("==========================================")
+    print(
+        "=========================================="
+    )
+    print(
+        "CURRENT TOPIC SAVED"
+    )
+    print(
+        "=========================================="
+    )
+
     print(
         f"File: {TOPIC_FILE}"
     )
+
     print(
         f"Topic: {data['topic']}"
     )
+
     print(
         f"Title: {data['title']}"
     )
-    print("==========================================")
+
+    print(
+        "=========================================="
+    )
 
 
 def save_history(data):
@@ -417,6 +619,7 @@ def save_history(data):
                 history,
                 list
             ):
+
                 history = []
 
         except Exception:
@@ -430,7 +633,6 @@ def save_history(data):
         }
     )
 
-    # Son 100 konuyu sakla
     history = history[-100:]
 
     HISTORY_FILE.write_text(
@@ -442,7 +644,6 @@ def save_history(data):
         encoding="utf-8"
     )
 
-    print("")
     print(
         f"Topic history updated: {len(history)} topics"
     )
@@ -450,13 +651,20 @@ def save_history(data):
 
 def main():
 
-    print("==========================================")
-    print("SHADOW ARCHIVE DAILY TOPIC SYSTEM")
-    print("==========================================")
+    print(
+        "=========================================="
+    )
+
+    print(
+        "SHADOW ARCHIVE DAILY TOPIC SYSTEM"
+    )
+
+    print(
+        "=========================================="
+    )
 
     previous_topics = load_previous_topics()
 
-    print("")
     print(
         f"ÖNCEKİ KONU SAYISI: {len(previous_topics)}"
     )
@@ -473,16 +681,24 @@ def main():
             )
 
     print("")
-    print("YENİ KONU ÜRETİLİYOR...")
+    print(
+        "🚫 GEMİ / UÇAK / ZEPLİN KONULARI ENGELLİ"
+    )
+
+    print("")
+    print(
+        "YENİ KONU ÜRETİLİYOR..."
+    )
+
     print("")
 
     data = None
 
-    # Aynı konu gelirse maksimum 5 deneme
-    for attempt in range(1, 6):
+    # 10 deneme
+    for attempt in range(1, 11):
 
         print(
-            f"KONU ÜRETİM DENEMESİ: {attempt}/5"
+            f"KONU ÜRETİM DENEMESİ: {attempt}/10"
         )
 
         try:
@@ -498,12 +714,14 @@ def main():
                 f"❌ GEMINI HATASI: {e}"
             )
 
-            if attempt == 5:
+            if attempt == 10:
+
                 raise
 
             print(
                 "Yeni deneme yapılacak..."
             )
+
             print("")
 
             continue
@@ -512,6 +730,22 @@ def main():
             f"ÜRETİLEN KONU: {candidate['topic']}"
         )
 
+        # Yasak kontrolü
+        if is_forbidden(candidate):
+
+            print(
+                "❌ YASAKLI KONU ÜRETİLDİ."
+            )
+
+            print(
+                "Yeni konu isteniyor..."
+            )
+
+            print("")
+
+            continue
+
+        # Tekrar kontrolü
         if is_duplicate(
             candidate,
             previous_topics
@@ -540,7 +774,7 @@ def main():
     if data is None:
 
         raise RuntimeError(
-            "5 denemede de yeni ve farklı konu üretilemedi."
+            "10 denemede de uygun yeni konu üretilemedi."
         )
 
     save_current_topic(
@@ -551,19 +785,23 @@ def main():
         data
     )
 
-    # Telegram burada KESİNLİKLE gönderilmiyor.
-    #
-    # Telegram yayın onayı ayrı workflow tarafından
-    # gönderilecek.
     print("")
     print(
         "ℹ️ TOPIC TELEGRAM MESAJI GÖNDERİLMEDİ."
     )
 
     print("")
-    print("==========================================")
-    print("DAILY TOPIC COMPLETED")
-    print("==========================================")
+    print(
+        "=========================================="
+    )
+
+    print(
+        "DAILY TOPIC COMPLETED"
+    )
+
+    print(
+        "=========================================="
+    )
 
     print(
         f"KONU: {data['topic']}"
@@ -577,7 +815,9 @@ def main():
         f"AÇIKLAMA: {data['description']}"
     )
 
-    print("==========================================")
+    print(
+        "=========================================="
+    )
 
 
 if __name__ == "__main__":
