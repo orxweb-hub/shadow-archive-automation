@@ -15,28 +15,16 @@ jobs:
 
     steps:
 
-      # ==========================================================
-      # 1 — CHECKOUT
-      # ==========================================================
-
       - name: Checkout Main Branch
         uses: actions/checkout@v4
         with:
           ref: main
           fetch-depth: 0
 
-      # ==========================================================
-      # 2 — PYTHON
-      # ==========================================================
-
       - name: Python 3.12 Kurulumu
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-
-      # ==========================================================
-      # 3 — DEPENDENCIES
-      # ==========================================================
 
       - name: Python Paketlerini Kur
         run: |
@@ -48,19 +36,14 @@ jobs:
 
           pip install google-genai
 
-      # ==========================================================
-      # 4 — FFMPEG
-      # ==========================================================
-
       - name: FFmpeg Kur
         run: |
           sudo apt-get update
           sudo apt-get install -y ffmpeg
-
           ffmpeg -version | head -n 1
 
       # ==========================================================
-      # 5 — YENİ KONU ÜRET
+      # YENİ KONU
       # ==========================================================
 
       - name: Yeni Shadow Archive Konusu Üret
@@ -85,19 +68,12 @@ jobs:
 
           cat research/current_topic.json
 
-          echo ""
-          echo "=========================================="
-
       # ==========================================================
-      # 6 — KONU KONTROL
+      # KONU KONTROL
       # ==========================================================
 
       - name: Yeni Konu Kontrolü
         run: |
-          echo "=========================================="
-          echo "CURRENT TOPIC KONTROL"
-          echo "=========================================="
-
           test -f research/current_topic.json
 
           python - <<'PY'
@@ -105,10 +81,7 @@ jobs:
           from pathlib import Path
 
           path = Path("research/current_topic.json")
-
-          data = json.loads(
-              path.read_text(encoding="utf-8")
-          )
+          data = json.loads(path.read_text(encoding="utf-8"))
 
           required = [
               "topic",
@@ -119,21 +92,18 @@ jobs:
 
           for key in required:
               if key not in data:
-                  raise SystemExit(
-                      f"❌ Eksik alan: {key}"
-                  )
+                  raise SystemExit(f"❌ Eksik alan: {key}")
 
           print("TOPIC:", data["topic"])
           print("TITLE:", data["title"])
           print("DESCRIPTION:", data["description"])
           print("HASHTAGS:", data["hashtags"])
 
-          print("")
           print("✅ YENİ KONU GEÇERLİ.")
           PY
 
       # ==========================================================
-      # 7 — WEB RESEARCH
+      # WEB RESEARCH
       # ==========================================================
 
       - name: Web Research
@@ -143,7 +113,7 @@ jobs:
           python research/research/web_researcher.py
 
       # ==========================================================
-      # 8 — SCRIPT
+      # SCRIPT
       # ==========================================================
 
       - name: Script Generator
@@ -153,7 +123,7 @@ jobs:
           python research/research/script_generator.py
 
       # ==========================================================
-      # 9 — TTS
+      # TTS
       # ==========================================================
 
       - name: TTS Generator
@@ -163,17 +133,29 @@ jobs:
           python research/research/tts_generator.py
 
       # ==========================================================
-      # 10 — VISUAL RESEARCH
+      # VISUAL RESEARCH
       # ==========================================================
 
       - name: Visual Research
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
         run: |
+          echo "=========================================="
+          echo "SHADOW ARCHIVE VISUAL RESEARCH"
+          echo "=========================================="
+
+          if [ -z "$PEXELS_API_KEY" ]; then
+            echo "❌ PEXELS_API_KEY bulunamadı."
+            exit 1
+          fi
+
+          echo "✅ PEXELS_API_KEY bulundu."
+
           python research/research/visual_research.py
 
       # ==========================================================
-      # 11 — MAIN VIDEO
+      # MAIN VIDEO
       # ==========================================================
 
       - name: Cinematic Video Editor
@@ -181,7 +163,7 @@ jobs:
           python research/research/cinematic_video_editor.py
 
       # ==========================================================
-      # 12 — SUBTITLES
+      # MAIN SUBTITLES
       # ==========================================================
 
       - name: English Subtitle Generator
@@ -191,7 +173,7 @@ jobs:
           python research/research/english_subtitle_generator.py
 
       # ==========================================================
-      # 13 — SHORTS SELECTOR
+      # SHORTS SELECTOR
       # ==========================================================
 
       - name: Shorts Selector
@@ -201,7 +183,7 @@ jobs:
           python research/research/shorts_selector.py
 
       # ==========================================================
-      # 14 — SHORTS TTS
+      # SHORTS TTS
       # ==========================================================
 
       - name: Shorts TTS
@@ -211,7 +193,7 @@ jobs:
           python research/research/shorts_tts.py
 
       # ==========================================================
-      # 15 — SHORTS SUBTITLES
+      # SHORTS SUBTITLES
       # ==========================================================
 
       - name: Shorts Subtitles
@@ -221,7 +203,7 @@ jobs:
           python research/research/shorts_subtitles.py
 
       # ==========================================================
-      # 16 — SHORTS EDITOR
+      # SHORTS EDITOR
       # ==========================================================
 
       - name: Shorts Editor
@@ -229,7 +211,7 @@ jobs:
           python research/research/shorts_editor.py
 
       # ==========================================================
-      # 17 — SHORTS CAPTIONS
+      # SHORTS CAPTIONS
       # ==========================================================
 
       - name: Shorts Caption Editor
@@ -237,7 +219,7 @@ jobs:
           python research/research/shorts_caption_editor.py
 
       # ==========================================================
-      # 18 — SHORTS BRANDING
+      # SHORTS BRANDING
       # ==========================================================
 
       - name: Shorts Branding
@@ -245,7 +227,7 @@ jobs:
           python research/research/shorts_branding.py
 
       # ==========================================================
-      # 19 — DOSYA KONTROL
+      # DOSYA KONTROL
       # ==========================================================
 
       - name: Production Dosyalarını Kontrol Et
@@ -270,7 +252,7 @@ jobs:
           ls -lh shorts/short_2.mp4
 
       # ==========================================================
-      # 20 — PRODUCTION PACKAGE
+      # PRODUCTION PACKAGE
       # ==========================================================
 
       - name: Production Package Hazırla
@@ -310,15 +292,35 @@ jobs:
               production_package/main/main_video_english.srt
           fi
 
-          cat > production_package/metadata/production.json <<EOF
-          {
-            "production_id": "$PRODUCTION_ID",
-            "production_date": "$PRODUCTION_DATE",
-            "github_run_id": "$GITHUB_RUN_ID",
-            "topic": $(python -c 'import json; print(json.dumps(json.load(open("research/current_topic.json", encoding="utf-8")).get("topic","")))' ),
-            "title": $(python -c 'import json; print(json.dumps(json.load(open("research/current_topic.json", encoding="utf-8")).get("title","")))' )
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          import os
+
+          topic_file = Path("research/current_topic.json")
+          data = json.loads(
+              topic_file.read_text(encoding="utf-8")
+          )
+
+          metadata = {
+              "production_id": f"{os.environ.get('PRODUCTION_DATE', '')}-{os.environ.get('GITHUB_RUN_ID', '')}",
+              "production_date": os.environ.get("PRODUCTION_DATE", ""),
+              "github_run_id": os.environ.get("GITHUB_RUN_ID", ""),
+              "topic": data.get("topic", ""),
+              "title": data.get("title", "")
           }
-          EOF
+
+          Path(
+              "production_package/metadata/production.json"
+          ).write_text(
+              json.dumps(
+                  metadata,
+                  ensure_ascii=False,
+                  indent=2
+              ),
+              encoding="utf-8"
+          )
+          PY
 
           echo ""
           echo "=========================================="
@@ -330,7 +332,7 @@ jobs:
             -exec ls -lh {} \;
 
       # ==========================================================
-      # 21 — PACKAGE KONTROL
+      # PACKAGE KONTROL
       # ==========================================================
 
       - name: Production Package Kontrol
@@ -349,7 +351,7 @@ jobs:
           cat production_package/metadata/production.json
 
       # ==========================================================
-      # 22 — ARTIFACT
+      # ARTIFACT
       # ==========================================================
 
       - name: Production Package Upload
@@ -360,7 +362,7 @@ jobs:
           retention-days: 7
 
       # ==========================================================
-      # 23 — COMMIT CURRENT TOPIC + HISTORY
+      # TOPIC HISTORY
       # ==========================================================
 
       - name: Topic History Kaydet
@@ -378,21 +380,24 @@ jobs:
           fi
 
       # ==========================================================
-      # 24 — SONUÇ
+      # COMPLETE
       # ==========================================================
 
       - name: Production Complete
         run: |
-          echo ""
           echo "=========================================="
           echo "🎉 SHADOW ARCHIVE PRODUCTION TAMAMLANDI"
           echo "=========================================="
+
           echo ""
-          echo "Production ID:"
-          echo "${GITHUB_RUN_ID}"
-          echo ""
-          echo "Yeni konu:"
+          echo "YENİ KONU:"
           cat research/current_topic.json
+
+          echo ""
+          echo "Production Run ID:"
+          echo "$GITHUB_RUN_ID"
+
           echo ""
           echo "Telegram onayı için package hazır."
+
           echo "=========================================="
