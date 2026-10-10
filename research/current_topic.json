@@ -1,21 +1,21 @@
 {
-  "topic": "The YOGTZE Case: The Cryptic Unsolved Death of Günther Stoll (1984)",
-  "category": "Unsolved Crimes & Mysterious Deaths",
-  "summary": "On October 25, 1984, German food technician Günther Stoll fell into severe paranoia, suddenly shouted 'Jetzt geht mir ein Licht auf!' ('Now I get it!'), and wrote the mysterious acronym 'YOGTZE' on a piece of paper. Hours later, he was found severely injured and naked inside his crashed Volkswagen Golf on Autobahn A4. Medical examinations revealed he had been run over by another vehicle prior to the crash and placed in his own car. To this day, the meaning of 'YOGTZE' and the identity of his killer remain completely unsolved.",
+  "topic": "The Mysterious Death of Gareth Williams (The Spy in the Bag, 2010)",
+  "category": "Gizemli Ölümler ve Casusluk",
+  "summary": "In August 2010, the body of 31-year-old Welsh mathematician and MI6 cyber-intelligence specialist Gareth Williams was found locked inside a padlocked North Face holdall in the bathtub of his London safehouse. The padlock key was located inside the bag beneath his body. Despite no foreign DNA or fingerprints being found in the apartment, and expert demonstrations proving it was almost physically impossible to lock oneself inside the bag from the interior, official investigations remained deeply conflicted between assassination and accidental death.",
   "research_points": [
-    "The origin and cryptographic analysis of the handwritten note 'YOGTZE' (or 'YO6TZE') made moments before Stoll vanished.",
-    "Stoll's late-night visit at 01:00 AM to a local pub and a childhood acquaintance in Haigerseelbach, where he foretold a terrible event.",
-    "The testimony of two truck drivers who spotted Stoll's damaged car in a ditch near Hagen-Süd and saw a injured man accompanied by a person in a white jacket.",
-    "Forensic autopsies proving Stoll suffered severe trauma from being run over elsewhere while completely unclothed before being loaded into his car's passenger seat.",
-    "Decades of investigations by the German Criminal Police (Kriminalpolizei) and public appeals on 'Aktenzeichen XY... ungelöst' that led to hundreds of clues but no resolution."
+    "Gareth Williams' background as a prodigy mathematician at GCHQ seconded to MI6 working on high-level cyber-espionage and cryptanalysis.",
+    "The timeline leading to the discovery on August 23, 2010, in Pimlico, London, after Williams failed to show up for work for over a week without alert.",
+    "The complete absence of forensic evidence at the crime scene, including no external fingerprints on the bathtub, lock, or bag, suggesting a professional cleanup.",
+    "The 2012 Coroner's Inquest led by Fiona Wilcox, which officially ruled that Williams was likely killed unlawfully by a third party in an intelligence-related cover-up.",
+    "Scotland Yard's controversial 2013 reopening conclusion claiming the death was 'probably accidental' despite overwhelming physical counter-evidence."
   ],
-  "title": "Ölmeden Önce Tek Bir Kelime Yazdı: YOGTZE Şifresi ve Otoyoldaki Gizemli Cinayet",
-  "description": "25 Ekim 1984 gecesi Almanya'da gıda teknisyeni Günther Stoll, aniden 'Şimdi anladım!' diye bağırarak bir kağıda altı harfli gizemli bir kelime yazdı: YOGTZE. Bu olaydan sadece birkaç saat sonra A4 otoyolunda kendi aracının yolcu koltuğunda ağır yaralı ve tamamen çıplak halde bulundu. \n\nAdli tıp raporları Stoll'un kaza yapmadığını, başka bir yerde başka bir araç tarafından ezildikten sonra kendi arabasına taşındığını ortaya çıkardı. Peki Stoll ölmeden önce neyi çözmüştü? Kağıttaki YOGTZE kelimesi ne anlama geliyordu?\n\nBu bölümde, Alman polis arşivlerinin en garip ve çözülememiş faili meçhul dosyalarından biri olan YOGTZE vakasının karanlık detaylarını, adli tıp bulgularını ve cevapsız kalan soruları inceliyoruz.",
+  "title": "MI6 Ajanının Çantadaki Sır Ölümü: Gareth Williams Vakası",
+  "description": "2010 yılında Londra'daki yüksek güvenlikli dairesinde, banyo küvetindeki kilitli bir spor çantasının içinde cesedi bulunan İngiliz dış istihbarat (MI6) ajanı Gareth Williams'ın gizemli hikayesi. Anahtarı çantanın içinde olan, üstü profesyonelce temizlenmiş bu olay bir kaza mıydı yoksa kusursuz bir suikast mı? Gölge Arşiv, devlet sırları ve Adli Tıp raporları arasındaki çelişkileri inceliyor.",
   "hashtags": [
-    "#YOGTZE",
+    "#GarethWilliams",
+    "#MI6",
     "#FailiMeçhul",
-    "#GölgeArşivi",
-    "#GizemliCinayetler",
-    "#Belgesel"
+    "#GizemliÖlümler",
+    "#GölgeArşiv"
   ]
 }
